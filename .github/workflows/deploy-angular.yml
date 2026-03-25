@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Có thể đổi nếu máy bạn dùng bản Node khác
+          node-version: '22' # Có thể đổi nếu máy bạn dùng bản Node khác
 
       - name: Install dependencies
         run: npm ci # Dùng npm ci thay vì npm i trên môi trường server để cài đặt chính xác
