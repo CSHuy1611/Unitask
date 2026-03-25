@@ -1,0 +1,605 @@
+[
+  {
+    "id": 1,
+    "title": "Mẫu ảnh lookbook thời trang",
+    "company": "Studio Ánh Sáng",
+    "companyId": 1,
+    "companyLogo": "AS",
+    "location": "TP. Hồ Chí Minh",
+    "type": "Freelance",
+    "salary": "300k - 500k/buổi",
+    "salaryRange": [
+      300000,
+      500000
+    ],
+    "description": "Cần tuyển mẫu ảnh nam/nữ chụp lookbook cho BST xuân-hè 2026. Buổi chụp kéo dài 3-4 tiếng tại studio. Trang phục và makeup do studio lo. Ưu tiên bạn có chiều cao từ 1m60 trở lên, gương mặt sáng, biết tạo dáng cơ bản.",
+    "requirements": [
+      "Sinh viên 18-24 tuổi",
+      "Chiều cao từ 1m60 (nữ) / 1m70 (nam)",
+      "Có ảnh profile",
+      "Đúng giờ, chuyên nghiệp"
+    ],
+    "benefits": [
+      "Thanh toán ngay sau buổi chụp",
+      "Nhận ảnh đã chỉnh sửa làm portfolio",
+      "Giờ làm linh hoạt theo lịch học",
+      "Cơ hội hợp tác lâu dài"
+    ],
+    "tags": [
+      "Mẫu ảnh",
+      "Thời trang",
+      "Lookbook",
+      "Freelance"
+    ],
+    "postedDate": "2026-03-24",
+    "deadline": "2026-04-15",
+    "views": 2345,
+    "applications": 67,
+    "isUrgent": true,
+    "isRemote": false,
+    "status": "open",
+    "budget": 300000,
+    "commission": 30000,
+    "applicants": []
+  },
+  {
+    "id": 2,
+    "title": "Mẫu makeup - Thực hành trang điểm",
+    "company": "Makeup Artist Linh Nguyễn",
+    "companyId": 2,
+    "companyLogo": "LN",
+    "location": "Hà Nội",
+    "type": "Freelance",
+    "salary": "150k - 250k/buổi",
+    "salaryRange": [
+      150000,
+      250000
+    ],
+    "description": "Cần bạn nữ làm mẫu cho học viên lớp makeup thực hành. Mỗi buổi 2-3 tiếng, được trang điểm và tháo makeup. Lịch linh hoạt, bạn có thể chọn buổi phù hợp. Phù hợp sinh viên muốn kiếm thêm thu nhập nhẹ nhàng.",
+    "requirements": [
+      "Nữ, 18-25 tuổi",
+      "Da mặt không quá nhạy cảm",
+      "Ngồi yên trong 1-2 tiếng",
+      "Có thể làm ngày thường hoặc cuối tuần"
+    ],
+    "benefits": [
+      "Được makeup miễn phí",
+      "Giờ cực linh hoạt",
+      "Thanh toán ngay",
+      "Môi trường thân thiện"
+    ],
+    "tags": [
+      "Mẫu makeup",
+      "Làm đẹp",
+      "Linh hoạt",
+      "Freelance"
+    ],
+    "postedDate": "2026-03-23",
+    "deadline": "2026-04-30",
+    "views": 1890,
+    "applications": 89,
+    "isUrgent": false,
+    "isRemote": false,
+    "status": "open",
+    "budget": 150000,
+    "commission": 15000,
+    "applicants": []
+  },
+  {
+    "id": 3,
+    "title": "Bê tráp đám cưới - Cuối tuần",
+    "company": "Wedding House Việt",
+    "companyId": 3,
+    "companyLogo": "WH",
+    "location": "TP. Hồ Chí Minh",
+    "type": "Freelance",
+    "salary": "400k - 600k/lần",
+    "salaryRange": [
+      400000,
+      600000
+    ],
+    "description": "Tuyển nam/nữ bê tráp cho lễ ăn hỏi và đám cưới vào cuối tuần. Yêu cầu ngoại hình ưa nhìn, biết cách cư xử lịch sự. Trang phục áo dài được cung cấp. Thời gian: sáng thứ 7 hoặc Chủ nhật, kéo dài 2-3 tiếng.",
+    "requirements": [
+      "18-24 tuổi, ngoại hình ưa nhìn",
+      "Chiều cao phù hợp (nữ 1m55+, nam 1m68+)",
+      "Có thể làm cuối tuần",
+      "Biết cách bưng bê lễ vật"
+    ],
+    "benefits": [
+      "Thanh toán cao cho 2-3 tiếng",
+      "Trang phục áo dài được cấp",
+      "Ăn tiệc miễn phí",
+      "Bổ sung kinh nghiệm sự kiện"
+    ],
+    "tags": [
+      "Bê tráp",
+      "Đám cưới",
+      "Sự kiện",
+      "Cuối tuần"
+    ],
+    "postedDate": "2026-03-22",
+    "deadline": "2026-04-20",
+    "views": 3210,
+    "applications": 120,
+    "isUrgent": true,
+    "isRemote": false,
+    "status": "open",
+    "budget": 400000,
+    "commission": 40000,
+    "applicants": []
+  },
+  {
+    "id": 4,
+    "title": "PG sự kiện khai trương cửa hàng",
+    "company": "Shop Mây Fashion",
+    "companyId": 4,
+    "companyLogo": "MF",
+    "location": "Đà Nẵng",
+    "type": "Freelance",
+    "salary": "250k - 400k/buổi",
+    "salaryRange": [
+      250000,
+      400000
+    ],
+    "description": "Cần 4-6 bạn PG/PB cho sự kiện khai trương chi nhánh mới. Nhiệm vụ: phát tờ rơi, hướng dẫn khách, chụp ảnh check-in. Thời gian 1 ngày, có thể gia hạn thêm 2-3 ngày tiếp.",
+    "requirements": [
+      "Ngoại hình sáng, thân thiện",
+      "Năng động, giao tiếp tốt",
+      "Có kinh nghiệm PG là lợi thế",
+      "Có thể làm full ngày"
+    ],
+    "benefits": [
+      "Thanh toán cuối ngày",
+      "Được mặc đồng phục thương hiệu",
+      "Bữa trưa miễn phí",
+      "Thưởng nếu bán được hàng"
+    ],
+    "tags": [
+      "PG",
+      "Sự kiện",
+      "Khai trương",
+      "Freelance"
+    ],
+    "postedDate": "2026-03-24",
+    "deadline": "2026-03-30",
+    "views": 876,
+    "applications": 34,
+    "isUrgent": true,
+    "isRemote": false,
+    "status": "open",
+    "budget": 250000,
+    "commission": 25000,
+    "applicants": []
+  },
+  {
+    "id": 5,
+    "title": "Livestream bán hàng online",
+    "company": "Tiệm Hoa Cỏ May",
+    "companyId": 5,
+    "companyLogo": "CM",
+    "location": "Remote",
+    "type": "Freelance",
+    "salary": "200k/buổi + hoa hồng",
+    "salaryRange": [
+      200000,
+      500000
+    ],
+    "description": "Tuyển bạn có khả năng nói chuyện lưu loát để livestream bán hoa tươi và quà tặng trên TikTok Shop/Shopee Live. Mỗi buổi 1-2 tiếng, có thể live từ nhà hoặc tại cửa hàng. Được training trước khi bắt đầu.",
+    "requirements": [
+      "Tự tin trước camera",
+      "Giọng nói rõ ràng, dễ nghe",
+      "Có điện thoại/laptop chất lượng tốt",
+      "Ưu tiên có kinh nghiệm livestream"
+    ],
+    "benefits": [
+      "Làm từ nhà",
+      "Hoa hồng theo doanh số",
+      "Lịch linh hoạt tự chọn",
+      "Được training miễn phí"
+    ],
+    "tags": [
+      "Livestream",
+      "Bán hàng",
+      "TikTok",
+      "Remote"
+    ],
+    "postedDate": "2026-03-21",
+    "deadline": "2026-04-15",
+    "views": 1567,
+    "applications": 45,
+    "isUrgent": false,
+    "isRemote": true,
+    "status": "open",
+    "budget": 200000,
+    "commission": 20000,
+    "applicants": []
+  },
+  {
+    "id": 6,
+    "title": "Mẫu ảnh sản phẩm - Phụ kiện handmade",
+    "company": "Mimu Accessories",
+    "companyId": 6,
+    "companyLogo": "MM",
+    "location": "Remote",
+    "type": "Freelance",
+    "salary": "200k - 350k/set ảnh",
+    "salaryRange": [
+      200000,
+      350000
+    ],
+    "description": "Cần bạn nữ chụp ảnh đeo phụ kiện handmade (vòng tay, dây chuyền, bông tai) bằng điện thoại. Tự chụp tại nhà theo hướng dẫn, gửi ảnh qua Zalo. Mỗi set 10-15 tấm, làm xong trong 1-2 ngày.",
+    "requirements": [
+      "Nữ 18-25, tay đẹp hoặc ngoại hình sáng",
+      "Có điện thoại camera tốt",
+      "Biết chụp ảnh aesthetic cơ bản",
+      "Deadline-oriented"
+    ],
+    "benefits": [
+      "Làm hoàn toàn từ nhà",
+      "Nhận sản phẩm miễn phí",
+      "Thanh toán qua chuyển khoản",
+      "Lịch tự sắp xếp"
+    ],
+    "tags": [
+      "Mẫu ảnh",
+      "Sản phẩm",
+      "Handmade",
+      "Remote"
+    ],
+    "postedDate": "2026-03-23",
+    "deadline": "2026-04-10",
+    "views": 1230,
+    "applications": 56,
+    "isUrgent": false,
+    "isRemote": true,
+    "status": "open",
+    "budget": 200000,
+    "commission": 20000,
+    "applicants": []
+  },
+  {
+    "id": 7,
+    "title": "MC dẫn chương trình tiệc sinh nhật",
+    "company": "Gia đình anh Tuấn",
+    "companyId": 7,
+    "companyLogo": "GT",
+    "location": "TP. Hồ Chí Minh",
+    "type": "Freelance",
+    "salary": "500k - 800k/buổi",
+    "salaryRange": [
+      500000,
+      800000
+    ],
+    "description": "Cần 1 bạn MC cho tiệc sinh nhật con gái 10 tuổi. Tiệc tổ chức tại nhà hàng, cần dẫn các trò chơi, tổ chức mini game, và điều phối chương trình khoảng 2 tiếng chiều thứ 7.",
+    "requirements": [
+      "Hoạt ngôn, vui vẻ",
+      "Có kinh nghiệm MC hoặc dẫn chương trình",
+      "Biết tổ chức trò chơi cho trẻ em",
+      "Đúng giờ, chuyên nghiệp"
+    ],
+    "benefits": [
+      "Thanh toán cao cho 2 tiếng",
+      "Ăn tiệc miễn phí",
+      "Tip thêm nếu làm tốt",
+      "Networking"
+    ],
+    "tags": [
+      "MC",
+      "Sự kiện",
+      "Sinh nhật",
+      "Freelance"
+    ],
+    "postedDate": "2026-03-24",
+    "deadline": "2026-03-29",
+    "views": 654,
+    "applications": 12,
+    "isUrgent": true,
+    "isRemote": false,
+    "status": "open",
+    "budget": 500000,
+    "commission": 50000,
+    "applicants": []
+  },
+  {
+    "id": 8,
+    "title": "Phụ chụp ảnh cưới - Cuối tuần",
+    "company": "Studio Ánh Sáng",
+    "companyId": 1,
+    "companyLogo": "AS",
+    "location": "TP. Hồ Chí Minh",
+    "type": "Freelance",
+    "salary": "350k - 500k/buổi",
+    "salaryRange": [
+      350000,
+      500000
+    ],
+    "description": "Tuyển assistant photographer cho các buổi chụp ảnh cưới outdoor. Nhiệm vụ: cầm đèn, giữ phản quang, chỉnh trang phục cô dâu, mang vác thiết bị nhẹ. Phù hợp sinh viên yêu thích nhiếp ảnh.",
+    "requirements": [
+      "Có sức khỏe tốt (đi bộ nhiều)",
+      "Yêu thích nhiếp ảnh",
+      "Có thể làm cuối tuần",
+      "Chịu khó, nhanh nhẹn"
+    ],
+    "benefits": [
+      "Học hỏi kỹ thuật chụp ảnh",
+      "Portfolio assistant",
+      "Thanh toán ngay",
+      "Môi trường sáng tạo"
+    ],
+    "tags": [
+      "Photography",
+      "Ảnh cưới",
+      "Assistant",
+      "Cuối tuần"
+    ],
+    "postedDate": "2026-03-20",
+    "deadline": "2026-04-20",
+    "views": 998,
+    "applications": 28,
+    "isUrgent": false,
+    "isRemote": false,
+    "status": "open",
+    "budget": 350000,
+    "commission": 35000,
+    "applicants": []
+  },
+  {
+    "id": 9,
+    "title": "Người mẫu KOC - Review mỹ phẩm",
+    "company": "BeautyBox VN",
+    "companyId": 8,
+    "companyLogo": "BB",
+    "location": "Remote",
+    "type": "Freelance",
+    "salary": "300k - 1 triệu/video",
+    "salaryRange": [
+      300000,
+      1000000
+    ],
+    "description": "Tuyển bạn nữ quay video review/swatch mỹ phẩm cho kênh TikTok và Instagram. Sản phẩm được gửi miễn phí đến tận nhà. Mỗi video 30-60s, quay bằng điện thoại, edit đơn giản.",
+    "requirements": [
+      "Có tài khoản TikTok/Instagram",
+      "Tự tin trước camera",
+      "Da sáng, biết makeup cơ bản",
+      "Có thể quay edit video ngắn"
+    ],
+    "benefits": [
+      "Nhận mỹ phẩm miễn phí",
+      "Làm hoàn toàn remote",
+      "Thu nhập theo video",
+      "Xây dựng thương hiệu cá nhân"
+    ],
+    "tags": [
+      "KOC",
+      "Review",
+      "Mỹ phẩm",
+      "TikTok",
+      "Remote"
+    ],
+    "postedDate": "2026-03-22",
+    "deadline": "2026-04-30",
+    "views": 4521,
+    "applications": 156,
+    "isUrgent": false,
+    "isRemote": true,
+    "status": "open",
+    "budget": 300000,
+    "commission": 30000,
+    "applicants": []
+  },
+  {
+    "id": 10,
+    "title": "Nhân sự phục vụ tiệc cưới - Gấp",
+    "company": "Nhà hàng Hoa Sen",
+    "companyId": 9,
+    "companyLogo": "HS",
+    "location": "Hà Nội",
+    "type": "Freelance",
+    "salary": "250k - 350k/buổi",
+    "salaryRange": [
+      250000,
+      350000
+    ],
+    "description": "Cần 8-10 bạn phục vụ tiệc cưới tại nhà hàng. Công việc: bưng bê thức ăn, dọn bàn, hỗ trợ khách. Có training trước 30 phút. Ca tối từ 17h-22h. Nhiều đám cưới liên tục trong tháng 4.",
+    "requirements": [
+      "Ngoại hình gọn gàng",
+      "Nhanh nhẹn, lễ phép",
+      "Có thể làm ca tối",
+      "Không cần kinh nghiệm"
+    ],
+    "benefits": [
+      "Bao ăn tối",
+      "Thanh toán ngay sau buổi",
+      "Lịch đăng ký linh hoạt",
+      "Tip từ khách"
+    ],
+    "tags": [
+      "Phục vụ",
+      "Tiệc cưới",
+      "Nhà hàng",
+      "On-demand"
+    ],
+    "postedDate": "2026-03-24",
+    "deadline": "2026-04-25",
+    "views": 1876,
+    "applications": 89,
+    "isUrgent": true,
+    "isRemote": false,
+    "status": "open",
+    "budget": 250000,
+    "commission": 25000,
+    "applicants": []
+  },
+  {
+    "id": 11,
+    "title": "Thiết kế Canva - Banner quảng cáo",
+    "company": "Shop Mây Fashion",
+    "companyId": 4,
+    "companyLogo": "MF",
+    "location": "Remote",
+    "type": "Freelance",
+    "salary": "100k - 200k/banner",
+    "salaryRange": [
+      100000,
+      200000
+    ],
+    "description": "Cần bạn thiết kế banner quảng cáo cho Facebook/Instagram bằng Canva hoặc Photoshop. Mỗi tuần 5-10 banner, nhận brief qua Zalo, deadline 24h. Phù hợp sinh viên Design hoặc ai biết Canva.",
+    "requirements": [
+      "Thành thạo Canva hoặc Photoshop",
+      "Có gu thẩm mỹ, bắt trend",
+      "Đúng deadline",
+      "Phản hồi nhanh qua Zalo"
+    ],
+    "benefits": [
+      "100% remote",
+      "Lịch tự do",
+      "Thưởng nếu chất lượng tốt",
+      "Portfolio thực tế"
+    ],
+    "tags": [
+      "Design",
+      "Canva",
+      "Banner",
+      "Remote"
+    ],
+    "postedDate": "2026-03-21",
+    "deadline": "2026-04-15",
+    "views": 2100,
+    "applications": 73,
+    "isUrgent": false,
+    "isRemote": true,
+    "status": "open",
+    "budget": 100000,
+    "commission": 10000,
+    "applicants": []
+  },
+  {
+    "id": 12,
+    "title": "Dancer/Nhảy cover sự kiện Tết Trung thu",
+    "company": "Trung tâm Văn hóa Q.7",
+    "companyId": 10,
+    "companyLogo": "VH",
+    "location": "TP. Hồ Chí Minh",
+    "type": "Freelance",
+    "salary": "500k - 700k/buổi diễn",
+    "salaryRange": [
+      500000,
+      700000
+    ],
+    "description": "Tuyển nhóm nhảy 4-6 bạn cho chương trình Trung thu tại khu dân cư. Tập luyện 3 buổi, biểu diễn 1 buổi tối. Bài nhảy K-pop hoặc nhạc trẻ Việt, tự dàn dựng theo nhạc được cung cấp.",
+    "requirements": [
+      "Biết nhảy, có clip demo",
+      "Có thể tập luyện 3 buổi",
+      "Năng lượng cao, sân khấu tốt",
+      "Nhóm hoặc cá nhân đều OK"
+    ],
+    "benefits": [
+      "Chi phí tập luyện được hỗ trợ",
+      "Quay video biểu diễn chuyên nghiệp",
+      "Ăn uống tại sự kiện",
+      "Networking cộng đồng nhảy"
+    ],
+    "tags": [
+      "Dancer",
+      "K-pop",
+      "Sự kiện",
+      "Biểu diễn"
+    ],
+    "postedDate": "2026-03-20",
+    "deadline": "2026-04-10",
+    "views": 1456,
+    "applications": 34,
+    "isUrgent": false,
+    "isRemote": false,
+    "status": "open",
+    "budget": 500000,
+    "commission": 50000,
+    "applicants": []
+  },
+  {
+    "id": 13,
+    "title": "Gia sư chụp ảnh điện thoại",
+    "company": "Chị Mai - Cá nhân",
+    "companyId": 11,
+    "companyLogo": "CM",
+    "location": "Remote",
+    "type": "Freelance",
+    "salary": "200k/buổi (1 tiếng)",
+    "salaryRange": [
+      200000,
+      200000
+    ],
+    "description": "Cần bạn dạy cách chụp ảnh sản phẩm bằng điện thoại cho shop online bán quần áo trẻ em. Dạy 1-1 qua Google Meet, 4-5 buổi, mỗi buổi 1 tiếng. Hướng dẫn góc chụp, ánh sáng, edit bằng app.",
+    "requirements": [
+      "Biết chụp ảnh sản phẩm đẹp",
+      "Có kinh nghiệm bán hàng online là plus",
+      "Kiên nhẫn, giải thích dễ hiểu",
+      "Có thể dạy qua Google Meet"
+    ],
+    "benefits": [
+      "Remote 100%",
+      "Lịch tự thỏa thuận",
+      "Mở rộng kỹ năng giảng dạy",
+      "Có thể nhận thêm học viên"
+    ],
+    "tags": [
+      "Gia sư",
+      "Photography",
+      "Online",
+      "Remote"
+    ],
+    "postedDate": "2026-03-23",
+    "deadline": "2026-04-05",
+    "views": 345,
+    "applications": 8,
+    "isUrgent": false,
+    "isRemote": true,
+    "status": "open",
+    "budget": 200000,
+    "commission": 20000,
+    "applicants": []
+  },
+  {
+    "id": 14,
+    "title": "Mẫu ảnh couple - Cafe concept",
+    "company": "Studio Ánh Sáng",
+    "companyId": 1,
+    "companyLogo": "AS",
+    "location": "TP. Hồ Chí Minh",
+    "type": "Freelance",
+    "salary": "400k/cặp/buổi",
+    "salaryRange": [
+      400000,
+      400000
+    ],
+    "description": "Tuyển 2-3 cặp đôi để chụp ảnh concept cafe cho chiến dịch Valentine muộn. Chụp tại quán cafe aesthetic Q.1. Trang phục tự chuẩn bị (tone pastel), makeup nhẹ. Buổi chụp 2 tiếng.",
+    "requirements": [
+      "Cặp đôi thật hoặc bạn bè thân",
+      "Ngoại hình sáng, dễ thương",
+      "Biết tạo dáng tự nhiên",
+      "Có thể đến Q.1 HCM"
+    ],
+    "benefits": [
+      "Ảnh couple chuyên nghiệp miễn phí",
+      "Thanh toán ngay",
+      "Vui vẻ, thoải mái",
+      "Portfolio đẹp"
+    ],
+    "tags": [
+      "Mẫu ảnh",
+      "Couple",
+      "Cafe",
+      "Concept"
+    ],
+    "postedDate": "2026-03-24",
+    "deadline": "2026-04-01",
+    "views": 1789,
+    "applications": 42,
+    "isUrgent": true,
+    "isRemote": false,
+    "status": "open",
+    "budget": 400000,
+    "commission": 40000,
+    "applicants": []
+  }
+]

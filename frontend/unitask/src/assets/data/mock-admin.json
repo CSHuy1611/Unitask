@@ -1,0 +1,27 @@
+{
+  "revenueByMonth": [
+    { "month": "10/2025", "revenue": 12500000 },
+    { "month": "11/2025", "revenue": 18700000 },
+    { "month": "12/2025", "revenue": 22300000 },
+    { "month": "01/2026", "revenue": 28900000 },
+    { "month": "02/2026", "revenue": 35200000 },
+    { "month": "03/2026", "revenue": 42100000 }
+  ],
+  "packages": [
+    { "id": 1, "name": "Gói 3 tháng", "price": 500000, "duration": "3 tháng", "description": "Đăng tuyển không giới hạn trong 3 tháng", "subscribers": 45 },
+    { "id": 2, "name": "Gói 6 tháng", "price": 1029000, "duration": "6 tháng", "description": "Đăng tuyển không giới hạn trong 6 tháng + ưu tiên hiển thị", "subscribers": 32 },
+    { "id": 3, "name": "Gói 12 tháng", "price": 1399000, "duration": "12 tháng", "description": "Đăng tuyển không giới hạn + ưu tiên hiển thị + badge Premium", "subscribers": 18 },
+    { "id": 4, "name": "Đăng tin lẻ", "price": 200, "duration": "1 tin", "description": "200đ cho mỗi tin đăng tuyển riêng lẻ", "subscribers": 567 }
+  ],
+  "summary": {
+    "totalRevenue": 159700000,
+    "totalUsers": 1245,
+    "totalJobs": 892,
+    "totalStudents": 1038,
+    "totalEmployers": 203,
+    "ekycPending": 47,
+    "ekycVerified": 876,
+    "activeJobsToday": 234,
+    "applicationsThisMonth": 3456
+  }
+}
