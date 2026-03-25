@@ -31,8 +31,8 @@ jobs:
         run: npm ci # Dùng npm ci thay vì npm i trên môi trường server để cài đặt chính xác
 
       - name: Build Angular project
-        # Thêm base-href để web nhận diện đúng đường dẫn thư mục ảo trên GitHub Pages
-        run: npx ng build --configuration production --base-href /Unitask/
+        # Đã thêm cờ --prerender false để bỏ qua việc tạo trang tĩnh cho các route động
+        run: npx ng build --configuration production --base-href /Unitask/ --prerender false
 
       - name: Upload artifact for deployment
         uses: actions/upload-pages-artifact@v3
