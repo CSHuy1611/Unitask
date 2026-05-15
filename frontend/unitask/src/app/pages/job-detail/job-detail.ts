@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { JobService } from '../../services/job.service';
 import { AuthService } from '../../services/auth.service';
 import { CompanyService } from '../../services/company.service';
+import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
 
 @Component({
@@ -441,6 +442,8 @@ export class JobDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private jobService = inject(JobService);
   private companyService = inject(CompanyService);
+  private router = inject(Router);
+  private toast = inject(ToastService);
   auth = inject(AuthService);
 
   job = signal<Job | null>(null);
@@ -471,9 +474,31 @@ export class JobDetailComponent implements OnInit {
 
   onApply() {
     const job = this.job();
-    if (job) {
-      this.auth.applyToJob(job.id);
-      this.applied.set(true);
+    const user = this.auth.currentUser();
+    if (!job) return;
+
+    if (!user || user.role !== 'student') {
+      this.toast.warning('Vui lòng đăng nhập với tài khoản sinh viên để ứng tuyển.');
+      this.router.navigate(['/login']);
+      return;
     }
+
+    if (user.ekycStatus !== 'verified') {
+      this.toast.warning('Bạn cần xác thực danh tính (eKYC) trước khi ứng tuyển.');
+      return;
+    }
+
+    const deadlineDate = new Date(job.deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Ignore time
+    if (deadlineDate < today) {
+      this.toast.error('Công việc này đã hết hạn ứng tuyển.');
+      return;
+    }
+
+    this.auth.applyToJob(job.id);
+    this.jobService.addApplicant(job.id, user.id);
+    this.applied.set(true);
+    this.toast.success('Ứng tuyển thành công! Nhà tuyển dụng sẽ liên hệ nếu phù hợp.');
   }
 }

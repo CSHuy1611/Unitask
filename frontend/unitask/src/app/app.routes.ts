@@ -42,6 +42,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/pricing/pricing').then(m => m.PricingComponent),
   },
   {
+    path: 'payment/success',
+    loadComponent: () => import('./pages/payment/payment-success').then(m => m.PaymentSuccessComponent),
+  },
+  {
+    path: 'payment/cancel',
+    loadComponent: () => import('./pages/payment/payment-cancel').then(m => m.PaymentCancelComponent),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

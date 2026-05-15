@@ -85,7 +85,7 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
             <div class="payment-modal-overlay animate-fade-in">
               <div class="payment-modal glass-card">
                 <div class="modal-header">
-                  <h3>Thanh toán qua VNPay (Mock)</h3>
+                  <h3>Thanh toán (Chuẩn bị cho PayOS)</h3>
                   <button class="close-btn" (click)="closeModal()"><span class="material-icons-round">close</span></button>
                 </div>
                 
@@ -394,21 +394,23 @@ export class PricingComponent {
   processPayment() {
     this.isProcessing.set(true);
     
-    // Simulate API delay
+    // Simulate Backend API call to get PayOS checkoutUrl
     setTimeout(() => {
-      this.isProcessing.set(false);
-      this.paymentSuccess.set(true);
-
+      // ⚠️ TRONG THỰC TẾ: Backend sẽ trả về 1 URL (vd: https://pay.payos.vn/...)
+      // Sau đó ta dùng window.location.href = url; để redirect.
+      // Dưới đây là MÔ PHỎNG việc thanh toán thành công (Webhook đã xử lý ngầm)
+      // và PayOS redirect User quay lại trang /payment/success
+      
       if (this.paymentType() === 'deposit') {
-         const result = this.auth.addBalance(this.getPayAmount());
-         this.successMessage.set(result.message);
+         this.auth.addBalance(this.getPayAmount()); // Mock webhook action
       } else {
          const pkg = this.selectedPackage();
-         // Calculate duration in months from string like "3 tháng"
          const months = parseInt(pkg.duration);
-         const result = this.auth.updatePackage(pkg.name, isNaN(months) ? 1 : months);
-         this.successMessage.set(result.message);
+         this.auth.updatePackage(pkg.name, isNaN(months) ? 1 : months); // Mock webhook action
       }
-    }, 2000);
+
+      this.closeModal();
+      this.router.navigate(['/payment/success']);
+    }, 1500);
   }
 }

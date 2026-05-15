@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Job } from '../../models/job.model';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-job-card',
@@ -186,6 +187,7 @@ export class JobCardComponent {
   job = input.required<Job>();
   auth = inject(AuthService);
   jobService = inject(JobService);
+  toast = inject(ToastService);
 
   hasApplied() {
     const user = this.auth.currentUser();
@@ -198,13 +200,26 @@ export class JobCardComponent {
     
     const user = this.auth.currentUser();
     if (!user || user.role !== 'student') {
-      alert('Vui lòng đăng nhập với tài khoản sinh viên để ứng tuyển.');
+      this.toast.warning('Vui lòng đăng nhập với tài khoản sinh viên để ứng tuyển.');
       return;
     }
 
     if (!this.hasApplied()) {
+      if (user.ekycStatus !== 'verified') {
+        this.toast.warning('Bạn cần xác thực danh tính (eKYC) trước khi ứng tuyển.');
+        return;
+      }
+
+      const deadlineDate = new Date(this.job().deadline);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Ignore time
+      if (deadlineDate < today) {
+        this.toast.error('Công việc này đã hết hạn ứng tuyển.');
+        return;
+      }
+
       this.jobService.addApplicant(this.job().id, user.id);
-      alert('Ứng tuyển thành công! Nhà tuyển dụng sẽ liên hệ nếu phù hợp.');
+      this.toast.success('Ứng tuyển thành công! Nhà tuyển dụng sẽ liên hệ nếu phù hợp.');
     }
   }
 

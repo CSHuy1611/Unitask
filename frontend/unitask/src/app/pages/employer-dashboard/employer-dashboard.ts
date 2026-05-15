@@ -1,8 +1,10 @@
 import { Component, inject, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
-import { RouterLink } from '@angular/router';
+import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
 
 @Component({
@@ -156,7 +158,15 @@ import { Job } from '../../models/job.model';
                   }
                 </div>
                 <div class="form-group" style="grid-column: 1 / -1">
-                  <label class="form-label">Yêu cầu, Tags (cách nhau bằng dấu phẩy)</label>
+                  <label class="form-label">Yêu cầu công việc (cách nhau bằng dấu phẩy)</label>
+                  <textarea class="form-input" [(ngModel)]="formData.requirementsStr" name="requirementsStr" rows="2" placeholder="VD: Sinh viên năm 3-4, Có laptop cá nhân, Tiếng Anh giao tiếp cơ bản"></textarea>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1">
+                  <label class="form-label">Quyền lợi (cách nhau bằng dấu phẩy)</label>
+                  <textarea class="form-input" [(ngModel)]="formData.benefitsStr" name="benefitsStr" rows="2" placeholder="VD: Hỗ trợ dấu mộc thực tập, Phụ cấp ăn trưa, Môi trường năng động"></textarea>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1">
+                  <label class="form-label">Tags (cách nhau bằng dấu phẩy)</label>
                   <input type="text" class="form-input" [(ngModel)]="formData.tagsStr" name="tags" placeholder="VD: Sinh viên, Tiếng Anh, Chăm chỉ">
                 </div>
                 <div class="form-row">
@@ -231,7 +241,7 @@ import { Job } from '../../models/job.model';
                     } @else if (job.status === 'in_progress') {
                       <span class="badge badge-warning">Đang thực hiện</span>
                     } @else if (job.status === 'pending_confirmation') {
-                      <button class="btn btn-success btn-sm" (click)="approveCompletion(job)" style="gap:4px">
+                      <button class="btn btn-success btn-sm" (click)="jobToApprove.set(job)" style="gap:4px">
                         <span class="material-icons-round" style="font-size:16px">check_circle</span> Trả lương
                       </button>
                     } @else if (job.status === 'completed') {
@@ -262,19 +272,36 @@ import { Job } from '../../models/job.model';
                 
                 <div class="applicants-list d-flex flex-col gap-4">
                   @for (student of applicantUsers(); track student.id) {
-                    <div class="applicant-card p-4 rounded-lg bg-secondary border border-light d-flex justify-between items-center">
-                      <div class="d-flex items-center gap-3">
-                        <div class="avatar-sm" style="width:40px; height:40px; border-radius:50%; background:var(--primary-gradient); display:flex; align-items:center; justify-content:center; color:white; font-weight:700">
-                          {{ student.avatar }}
+                    <div class="applicant-card p-4 rounded-lg bg-secondary border border-light d-flex flex-col gap-3">
+                      <div class="d-flex justify-between items-center">
+                        <div class="d-flex items-center gap-3">
+                          <div class="avatar-sm" style="width:48px; height:48px; border-radius:50%; background:var(--primary-gradient); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:1.1rem">
+                            {{ student.avatar }}
+                          </div>
+                          <div>
+                            <strong style="display:block; color:var(--text-primary); font-size:1.1rem">{{ student.fullName }}</strong>
+                            <span style="font-size:0.875rem; color:var(--text-secondary)">{{ student.university }} - {{ student.major }} (Năm {{ student.year }})</span>
+                          </div>
                         </div>
-                        <div>
-                          <strong style="display:block; color:var(--text-primary)">{{ student.fullName }}</strong>
-                          <span style="font-size:0.875rem; color:var(--text-secondary)">{{ student.university }} - {{ student.major }}</span>
-                        </div>
+                        <button class="btn btn-primary btn-sm" (click)="assignJobToUser(student.id)">
+                          Giao việc ngay
+                        </button>
                       </div>
-                      <button class="btn btn-primary btn-sm" (click)="assignJobToUser(student.id)">
-                        Giao việc ngay
-                      </button>
+                      
+                      @if (student.bio) {
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin:0; line-height:1.5">
+                          "{{ student.bio }}"
+                        </p>
+                      }
+
+                      <div class="d-flex gap-2 items-center" style="flex-wrap:wrap">
+                        @if (student.ekycStatus === 'verified') {
+                          <span class="badge badge-success" style="font-size:0.75rem"><span class="material-icons-round" style="font-size:12px; margin-right:2px">verified</span> Đã định danh</span>
+                        }
+                        @for (skill of student.skills; track skill) {
+                          <span class="badge badge-secondary" style="font-size:0.75rem">{{ skill }}</span>
+                        }
+                      </div>
                     </div>
                   } @empty {
                     <div class="text-center p-8 text-muted">
@@ -282,6 +309,36 @@ import { Job } from '../../models/job.model';
                       <p class="mt-2">Chưa có ứng viên nào ứng tuyển.</p>
                     </div>
                   }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Confirm Assign Modal -->
+          @if (userToAssign()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 450px; text-align: center;">
+                <span class="material-icons-round" style="font-size:64px; color:var(--primary); margin-bottom:16px">handshake</span>
+                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận giao việc</h3>
+                <p style="color:var(--text-secondary); margin-bottom:24px">Bạn chắc chắn muốn giao việc cho ứng viên này? (Trạng thái sẽ chuyển sang Đang thực hiện)</p>
+                <div class="form-actions d-flex justify-center gap-3">
+                  <button class="btn btn-secondary" (click)="userToAssign.set(null)">Hủy</button>
+                  <button class="btn btn-primary" (click)="assignJobToUser(userToAssign()!)">Xác nhận</button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Confirm Approve Modal -->
+          @if (jobToApprove()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 450px; text-align: center;">
+                <span class="material-icons-round" style="font-size:64px; color:var(--success); margin-bottom:16px">payments</span>
+                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận nghiệm thu</h3>
+                <p style="color:var(--text-secondary); margin-bottom:24px">Bạn xác nhận nghiệm thu công việc này? Số tiền <strong>{{ jobToApprove()?.budget?.toLocaleString('vi-VN') }}đ</strong> sẽ được chuyển thẳng cho sinh viên.</p>
+                <div class="form-actions d-flex justify-center gap-3">
+                  <button class="btn btn-secondary" (click)="jobToApprove.set(null)">Hủy</button>
+                  <button class="btn btn-success" (click)="approveCompletion(jobToApprove()!)">Nghiệm thu & Trả lương</button>
                 </div>
               </div>
             </div>
@@ -567,11 +624,15 @@ import { Job } from '../../models/job.model';
 export class EmployerDashboardComponent {
   auth = inject(AuthService);
   jobService = inject(JobService);
+  private toast = inject(ToastService);
 
   showPostForm = signal(false);
   postSuccess = signal(false);
   postMessage = signal('');
   editingJobId = signal<number | null>(null);
+
+  userToAssign = signal<number | null>(null);
+  jobToApprove = signal<Job | null>(null);
 
   formData = this.getEmptyForm();
 
@@ -591,6 +652,8 @@ export class EmployerDashboardComponent {
       salary: '',
       budget: null as number | null,
       description: '',
+      requirementsStr: '',
+      benefitsStr: '',
       tagsStr: '',
       deadline: '',
       isRemote: false,
@@ -634,6 +697,8 @@ export class EmployerDashboardComponent {
       salary: job.salary,
       budget: job.budget || null,
       description: job.description,
+      requirementsStr: (job.requirements || []).join(', '),
+      benefitsStr: (job.benefits || []).join(', '),
       tagsStr: job.tags.join(', '),
       deadline: job.deadline,
       isRemote: job.isRemote || false,
@@ -649,6 +714,8 @@ export class EmployerDashboardComponent {
     if (!user) return;
 
     const tags = this.formData.tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+    const requirements = this.formData.requirementsStr.split(',').map(r => r.trim()).filter(Boolean);
+    const benefits = this.formData.benefitsStr.split(',').map(b => b.trim()).filter(Boolean);
 
     if (this.editingJobId()) {
       // Edit mode (No fee for editing)
@@ -659,6 +726,8 @@ export class EmployerDashboardComponent {
         salary: this.formData.salary,
         budget: this.formData.budget || 0,
         description: this.formData.description,
+        requirements,
+        benefits,
         tags,
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
@@ -709,6 +778,8 @@ export class EmployerDashboardComponent {
         budget: budget,
         commission: commission,
         description: this.formData.description,
+        requirements,
+        benefits,
         tags,
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
@@ -748,29 +819,31 @@ export class EmployerDashboardComponent {
   assignJobToUser(studentId: number) {
     const job = this.selectedJobForApplicants();
     if (job) {
-      if (confirm('Bạn chắc chắn muốn giao việc cho ứng viên này? (Trạng thái sẽ chuyển sang Đang thực hiện)')) {
-         const res = this.jobService.assignJob(job.id, studentId);
-         if (res.success) {
-           this.auth.addWorkingJob(studentId, job.id);
-           this.selectedJobForApplicants.set(null); // close modal
-           this.employerJobs.set(this.getEmployerJobs()); // refresh list
-           alert('Giao việc thành công!');
-         }
+      const res = this.jobService.assignJob(job.id, studentId);
+      if (res.success) {
+        this.auth.addWorkingJob(studentId, job.id);
+        this.selectedJobForApplicants.set(null); // close modal
+        this.userToAssign.set(null); // close confirm modal
+        this.employerJobs.set(this.getEmployerJobs()); // refresh list
+        this.toast.success('Giao việc thành công!');
+      } else {
+        this.toast.error(res.message || 'Có lỗi xảy ra khi giao việc');
       }
     }
   }
 
   approveCompletion(job: Job) {
-    if (confirm(`Bạn xác nhận nghiệm thu công việc này? Số tiền ${job.budget?.toLocaleString('vi-VN')}đ sẽ được chuyển thẳng cho sinh viên.`)) {
-      const res = this.jobService.approveJob(job.id);
-      if (res.success) {
-        // Pay the student
-        if (job.selectedStudentId && job.budget) {
-          this.auth.payStudent(job.selectedStudentId, job.budget);
-        }
-        this.employerJobs.set(this.getEmployerJobs()); // refresh list
-        alert('Nghiệm thu thành công! Đã giải ngân cho sinh viên.');
+    const res = this.jobService.approveJob(job.id);
+    if (res.success) {
+      // Pay the student
+      if (job.selectedStudentId && job.budget) {
+        this.auth.payStudent(job.selectedStudentId, job.budget);
       }
+      this.employerJobs.set(this.getEmployerJobs()); // refresh list
+      this.jobToApprove.set(null); // close modal
+      this.toast.success('Nghiệm thu thành công! Đã giải ngân cho sinh viên.');
+    } else {
+      this.toast.error(res.message || 'Có lỗi xảy ra khi nghiệm thu');
     }
   }
 }

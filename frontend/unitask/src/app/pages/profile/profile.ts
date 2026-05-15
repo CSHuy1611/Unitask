@@ -1,8 +1,10 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
+import { ToastService } from '../../services/toast.service';
 import { CloudinaryService } from '../../services/cloudinary.service';
 import { Job } from '../../models/job.model';
 
@@ -88,10 +90,6 @@ import { Job } from '../../models/job.model';
                     <span class="material-icons-round">badge</span>
                     <span>{{ auth.currentUser()?.position }}</span>
                   </div>
-                  <div class="info-row" style="margin-top:var(--space-2); padding-top:var(--space-2); border-top:1px dashed var(--border-light)">
-                    <span class="material-icons-round" style="color:var(--primary-light)">account_balance_wallet</span>
-                    <strong style="color:var(--primary-light)">{{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ</strong>
-                  </div>
                   @if (auth.currentUser()?.activePackage) {
                     <div class="info-row">
                       <span class="material-icons-round" style="color:var(--success)">stars</span>
@@ -99,6 +97,17 @@ import { Job } from '../../models/job.model';
                     </div>
                   }
                 }
+                <div class="info-row" style="margin-top:var(--space-2); padding-top:var(--space-2); border-top:1px dashed var(--border-light); align-items: center; justify-content: space-between;">
+                  <div style="display:flex; align-items: center; gap:8px">
+                    <span class="material-icons-round" style="color:var(--primary-light)">account_balance_wallet</span>
+                    <strong style="color:var(--primary-light)">{{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ</strong>
+                  </div>
+                  @if (auth.isStudent()) {
+                    <button class="btn btn-primary btn-sm" (click)="showWithdrawModal.set(true)" [disabled]="(auth.currentUser()?.balance || 0) < 50000" style="padding: 6px 12px; font-size: 13px;">
+                      <span class="material-icons-round" style="font-size:16px">payments</span> Rút tiền
+                    </button>
+                  }
+                </div>
                 <div class="info-row">
                   <span class="material-icons-round">calendar_today</span>
                   <span>Tham gia: {{ auth.currentUser()?.createdAt }}</span>
@@ -356,7 +365,7 @@ import { Job } from '../../models/job.model';
                           </div>
                           @if (job.status === 'in_progress') {
                             <div style="text-align:right">
-                              <button class="btn btn-success btn-sm" (click)="studentCompleteJob(job)">
+                              <button class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
                                 <span class="material-icons-round" style="font-size:16px">task_alt</span> Báo cáo hoàn thành
                               </button>
                             </div>
@@ -402,6 +411,67 @@ import { Job } from '../../models/job.model';
           </div>
         }
       </div>
+
+      <!-- Withdraw Modal -->
+      @if (showWithdrawModal()) {
+        <div class="modal-overlay animate-fade-in">
+          <div class="modal-content glass-card p-6" style="width: 100%; max-width: 450px;">
+            <div class="modal-header d-flex justify-between items-center mb-6">
+              <h3 style="font-size:1.25rem; font-weight:700">Rút tiền về tài khoản</h3>
+              <button class="btn btn-secondary icon-btn" (click)="showWithdrawModal.set(false)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <form (ngSubmit)="onSubmitWithdraw()">
+              <div class="form-group mb-4">
+                <label class="form-label">Số tiền rút (Tối đa {{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ) *</label>
+                <input type="number" class="form-input" [(ngModel)]="withdrawForm.amount" name="amount" min="50000" [max]="auth.currentUser()?.balance || 0" required>
+              </div>
+              <div class="form-group mb-4">
+                <label class="form-label">Ngân hàng thụ hưởng *</label>
+                <select class="form-select" [(ngModel)]="withdrawForm.bank" name="bank" required>
+                  <option value="" disabled selected>Chọn ngân hàng</option>
+                  <option value="Vietcombank">Vietcombank</option>
+                  <option value="Techcombank">Techcombank</option>
+                  <option value="MBBank">MBBank</option>
+                  <option value="VietinBank">VietinBank</option>
+                  <option value="ACB">ACB</option>
+                  <option value="TPBank">TPBank</option>
+                </select>
+              </div>
+              <div class="form-group mb-4">
+                <label class="form-label">Số tài khoản *</label>
+                <input type="text" class="form-input" [(ngModel)]="withdrawForm.account" name="account" required>
+              </div>
+              <div class="form-group mb-6">
+                <label class="form-label">Tên chủ tài khoản *</label>
+                <input type="text" class="form-input" [(ngModel)]="withdrawForm.name" name="name" required style="text-transform:uppercase">
+              </div>
+              <div class="form-actions d-flex justify-between gap-3">
+                <button type="button" class="btn btn-secondary flex-1" (click)="showWithdrawModal.set(false)">Hủy</button>
+                <button type="submit" class="btn btn-primary flex-1" [disabled]="!withdrawForm.amount || !withdrawForm.bank || !withdrawForm.account || !withdrawForm.name">
+                  Xác nhận rút tiền
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- Confirm Complete Modal -->
+      @if (selectedJobToComplete()) {
+        <div class="modal-overlay animate-fade-in">
+          <div class="modal-content glass-card p-6" style="width: 100%; max-width: 450px; text-align: center;">
+            <span class="material-icons-round" style="font-size:64px; color:var(--success); margin-bottom:16px">task_alt</span>
+            <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận hoàn thành</h3>
+            <p style="color:var(--text-secondary); margin-bottom:24px">Bạn xác nhận đã hoàn thành công việc <strong>{{ selectedJobToComplete()?.title }}</strong>? Yêu cầu nghiệm thu sẽ được gửi đến Nhà tuyển dụng.</p>
+            <div class="form-actions d-flex justify-center gap-3">
+              <button class="btn btn-secondary" (click)="selectedJobToComplete.set(null)">Hủy</button>
+              <button class="btn btn-primary" (click)="studentCompleteJob(selectedJobToComplete()!)">Xác nhận</button>
+            </div>
+          </div>
+        </div>
+      }
     </section>
   `,
   styles: [`
@@ -898,15 +968,45 @@ import { Job } from '../../models/job.model';
       .upload-previews { grid-template-columns: 1fr; }
       .form-row { grid-template-columns: 1fr; }
     }
+
+    /* Utility classes for modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-content { background: var(--bg-card); padding: var(--space-6); border-radius: var(--radius-xl); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    .d-flex { display: flex; } .flex-col { flex-direction: column; }
+    .justify-between { justify-content: space-between; } .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .gap-3 { gap: 12px; } .gap-4 { gap: 16px; }
+    .p-4 { padding: 16px; } .p-6 { padding: 24px; } .p-8 { padding: 32px; }
+    .mb-4 { margin-bottom: 16px; } .mb-6 { margin-bottom: 24px; } .mt-2 { margin-top: 8px; }
+    .rounded-lg { border-radius: 8px; }
+    .flex-1 { flex: 1; }
+    .icon-btn { padding: 4px; display: flex; align-items: center; justify-content: center; background:transparent; border:none; color:var(--text-muted); cursor:pointer; }
+    .icon-btn:hover { color:var(--text-primary); }
   `]
 })
 export class ProfileComponent {
   auth = inject(AuthService);
   private jobService = inject(JobService);
+  private toast = inject(ToastService);
+  private cloudinaryService = inject(CloudinaryService);
 
   isEditing = signal(false);
   editSuccess = signal(false);
   editMessage = signal('');
+  
+  showWithdrawModal = signal(false);
+  selectedJobToComplete = signal<Job | null>(null);
+  
+  withdrawForm = {
+    amount: null as number | null,
+    bank: '',
+    account: '',
+    name: ''
+  };
 
   appliedJobs = computed(() => {
     const user = this.auth.currentUser();
@@ -975,20 +1075,39 @@ export class ProfileComponent {
       setTimeout(() => {
         this.editSuccess.set(false);
         this.isEditing.set(false);
-        alert('Ảnh chụp màn hình đã được lưu và gửi.');
+        this.toast.success('Hồ sơ đã được cập nhật thành công.');
       }, 1500);
+    }
+  }
+
+  onSubmitWithdraw() {
+    if (!this.withdrawForm.amount || this.withdrawForm.amount < 50000) {
+      this.toast.error('Số tiền rút tối thiểu là 50.000đ');
+      return;
+    }
+    const user = this.auth.currentUser();
+    if (user && (user.balance || 0) >= this.withdrawForm.amount) {
+      const res = this.auth.deductBalance(this.withdrawForm.amount);
+      if (res.success) {
+        this.toast.success('Yêu cầu rút tiền thành công! Tiền sẽ được chuyển trong 24h.');
+        this.showWithdrawModal.set(false);
+        this.withdrawForm = { amount: null, bank: '', account: '', name: '' };
+      } else {
+        this.toast.error('Có lỗi xảy ra: ' + res.message);
+      }
+    } else {
+      this.toast.error('Số dư không đủ để rút!');
     }
   }
 
   // Phase 4: Student confirms completion
   studentCompleteJob(job: Job) {
-    if (confirm('Bạn xác nhận đã hoàn thành công việc này? Yêu cầu nghiệm thu sẽ được gửi đến Nhà tuyển dụng.')) {
-      const res = this.jobService.completeJob(job.id);
-      if (res.success) {
-        alert('Báo cáo thành công! Số tiền ' + (job.budget?.toLocaleString('vi-VN') || 0) + 'đ sẽ được chuyển vào tài khoản của bạn sau khi Nhà tuyển dụng nghiệm thu.');
-      } else {
-        alert(res.message);
-      }
+    const res = this.jobService.completeJob(job.id);
+    if (res.success) {
+      this.toast.success(`Báo cáo thành công! Số tiền ${(job.budget || 0).toLocaleString('vi-VN')}đ sẽ được chuyển vào tài khoản sau khi nghiệm thu.`);
+      this.selectedJobToComplete.set(null);
+    } else {
+      this.toast.error(res.message);
     }
   }
 
@@ -1037,7 +1156,7 @@ export class ProfileComponent {
     if (!input.files?.length) return;
     const file = input.files[0];
     if (file.size > 5 * 1024 * 1024) {
-      alert('File quá lớn! Vui lòng chọn file nhỏ hơn 5MB.');
+      this.toast.warning('File quá lớn! Vui lòng chọn file nhỏ hơn 5MB.');
       return;
     }
 
@@ -1045,8 +1164,9 @@ export class ProfileComponent {
     try {
       const url = await this.cloudinary.uploadImage(file, 'unitask/avatars');
       this.auth.updateAvatarUrl(url);
+      this.toast.success('Cập nhật ảnh đại diện thành công!');
     } catch (err: any) {
-      alert('Upload ảnh thất bại: ' + (err?.message || 'Lỗi không xác định'));
+      this.toast.error('Upload ảnh thất bại: ' + (err?.message || 'Lỗi không xác định'));
     } finally {
       this.avatarUploading.set(false);
     }
@@ -1057,7 +1177,7 @@ export class ProfileComponent {
     if (!input.files?.length) return;
     const file = input.files[0];
     if (file.size > 5 * 1024 * 1024) {
-      alert('File quá lớn! Vui lòng chọn file nhỏ hơn 5MB.');
+      this.toast.warning('File quá lớn! Vui lòng chọn file nhỏ hơn 5MB.');
       return;
     }
 
@@ -1083,7 +1203,7 @@ export class ProfileComponent {
         this.ekycBackPreview.set(url);
       }
     } catch (err: any) {
-      alert('Upload ảnh thất bại: ' + (err?.message || 'Lỗi không xác định'));
+      this.toast.error('Upload ảnh thất bại: ' + (err?.message || 'Lỗi không xác định'));
       if (side === 'front') this.ekycFrontPreview.set('');
       else this.ekycBackPreview.set('');
     } finally {
@@ -1096,12 +1216,12 @@ export class ProfileComponent {
     const front = this.ekycFrontUrl();
     const back = this.ekycBackUrl();
     if (!front || !back) {
-      alert('Vui lòng chờ ảnh tải lên xong hoặc chọn lại ảnh CCCD.');
+      this.toast.warning('Vui lòng chờ ảnh tải lên xong hoặc cung cấp đủ 2 mặt CCCD.');
       return;
     }
     this.ekycSubmitting.set(true);
     this.auth.submitEkyc(front, back);
     this.ekycSubmitting.set(false);
-    alert('Gửi xác thực thành công! Vui lòng chờ Admin duyệt.');
+    this.toast.success('Gửi xác thực thành công! Vui lòng chờ Admin duyệt.');
   }
 }
