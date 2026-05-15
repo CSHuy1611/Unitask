@@ -738,6 +738,12 @@ export class EmployerDashboardComponent {
       this.postMessage.set(result.message);
     } else {
       // Create mode
+      if (user.ekycStatus !== 'verified') {
+        this.postSuccess.set(false);
+        this.postMessage.set('Tài khoản của bạn chưa được xác nhận danh tính (eKYC). Vui lòng cập nhật CCCD trong hồ sơ và chờ duyệt để đăng tin.');
+        return;
+      }
+
       const budget = this.formData.budget || 0;
       if (budget < 50000) {
         this.postSuccess.set(false);
