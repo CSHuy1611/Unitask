@@ -4,10 +4,13 @@ export interface User {
   password: string;
   role: 'student' | 'employer' | 'admin';
   fullName: string;
-  avatar: string;
+  avatar: string;        // Initials (fallback)
+  avatarUrl?: string;    // Cloudinary URL for profile photo
   phone: string;
   ekycStatus: 'none' | 'pending' | 'verified' | 'rejected';
   ekycDate: string | null;
+  ekycFrontImage?: string; // Cloudinary URL of CCCD front side
+  ekycBackImage?: string;  // Cloudinary URL of CCCD back side
   createdAt: string;
 
   // Student fields

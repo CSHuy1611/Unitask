@@ -65,18 +65,6 @@ import { AuthService } from '../../services/auth.service';
           <div class="auth-footer">
             <p>Chưa có tài khoản? <a routerLink="/register">Đăng ký ngay</a></p>
           </div>
-
-          <div class="demo-accounts">
-            <p class="demo-title">🧪 Tài khoản demo:</p>
-            <div class="demo-list">
-              <button class="demo-btn" (click)="fillDemo('student@unitask.vn', '123456')">
-                🎓 Student: student&#64;unitask.vn
-              </button>
-              <button class="demo-btn" (click)="fillDemo('employer@unitask.vn', '123456')">
-                🏢 Employer: employer&#64;unitask.vn
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -202,43 +190,6 @@ import { AuthService } from '../../services/auth.service';
 
     .auth-footer a { font-weight: 600; }
 
-    .demo-accounts {
-      margin-top: var(--space-6);
-      padding-top: var(--space-5);
-      border-top: 1px solid var(--border-light);
-    }
-
-    .demo-title {
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
-      text-align: center;
-      margin-bottom: var(--space-3);
-    }
-
-    .demo-list {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-
-    .demo-btn {
-      width: 100%;
-      padding: var(--space-2) var(--space-3);
-      background: var(--bg-glass);
-      border: 1px solid var(--border-light);
-      border-radius: var(--radius-md);
-      color: var(--text-secondary);
-      font-size: var(--font-size-xs);
-      text-align: left;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-
-    .demo-btn:hover {
-      background: rgba(79, 70, 229, 0.1);
-      border-color: var(--primary-light);
-      color: var(--primary-light);
-    }
   `]
 })
 export class LoginComponent {
@@ -250,11 +201,6 @@ export class LoginComponent {
   loading = signal(false);
   errorMsg = signal('');
   successMsg = signal('');
-
-  fillDemo(email: string, password: string) {
-    this.email = email;
-    this.password = password;
-  }
 
   onLogin() {
     this.errorMsg.set('');

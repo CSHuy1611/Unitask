@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
+import { CloudinaryService } from '../../services/cloudinary.service';
 import { Job } from '../../models/job.model';
 
 @Component({
@@ -23,8 +24,22 @@ import { Job } from '../../models/job.model';
           <div class="profile-grid">
             <!-- Profile card -->
             <div class="profile-card glass-card animate-fade-in-up">
-              <div class="profile-avatar">
-                {{ auth.currentUser()?.avatar }}
+              <div class="profile-avatar-wrapper">
+                @if (auth.currentUser()?.avatarUrl) {
+                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" />
+                } @else {
+                  <div class="profile-avatar">
+                    {{ auth.currentUser()?.avatar }}
+                  </div>
+                }
+                <button class="avatar-upload-btn" (click)="avatarInput.click()" [disabled]="avatarUploading()">
+                  @if (avatarUploading()) {
+                    <span class="mini-spinner"></span>
+                  } @else {
+                    <span class="material-icons-round">photo_camera</span>
+                  }
+                </button>
+                <input #avatarInput type="file" accept="image/png,image/jpeg,image/jpg,image/webp" style="display:none" (change)="onAvatarSelected($event)">
               </div>
               <h2>{{ auth.currentUser()?.fullName }}</h2>
               <p class="profile-role">
@@ -262,30 +277,55 @@ import { Job } from '../../models/job.model';
 
                 @if (auth.currentUser()?.ekycStatus !== 'verified' && auth.currentUser()?.ekycStatus !== 'pending') {
                   <div class="ekyc-form">
-                    <h4>Tải lên giấy tờ tùy thân</h4>
-                    <div class="upload-area" (click)="onUploadClick()">
-                      <span class="material-icons-round upload-icon">cloud_upload</span>
-                      <p><strong>Click để tải lên</strong> hoặc kéo thả file vào đây</p>
-                      <span class="upload-note">CCCD/CMND - Mặt trước và mặt sau (PNG, JPG, max 5MB)</span>
-                    </div>
+                    <h4>Tải lên giấy tờ tùy thân (CCCD/CMND)</h4>
 
                     <div class="upload-previews">
-                      <div class="upload-preview">
-                        <div class="preview-placeholder">
-                          <span class="material-icons-round">badge</span>
-                          <span>Mặt trước</span>
-                        </div>
+                      <div class="upload-preview" (click)="!uploadingFront() && ekycFrontInput.click()">
+                        @if (uploadingFront()) {
+                          <div class="preview-placeholder">
+                            <span class="upload-spinner"></span>
+                            <span>Đang tải lên...</span>
+                          </div>
+                        } @else if (ekycFrontPreview()) {
+                          <img [src]="ekycFrontPreview()" alt="CCCD Mặt trước" class="preview-image" />
+                          <span class="preview-label">Mặt trước ✓</span>
+                        } @else {
+                          <div class="preview-placeholder">
+                            <span class="material-icons-round">add_a_photo</span>
+                            <span>Mặt trước</span>
+                          </div>
+                        }
                       </div>
-                      <div class="upload-preview">
-                        <div class="preview-placeholder">
-                          <span class="material-icons-round">badge</span>
-                          <span>Mặt sau</span>
-                        </div>
+                      <div class="upload-preview" (click)="!uploadingBack() && ekycBackInput.click()">
+                        @if (uploadingBack()) {
+                          <div class="preview-placeholder">
+                            <span class="upload-spinner"></span>
+                            <span>Đang tải lên...</span>
+                          </div>
+                        } @else if (ekycBackPreview()) {
+                          <img [src]="ekycBackPreview()" alt="CCCD Mặt sau" class="preview-image" />
+                          <span class="preview-label">Mặt sau ✓</span>
+                        } @else {
+                          <div class="preview-placeholder">
+                            <span class="material-icons-round">add_a_photo</span>
+                            <span>Mặt sau</span>
+                          </div>
+                        }
                       </div>
                     </div>
+                    <input #ekycFrontInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onEkycFileSelected($event, 'front')">
+                    <input #ekycBackInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onEkycFileSelected($event, 'back')">
 
-                    <button class="btn btn-primary btn-lg full-width" (click)="onSubmitEkyc()">
-                      <span class="material-icons-round">verified</span> Gửi xác thực
+                    <p class="upload-hint">Ảnh sẽ được tải lên Cloudinary. Click vào ô bên trên để chọn ảnh CCCD (PNG, JPG, max 5MB)</p>
+
+                    <button class="btn btn-primary btn-lg full-width"
+                            [disabled]="!ekycFrontPreview() || !ekycBackPreview() || ekycSubmitting()"
+                            (click)="onSubmitEkyc()">
+                      @if (ekycSubmitting()) {
+                        <span class="mini-spinner"></span> Đang gửi...
+                      } @else {
+                        <span class="material-icons-round">verified</span> Gửi xác thực
+                      }
                     </button>
                   </div>
                 }
@@ -395,9 +435,16 @@ import { Job } from '../../models/job.model';
       top: 80px;
     }
 
+    .profile-avatar-wrapper {
+      position: relative;
+      width: 88px;
+      height: 88px;
+      margin: 0 auto var(--space-4);
+    }
+
     .profile-avatar {
-      width: 80px;
-      height: 80px;
+      width: 88px;
+      height: 88px;
       border-radius: 50%;
       background: var(--primary-gradient);
       display: flex;
@@ -406,9 +453,59 @@ import { Job } from '../../models/job.model';
       font-size: var(--font-size-2xl);
       font-weight: 800;
       color: white;
-      margin: 0 auto var(--space-4);
       box-shadow: 0 0 30px rgba(79, 70, 229, 0.3);
     }
+
+    .profile-avatar-img {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 30px rgba(79, 70, 229, 0.3);
+    }
+
+    .avatar-upload-btn {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid var(--bg-card);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .avatar-upload-btn:hover { background: var(--primary-dark); transform: scale(1.1); }
+    .avatar-upload-btn:disabled { opacity: 0.5; cursor: wait; }
+    .avatar-upload-btn .material-icons-round { font-size: 16px; }
+
+    .mini-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .upload-spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary-light);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .profile-card h2 {
       font-size: var(--font-size-xl);
@@ -669,13 +766,55 @@ import { Job } from '../../models/job.model';
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: var(--space-4);
-      margin-bottom: var(--space-5);
+      margin-bottom: var(--space-4);
+    }
+
+    .upload-preview {
+      cursor: pointer;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 2px dashed var(--border-color);
+      transition: all var(--transition-fast);
+      position: relative;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .upload-preview:hover {
+      border-color: var(--primary-light);
+      background: rgba(79, 70, 229, 0.05);
+    }
+
+    .preview-image {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .preview-label {
+      display: block;
+      text-align: center;
+      padding: var(--space-2);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .upload-hint {
+      text-align: center;
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-bottom: var(--space-4);
     }
 
     .preview-placeholder {
       padding: var(--space-6);
       background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       display: flex;
       flex-direction: column;
@@ -683,6 +822,9 @@ import { Job } from '../../models/job.model';
       gap: var(--space-2);
       color: var(--text-muted);
       font-size: var(--font-size-xs);
+      width: 100%;
+      height: 100%;
+      justify-content: center;
     }
 
     .preview-placeholder .material-icons-round {
@@ -755,8 +897,6 @@ import { Job } from '../../models/job.model';
     @media (max-width: 480px) {
       .upload-previews { grid-template-columns: 1fr; }
       .form-row { grid-template-columns: 1fr; }
-      .upload-area:hover .upload-icon {
-      color: var(--primary);
     }
   `]
 })
@@ -881,11 +1021,87 @@ export class ProfileComponent {
     }
   }
 
-  onUploadClick() {
-    // Mock - show file picker simulation
+  private cloudinary = inject(CloudinaryService);
+
+  avatarUploading = signal(false);
+  ekycFrontPreview = signal<string>('');
+  ekycBackPreview = signal<string>('');
+  ekycFrontUrl = signal<string>('');
+  ekycBackUrl = signal<string>('');
+  uploadingFront = signal(false);
+  uploadingBack = signal(false);
+  ekycSubmitting = signal(false);
+
+  async onAvatarSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+    const file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File quá lớn! Vui lòng chọn file nhỏ hơn 5MB.');
+      return;
+    }
+
+    this.avatarUploading.set(true);
+    try {
+      const url = await this.cloudinary.uploadImage(file, 'unitask/avatars');
+      this.auth.updateAvatarUrl(url);
+    } catch (err: any) {
+      alert('Upload ảnh thất bại: ' + (err?.message || 'Lỗi không xác định'));
+    } finally {
+      this.avatarUploading.set(false);
+    }
+  }
+
+  async onEkycFileSelected(event: Event, side: 'front' | 'back') {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+    const file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File quá lớn! Vui lòng chọn file nhỏ hơn 5MB.');
+      return;
+    }
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (side === 'front') this.ekycFrontPreview.set(reader.result as string);
+      else this.ekycBackPreview.set(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to Cloudinary
+    if (side === 'front') this.uploadingFront.set(true);
+    else this.uploadingBack.set(true);
+
+    try {
+      const url = await this.cloudinary.uploadImage(file, 'unitask/ekyc');
+      if (side === 'front') {
+        this.ekycFrontUrl.set(url);
+        this.ekycFrontPreview.set(url);
+      } else {
+        this.ekycBackUrl.set(url);
+        this.ekycBackPreview.set(url);
+      }
+    } catch (err: any) {
+      alert('Upload ảnh thất bại: ' + (err?.message || 'Lỗi không xác định'));
+      if (side === 'front') this.ekycFrontPreview.set('');
+      else this.ekycBackPreview.set('');
+    } finally {
+      if (side === 'front') this.uploadingFront.set(false);
+      else this.uploadingBack.set(false);
+    }
   }
 
   onSubmitEkyc() {
-    this.auth.submitEkyc();
+    const front = this.ekycFrontUrl();
+    const back = this.ekycBackUrl();
+    if (!front || !back) {
+      alert('Vui lòng chờ ảnh tải lên xong hoặc chọn lại ảnh CCCD.');
+      return;
+    }
+    this.ekycSubmitting.set(true);
+    this.auth.submitEkyc(front, back);
+    this.ekycSubmitting.set(false);
+    alert('Gửi xác thực thành công! Vui lòng chờ Admin duyệt.');
   }
 }

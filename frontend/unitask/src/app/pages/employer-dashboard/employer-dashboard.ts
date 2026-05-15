@@ -534,10 +534,15 @@ import { Job } from '../../models/job.model';
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .form-row { grid-template-columns: 1fr; }
       .job-row { flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+      .job-actions { flex-wrap: wrap; width: 100%; }
+      .job-meta { flex-wrap: wrap; }
+      .modal-content { max-width: 95vw !important; padding: var(--space-4) !important; max-height: 85vh !important; }
     }
 
     @media (max-width: 480px) {
       .stats-grid { grid-template-columns: 1fr; }
+      .job-actions { flex-direction: column; align-items: stretch; gap: var(--space-2); }
+      .stat-mini { font-size: var(--font-size-xs); }
     }
     
     /* Utility classes for modal */

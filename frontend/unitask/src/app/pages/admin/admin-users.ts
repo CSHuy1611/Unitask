@@ -109,11 +109,8 @@ import { User } from '../../models/user.model';
                       <td>
                         @if (user.ekycStatus === 'pending') {
                           <div class="action-buttons">
-                            <button class="btn btn-success btn-sm icon-btn" title="Duyệt" (click)="auth.approveEkyc(user.id); loadUsers()">
-                              <span class="material-icons-round">check</span>
-                            </button>
-                            <button class="btn btn-danger btn-sm icon-btn" title="Từ chối" (click)="auth.rejectEkyc(user.id); loadUsers()">
-                              <span class="material-icons-round">close</span>
+                            <button class="btn btn-primary btn-sm" (click)="openReviewModal(user)">
+                              <span class="material-icons-round" style="font-size:16px">badge</span> Xem CCCD
                             </button>
                           </div>
                         } @else {
@@ -133,6 +130,79 @@ import { User } from '../../models/user.model';
               </table>
             </div>
           </div>
+
+          <!-- eKYC Review Modal -->
+          @if (reviewingUser()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card">
+                <div class="modal-header">
+                  <h3>Xét duyệt eKYC: {{ reviewingUser()?.fullName }}</h3>
+                  <button class="close-btn" (click)="reviewingUser.set(null)">
+                    <span class="material-icons-round">close</span>
+                  </button>
+                </div>
+
+                <div class="review-user-info">
+                  <div class="review-info-row">
+                    <span class="material-icons-round">email</span>
+                    <span>{{ reviewingUser()?.email }}</span>
+                  </div>
+                  <div class="review-info-row">
+                    <span class="material-icons-round">phone</span>
+                    <span>{{ reviewingUser()?.phone }}</span>
+                  </div>
+                  <div class="review-info-row">
+                    <span class="material-icons-round">person</span>
+                    <span>{{ reviewingUser()?.role === 'student' ? 'Sinh viên - ' + reviewingUser()?.university : 'Nhà tuyển dụng - ' + reviewingUser()?.companyName }}</span>
+                  </div>
+                </div>
+
+                <div class="cccd-images">
+                  <div class="cccd-card">
+                    <h4>Mặt trước CCCD</h4>
+                    @if (reviewingUser()?.ekycFrontImage) {
+                      <img [src]="reviewingUser()?.ekycFrontImage" alt="CCCD Mặt trước" class="cccd-img" (click)="zoomImage(reviewingUser()!.ekycFrontImage!)" />
+                    } @else {
+                      <div class="no-image">
+                        <span class="material-icons-round">image_not_supported</span>
+                        <span>Chưa có ảnh</span>
+                      </div>
+                    }
+                  </div>
+                  <div class="cccd-card">
+                    <h4>Mặt sau CCCD</h4>
+                    @if (reviewingUser()?.ekycBackImage) {
+                      <img [src]="reviewingUser()?.ekycBackImage" alt="CCCD Mặt sau" class="cccd-img" (click)="zoomImage(reviewingUser()!.ekycBackImage!)" />
+                    } @else {
+                      <div class="no-image">
+                        <span class="material-icons-round">image_not_supported</span>
+                        <span>Chưa có ảnh</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <div class="review-actions">
+                  <button class="btn btn-danger btn-lg" (click)="onRejectEkyc()">
+                    <span class="material-icons-round">close</span> Từ chối
+                  </button>
+                  <button class="btn btn-success btn-lg" (click)="onApproveEkyc()">
+                    <span class="material-icons-round">check</span> Chấp nhận xác thực
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Image Zoom Modal -->
+          @if (zoomedImage()) {
+            <div class="zoom-overlay animate-fade-in" (click)="zoomedImage.set('')">
+              <img [src]="zoomedImage()" alt="Phóng to ảnh" class="zoom-img" />
+              <button class="zoom-close-btn">
+                <span class="material-icons-round">close</span> Đóng
+              </button>
+            </div>
+          }
         }
       </div>
     </section>
@@ -412,6 +482,121 @@ import { User } from '../../models/user.model';
     @media (max-width: 900px) {
       .dashboard-header { flex-direction: column; align-items: flex-start; gap: var(--space-4); }
       .header-actions { flex-wrap: wrap; }
+      .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .data-table { min-width: 600px; }
+    }
+
+    @media (max-width: 600px) {
+      .filter-bar { flex-direction: column; }
+      .filter-bar select, .filter-bar .btn { width: 100%; }
+    }
+
+    /* Review Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: var(--space-4);
+    }
+
+    .modal-content {
+      width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto;
+      padding: var(--space-8);
+    }
+
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: var(--space-6);
+    }
+
+    .modal-header h3 { font-size: var(--font-size-xl); font-weight: 700; }
+
+    .close-btn {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      padding: var(--space-1);
+    }
+    .close-btn:hover { color: var(--text-primary); }
+
+    .review-user-info {
+      display: flex; flex-direction: column; gap: var(--space-2);
+      margin-bottom: var(--space-6);
+      padding: var(--space-4); background: var(--bg-secondary);
+      border-radius: var(--radius-lg); border: 1px solid var(--border-color);
+    }
+
+    .review-info-row {
+      display: flex; align-items: center; gap: var(--space-2);
+      font-size: var(--font-size-sm); color: var(--text-secondary);
+    }
+
+    .review-info-row .material-icons-round { font-size: 18px; color: var(--text-muted); }
+
+    .cccd-images {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .cccd-card {
+      text-align: center;
+    }
+
+    .cccd-card h4 {
+      font-size: var(--font-size-sm); font-weight: 600;
+      margin-bottom: var(--space-3); color: var(--text-secondary);
+    }
+
+    .cccd-img {
+      width: 100%; border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color); cursor: zoom-in;
+      transition: transform 0.2s;
+    }
+
+    .cccd-img:hover { transform: scale(1.02); }
+
+    .no-image {
+      padding: var(--space-8); background: var(--bg-secondary);
+      border: 1px dashed var(--border-color); border-radius: var(--radius-lg);
+      display: flex; flex-direction: column; align-items: center;
+      gap: var(--space-2); color: var(--text-muted); font-size: var(--font-size-xs);
+    }
+
+    .no-image .material-icons-round { font-size: 32px; }
+
+    .review-actions {
+      display: flex; gap: var(--space-4); justify-content: center;
+    }
+
+    .review-actions .btn { flex: 1; }
+
+    .btn-success { background: var(--success); color: white; border: none; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: #EF4444; color: white; border: none; }
+    .btn-danger:hover { background: #DC2626; }
+
+    /* Zoom Modal */
+    .zoom-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.9); display: flex; align-items: center;
+      justify-content: center; z-index: 1100; cursor: pointer;
+      flex-direction: column; gap: var(--space-4);
+    }
+
+    .zoom-img {
+      max-width: 90vw; max-height: 80vh; border-radius: var(--radius-lg);
+      object-fit: contain;
+    }
+
+    .zoom-close-btn {
+      background: rgba(255,255,255,0.15); color: white; border: none;
+      padding: var(--space-2) var(--space-4); border-radius: var(--radius-lg);
+      font-size: var(--font-size-sm); cursor: pointer; display: flex;
+      align-items: center; gap: var(--space-1);
+    }
+
+    @media (max-width: 600px) {
+      .cccd-images { grid-template-columns: 1fr; }
+      .review-actions { flex-direction: column; }
+      .modal-content { padding: var(--space-5); }
     }
   `]
 })
@@ -421,6 +606,8 @@ export class AdminUsersComponent {
   users = signal<User[]>([]);
   statusFilter = signal<string>('all');
   roleFilter = signal<string>('all');
+  reviewingUser = signal<User | null>(null);
+  zoomedImage = signal<string>('');
 
   filteredUsers = computed(() => {
     let result = this.users();
@@ -442,5 +629,33 @@ export class AdminUsersComponent {
 
   loadUsers() {
     this.users.set(this.auth.getAllUsers());
+  }
+
+  openReviewModal(user: User) {
+    // Re-fetch user from service to get latest data with images
+    const freshUser = this.auth.getUserById(user.id);
+    this.reviewingUser.set(freshUser || user);
+  }
+
+  zoomImage(src: string) {
+    this.zoomedImage.set(src);
+  }
+
+  onApproveEkyc() {
+    const user = this.reviewingUser();
+    if (user) {
+      this.auth.approveEkyc(user.id);
+      this.reviewingUser.set(null);
+      this.loadUsers();
+    }
+  }
+
+  onRejectEkyc() {
+    const user = this.reviewingUser();
+    if (user) {
+      this.auth.rejectEkyc(user.id);
+      this.reviewingUser.set(null);
+      this.loadUsers();
+    }
   }
 }

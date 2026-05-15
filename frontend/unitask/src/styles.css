@@ -441,6 +441,20 @@ input, select, textarea {
     --font-size-5xl: 2.25rem;
     --font-size-4xl: 1.875rem;
     --font-size-3xl: 1.5rem;
+    --font-size-2xl: 1.25rem;
+  }
+
+  .glass-card {
+    padding: var(--space-5);
+  }
+
+  .form-input, .form-select {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  .btn-lg {
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--font-size-sm);
   }
 }
 
@@ -448,4 +462,35 @@ input, select, textarea {
   .container {
     padding: 0 var(--space-3);
   }
+
+  .badge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .glass-card {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* Touch devices - disable hover transforms */
+@media (hover: none) {
+  .glass-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/* Disabled state for buttons */
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }

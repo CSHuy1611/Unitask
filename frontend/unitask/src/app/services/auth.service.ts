@@ -157,10 +157,16 @@ export class AuthService {
     }
   }
 
-  submitEkyc(): void {
+  submitEkyc(frontImage: string, backImage: string): void {
     const user = this.currentUser();
     if (user) {
-      const updated = { ...user, ekycStatus: 'pending' as const, ekycDate: new Date().toISOString().split('T')[0] };
+      const updated = {
+        ...user,
+        ekycStatus: 'pending' as const,
+        ekycDate: new Date().toISOString().split('T')[0],
+        ekycFrontImage: frontImage,
+        ekycBackImage: backImage,
+      };
       const idx = this.users.findIndex(u => u.id === user.id);
       if (idx >= 0) {
         this.users[idx] = updated;
@@ -285,11 +291,16 @@ export class AuthService {
     return this.users.filter(u => u.role !== 'admin');
   }
 
+  getUserById(id: number): User | undefined {
+    return this.users.find(u => u.id === id);
+  }
+
   approveEkyc(userId: number): void {
     const idx = this.users.findIndex(u => u.id === userId);
     if (idx >= 0) {
       this.users[idx] = { ...this.users[idx], ekycStatus: 'verified', ekycDate: new Date().toISOString().split('T')[0] };
-      // If this is the currently logged in user by another session, sync
+      this.saveUsersToStorage();
+      // If this is the currently logged in user, sync their session
       const current = this.currentUser();
       if (current?.id === userId) {
         this.currentUser.set(this.users[idx]);
@@ -302,11 +313,27 @@ export class AuthService {
     const idx = this.users.findIndex(u => u.id === userId);
     if (idx >= 0) {
       this.users[idx] = { ...this.users[idx], ekycStatus: 'rejected', ekycDate: new Date().toISOString().split('T')[0] };
+      this.saveUsersToStorage();
       const current = this.currentUser();
       if (current?.id === userId) {
         this.currentUser.set(this.users[idx]);
         this.saveToStorage(this.users[idx]);
       }
     }
+  }
+
+  updateAvatarUrl(avatarUrl: string): { success: boolean; message: string } {
+    const user = this.currentUser();
+    if (!user) return { success: false, message: 'Chưa đăng nhập' };
+
+    const updated = { ...user, avatarUrl };
+    const idx = this.users.findIndex(u => u.id === user.id);
+    if (idx >= 0) {
+      this.users[idx] = updated;
+      this.saveUsersToStorage();
+    }
+    this.currentUser.set(updated);
+    this.saveToStorage(updated);
+    return { success: true, message: 'Cập nhật ảnh đại diện thành công!' };
   }
 }

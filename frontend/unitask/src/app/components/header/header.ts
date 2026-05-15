@@ -54,7 +54,11 @@ import { AuthService } from '../../services/auth.service';
         <div class="header-actions">
           @if (auth.isLoggedIn()) {
             <div class="user-menu">
-              <div class="user-avatar">{{ auth.currentUser()?.avatar }}</div>
+              @if (auth.currentUser()?.avatarUrl) {
+                <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="user-avatar-img" />
+              } @else {
+                <div class="user-avatar">{{ auth.currentUser()?.avatar }}</div>
+              }
               <span class="user-name">{{ auth.currentUser()?.fullName }}</span>
               <button class="btn btn-secondary btn-sm" (click)="onLogout()">
                 <span class="material-icons-round" style="font-size:16px">logout</span> Đăng xuất
@@ -185,6 +189,14 @@ import { AuthService } from '../../services/auth.service';
       font-size: var(--font-size-sm);
       font-weight: 500;
       color: var(--text-primary);
+    }
+
+    .user-avatar-img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary-light);
     }
 
     .hamburger {
