@@ -1,0 +1,10 @@
+using Microsoft.AspNetCore.Http;
+
+namespace UniTask.Business.DTOs.Profile
+{
+    public class EkycUpdateDto
+    {
+        public IFormFile FrontImage { get; set; } = null!;
+        public IFormFile BackImage { get; set; } = null!;
+    }
+}

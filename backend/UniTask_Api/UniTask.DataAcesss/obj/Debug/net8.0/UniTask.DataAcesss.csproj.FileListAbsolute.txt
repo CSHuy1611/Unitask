@@ -1,0 +1,13 @@
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\bin\Debug\net8.0\UniTask.DataAcesss.deps.json
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\bin\Debug\net8.0\UniTask.DataAcesss.dll
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\bin\Debug\net8.0\UniTask.DataAcesss.pdb
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\UniTask.DataAcesss.csproj.AssemblyReference.cache
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\UniTask.DataAcesss.GeneratedMSBuildEditorConfig.editorconfig
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\UniTask.DataAcesss.AssemblyInfoInputs.cache
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\UniTask.DataAcesss.AssemblyInfo.cs
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\UniTask.DataAcesss.csproj.CoreCompileInputs.cache
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\UniTask.DataAcesss.sourcelink.json
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\UniTask.DataAcesss.dll
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\refint\UniTask.DataAcesss.dll
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\UniTask.DataAcesss.pdb
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.DataAcesss\obj\Debug\net8.0\ref\UniTask.DataAcesss.dll
