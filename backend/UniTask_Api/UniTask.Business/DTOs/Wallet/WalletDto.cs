@@ -8,7 +8,7 @@ namespace UniTask.Business.DTOs.Wallet
         public decimal Amount { get; set; }
         public TransactionType Type { get; set; }
         public string TypeName { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
+        public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
         public int? RelatedJobId { get; set; }
         public string? RelatedJobTitle { get; set; }

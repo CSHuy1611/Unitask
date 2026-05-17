@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="CloudinaryDotNet" Version="1.24.0" />
+    <PackageReference Include="payOS" Version="2.1.0" />
   </ItemGroup>
 
   <PropertyGroup>

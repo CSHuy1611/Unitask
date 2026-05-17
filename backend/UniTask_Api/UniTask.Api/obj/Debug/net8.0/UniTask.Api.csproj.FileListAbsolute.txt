@@ -145,3 +145,4 @@ D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.Api\obj\Debug\n
 D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.Api\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.Api\bin\Debug\net8.0\CloudinaryDotNet.dll
 D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.Api\bin\Debug\net8.0\Newtonsoft.Json.dll
+D:\7rd_Semester_FPTU\EXE101\Demo_MVP\backend\UniTask_Api\UniTask.Api\bin\Debug\net8.0\PayOS.dll

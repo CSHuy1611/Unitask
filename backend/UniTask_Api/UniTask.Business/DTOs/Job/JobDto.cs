@@ -6,10 +6,10 @@ namespace UniTask.Business.DTOs.Job
     {
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string Location { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? Location { get; set; }
         public string Type { get; set; } = string.Empty;
-        public string SalaryText { get; set; } = string.Empty;
+        public string? SalaryText { get; set; }
         public List<decimal> SalaryRange { get; set; } = new();
         public decimal Budget { get; set; }
         public decimal Commission { get; set; }

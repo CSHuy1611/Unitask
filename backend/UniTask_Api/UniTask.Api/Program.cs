@@ -75,6 +75,7 @@ builder.Services.AddScoped<UniTask.Business.Interfaces.IWalletService, UniTask.B
 builder.Services.AddScoped<UniTask.Business.Interfaces.ISavedJobService, UniTask.Business.Services.SavedJobService>();
 builder.Services.AddScoped<UniTask.Business.Interfaces.ISubscriptionService, UniTask.Business.Services.SubscriptionService>();
 builder.Services.AddScoped<UniTask.Business.Interfaces.IAdminService, UniTask.Business.Services.AdminService>();
+builder.Services.AddScoped<UniTask.Business.Interfaces.IPaymentService, UniTask.Business.Services.PaymentService>();
 
 // ===== JWT Authentication =====
 var jwtSettings = builder.Configuration.GetSection("Jwt");
