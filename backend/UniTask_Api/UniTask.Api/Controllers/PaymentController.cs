@@ -44,14 +44,29 @@ namespace UniTask.Api.Controllers
 
         [HttpPost("webhook")]
         [AllowAnonymous]
-        public async Task<IActionResult> Webhook([FromBody] global::PayOS.Models.Webhooks.Webhook webhookBody)
+        public async Task<IActionResult> Webhook([FromBody] System.Text.Json.JsonElement json)
         {
-            // Endpoint này được gọi từ PayOS Server
-            var success = await _paymentService.VerifyPaymentWebhookAsync(webhookBody);
-            
-            if (success)
+            try
             {
-                return Ok(new { success = true });
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var webhookBody = System.Text.Json.JsonSerializer.Deserialize<global::PayOS.Models.Webhooks.Webhook>(json.GetRawText(), options);
+                
+                if (webhookBody == null)
+                {
+                    return BadRequest(new { success = false, message = "Failed to deserialize PayOS webhook body." });
+                }
+
+                var success = await _paymentService.VerifyPaymentWebhookAsync(webhookBody);
+                
+                if (success)
+                {
+                    return Ok(new { success = true });
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Console.WriteLine($"[PAYOS_WEBHOOK_ERROR]: {ex.Message}");
+                return BadRequest(new { success = false, message = ex.Message });
             }
 
             return BadRequest(new { success = false });

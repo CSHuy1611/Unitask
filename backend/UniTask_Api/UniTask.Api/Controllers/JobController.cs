@@ -41,10 +41,17 @@ namespace UniTask.Api.Controllers
             var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (employerId == null) return Unauthorized();
 
-            var job = await _jobService.CreateJobAsync(employerId, dto);
-            if (job == null) return BadRequest(new { message = "Failed to create job. Please complete your employer profile first." });
+            try
+            {
+                var job = await _jobService.CreateJobAsync(employerId, dto);
+                if (job == null) return BadRequest(new { message = "Vui lòng hoàn thiện hồ sơ doanh nghiệp trước khi đăng tin." });
 
-            return CreatedAtAction(nameof(GetJobById), new { id = job.Id }, job);
+                return CreatedAtAction(nameof(GetJobById), new { id = job.Id }, job);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]

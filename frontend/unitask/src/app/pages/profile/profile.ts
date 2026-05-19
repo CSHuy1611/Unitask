@@ -1,11 +1,10 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
 import { ToastService } from '../../services/toast.service';
-import { CloudinaryService } from '../../services/cloudinary.service';
 import { Job } from '../../models/job.model';
 
 @Component({
@@ -376,7 +375,40 @@ import { Job } from '../../models/job.model';
                   } @else {
                     <div class="empty-applied">
                       <span class="material-icons-round" style="font-size:48px;color:var(--text-muted)">work_outline</span>
-                      <p>Bạn chưa được giao công việc nào</p>
+                      <p>Bạn chưa có công việc nào đang thực hiện</p>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Job History (Student) -->
+              @if (auth.isStudent()) {
+                <div class="history-section glass-card animate-fade-in-up" style="animation-delay:0.19s">
+                  <h3><span class="material-icons-round">history_edu</span> Lịch sử công việc</h3>
+                  @if (completedJobsHistory().length) {
+                    <div class="applied-list">
+                      @for (job of completedJobsHistory(); track job.id) {
+                        <div class="applied-item" style="flex-direction: column; align-items: stretch; gap: 8px">
+                          <div style="display:flex; justify-content:space-between; align-items:flex-start">
+                            <div class="applied-info">
+                              <a [routerLink]="['/jobs', job.id]" style="text-decoration:none; color:inherit">
+                                <strong style="font-size:16px">{{ job.title }}</strong>
+                              </a>
+                              <span>{{ job.company }} • 💰 {{ job.budget?.toLocaleString('vi-VN') }}đ</span>
+                            </div>
+                            @if (job.status === 'completed') {
+                              <span class="badge badge-success">Đã hoàn thành</span>
+                            } @else if (job.status === 'closed') {
+                              <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Chưa hoàn thành</span>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="empty-applied">
+                      <span class="material-icons-round" style="font-size:48px;color:var(--text-muted)">history_toggle_off</span>
+                      <p>Chưa có lịch sử công việc hoàn thành</p>
                     </div>
                   }
                 </div>
@@ -988,11 +1020,10 @@ import { Job } from '../../models/job.model';
     .icon-btn:hover { color:var(--text-primary); }
   `]
 })
-export class ProfileComponent {
+export class ProfileComponent implements OnInit {
   auth = inject(AuthService);
   private jobService = inject(JobService);
   private toast = inject(ToastService);
-  private cloudinaryService = inject(CloudinaryService);
 
   isEditing = signal(false);
   editSuccess = signal(false);
@@ -1008,16 +1039,54 @@ export class ProfileComponent {
     name: ''
   };
 
-  appliedJobs = computed(() => {
-    const user = this.auth.currentUser();
-    if (!user || user.role !== 'student' || !user.appliedJobs?.length) return [];
-    return this.jobService.getAllJobs().filter(j => user.appliedJobs?.includes(j.id));
-  });
+  myApplications = signal<any[]>([]);
 
   workingJobs = computed(() => {
     const user = this.auth.currentUser();
-    if (!user || user.role !== 'student' || !user.workingJobs?.length) return [];
-    return this.jobService.getAllJobs().filter(j => user.workingJobs?.includes(j.id));
+    if (!user || user.role !== 'student') return [];
+    
+    const acceptedJobIds = this.myApplications()
+      .filter(app => app.status === 2 || app.status === 'Accepted' || app.status === 'accepted')
+      .map(app => app.jobId);
+
+    return this.jobService.getAllJobs().filter(j => 
+      (j.selectedStudentId === user.id || 
+       (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
+       acceptedJobIds.includes(j.id)) &&
+      (j.status === 'in_progress' || j.status === 'pending_confirmation')
+    );
+  });
+
+  completedJobsHistory = computed(() => {
+    const user = this.auth.currentUser();
+    if (!user || user.role !== 'student') return [];
+    
+    const acceptedJobIds = this.myApplications()
+      .filter(app => app.status === 2 || app.status === 'Accepted' || app.status === 'accepted')
+      .map(app => app.jobId);
+
+    return this.jobService.getAllJobs().filter(j => 
+      (j.selectedStudentId === user.id || 
+       (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
+       acceptedJobIds.includes(j.id)) &&
+      (j.status === 'completed' || j.status === 'closed')
+    );
+  });
+
+  appliedJobs = computed(() => {
+    const user = this.auth.currentUser();
+    if (!user || user.role !== 'student') return [];
+    
+    const excludedJobIds = [
+      ...this.workingJobs().map(j => j.id),
+      ...this.completedJobsHistory().map(j => j.id)
+    ];
+
+    const appliedJobIds = this.myApplications()
+      .filter(app => !excludedJobIds.includes(app.jobId))
+      .map(app => app.jobId);
+
+    return this.jobService.getAllJobs().filter(j => appliedJobIds.includes(j.id));
   });
 
   editForm = {
@@ -1033,6 +1102,24 @@ export class ProfileComponent {
   };
 
   constructor() {
+  }
+
+  ngOnInit() {
+    if (this.auth.isLoggedIn()) {
+      this.auth.fetchProfile().subscribe();
+      this.auth.fetchBalance().subscribe();
+      this.jobService.fetchJobs();
+      this.refreshStudentApplications();
+    }
+  }
+
+  refreshStudentApplications() {
+    if (this.auth.isStudent()) {
+      this.jobService.getMyApplications().subscribe({
+        next: (apps) => this.myApplications.set(apps),
+        error: (err) => console.error('Failed to load student applications:', err)
+      });
+    }
   }
 
   toggleEditMode() {
@@ -1057,7 +1144,7 @@ export class ProfileComponent {
   }
 
   onSaveProfile() {
-    const result = this.auth.updateProfile({
+    this.auth.updateProfile({
       fullName: this.editForm.fullName,
       phone: this.editForm.phone,
       dateOfBirth: this.editForm.dateOfBirth || undefined,
@@ -1065,19 +1152,25 @@ export class ProfileComponent {
       university: this.editForm.university || undefined,
       major: this.editForm.major || undefined,
       year: Number(this.editForm.year),
-      skills: this.editForm.skillsStr.split(',').map(s => s.trim()).filter(Boolean),
+      skills: this.editForm.skillsStr.split(',').map(s => s.trim()).filter(Boolean) as any,
       bio: this.editForm.bio || undefined,
+    }).subscribe({
+      next: (result) => {
+        if (result.success) {
+          this.auth.fetchProfile().subscribe(); // Sync profile from database
+          this.editSuccess.set(true);
+          this.editMessage.set(result.message);
+          setTimeout(() => {
+            this.editSuccess.set(false);
+            this.isEditing.set(false);
+            this.toast.success('Hồ sơ đã được cập nhật thành công.');
+          }, 1500);
+        } else {
+          this.toast.error(result.message);
+        }
+      },
+      error: () => this.toast.error('Có lỗi xảy ra khi lưu hồ sơ.')
     });
-
-    if (result.success) {
-      this.editSuccess.set(true);
-      this.editMessage.set(result.message);
-      setTimeout(() => {
-        this.editSuccess.set(false);
-        this.isEditing.set(false);
-        this.toast.success('Hồ sơ đã được cập nhật thành công.');
-      }, 1500);
-    }
   }
 
   onSubmitWithdraw() {
@@ -1087,14 +1180,23 @@ export class ProfileComponent {
     }
     const user = this.auth.currentUser();
     if (user && (user.balance || 0) >= this.withdrawForm.amount) {
-      const res = this.auth.deductBalance(this.withdrawForm.amount);
-      if (res.success) {
-        this.toast.success('Yêu cầu rút tiền thành công! Tiền sẽ được chuyển trong 24h.');
-        this.showWithdrawModal.set(false);
-        this.withdrawForm = { amount: null, bank: '', account: '', name: '' };
-      } else {
-        this.toast.error('Có lỗi xảy ra: ' + res.message);
-      }
+      this.auth.withdraw(
+        this.withdrawForm.amount,
+        this.withdrawForm.bank,
+        this.withdrawForm.account,
+        this.withdrawForm.name
+      ).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.toast.success('Yêu cầu rút tiền thành công! Tiền sẽ được chuyển trong 24h.');
+            this.showWithdrawModal.set(false);
+            this.withdrawForm = { amount: null, bank: '', account: '', name: '' };
+          } else {
+            this.toast.error('Có lỗi xảy ra: ' + res.message);
+          }
+        },
+        error: () => this.toast.error('Lỗi kết nối máy chủ.')
+      });
     } else {
       this.toast.error('Số dư không đủ để rút!');
     }
@@ -1102,20 +1204,25 @@ export class ProfileComponent {
 
   // Phase 4: Student confirms completion
   studentCompleteJob(job: Job) {
-    const res = this.jobService.completeJob(job.id);
-    if (res.success) {
-      this.toast.success(`Báo cáo thành công! Số tiền ${(job.budget || 0).toLocaleString('vi-VN')}đ sẽ được chuyển vào tài khoản sau khi nghiệm thu.`);
-      this.selectedJobToComplete.set(null);
-    } else {
-      this.toast.error(res.message);
-    }
+    this.jobService.completeJob(job.id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(`Báo cáo thành công! Số tiền ${(job.budget || 0).toLocaleString('vi-VN')}đ sẽ được chuyển vào tài khoản sau khi nghiệm thu.`);
+          this.selectedJobToComplete.set(null);
+          this.refreshStudentApplications();
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi báo cáo.')
+    });
   }
 
   onCVSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files?.length) {
       const file = input.files[0];
-      this.auth.uploadCV(file.name);
+      this.uploadingCV(file);
     }
   }
 
@@ -1129,24 +1236,38 @@ export class ProfileComponent {
     event.stopPropagation();
     if (event.dataTransfer?.files.length) {
       const file = event.dataTransfer.files[0];
-      this.auth.uploadCV(file.name);
+      this.uploadingCV(file);
     }
+  }
+
+  private uploadingCV(file: File) {
+    this.toast.success('Đang tải CV lên, vui lòng đợi...');
+    this.auth.uploadCV(file).subscribe({
+      next: (res) => {
+        if (res.success) {
+           this.toast.success(res.message);
+        } else {
+           this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối máy chủ.')
+    });
   }
 
   onRemoveCV() {
+    // In actual implementation, we might call a DELETE endpoint. 
+    // For now, we optimistically update the state.
     const user = this.auth.currentUser();
     if (user) {
-      this.auth.updateProfile({ cvFileName: undefined, cvUploadDate: undefined } as any);
+      this.auth.currentUser.set({ ...user, cvFileName: undefined, cvUploadDate: undefined } as any);
     }
   }
-
-  private cloudinary = inject(CloudinaryService);
 
   avatarUploading = signal(false);
   ekycFrontPreview = signal<string>('');
   ekycBackPreview = signal<string>('');
-  ekycFrontUrl = signal<string>('');
-  ekycBackUrl = signal<string>('');
+  ekycFrontFile: File | null = null;
+  ekycBackFile: File | null = null;
   uploadingFront = signal(false);
   uploadingBack = signal(false);
   ekycSubmitting = signal(false);
@@ -1161,15 +1282,30 @@ export class ProfileComponent {
     }
 
     this.avatarUploading.set(true);
-    try {
-      const url = await this.cloudinary.uploadImage(file, 'unitask/avatars');
-      this.auth.updateAvatarUrl(url);
-      this.toast.success('Cập nhật ảnh đại diện thành công!');
-    } catch (err: any) {
-      this.toast.error('Upload ảnh thất bại: ' + (err?.message || 'Lỗi không xác định'));
-    } finally {
-      this.avatarUploading.set(false);
-    }
+    this.auth.updateAvatarUrl(file).subscribe({
+      next: (res) => {
+        this.avatarUploading.set(false);
+        if (res.success) {
+          this.toast.success(res.message);
+          // optimistically update preview locally
+          const reader = new FileReader();
+          reader.onload = () => {
+             const user = this.auth.currentUser();
+             if (user) {
+               const updated = { ...user, avatarUrl: reader.result as string };
+               this.auth.currentUser.set(updated);
+             }
+          };
+          reader.readAsDataURL(file);
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => {
+        this.avatarUploading.set(false);
+        this.toast.error('Upload ảnh thất bại do lỗi máy chủ.');
+      }
+    });
   }
 
   async onEkycFileSelected(event: Event, side: 'front' | 'back') {
@@ -1181,6 +1317,9 @@ export class ProfileComponent {
       return;
     }
 
+    if (side === 'front') this.ekycFrontFile = file;
+    else this.ekycBackFile = file;
+
     // Show local preview immediately
     const reader = new FileReader();
     reader.onload = () => {
@@ -1188,40 +1327,27 @@ export class ProfileComponent {
       else this.ekycBackPreview.set(reader.result as string);
     };
     reader.readAsDataURL(file);
-
-    // Upload to Cloudinary
-    if (side === 'front') this.uploadingFront.set(true);
-    else this.uploadingBack.set(true);
-
-    try {
-      const url = await this.cloudinary.uploadImage(file, 'unitask/ekyc');
-      if (side === 'front') {
-        this.ekycFrontUrl.set(url);
-        this.ekycFrontPreview.set(url);
-      } else {
-        this.ekycBackUrl.set(url);
-        this.ekycBackPreview.set(url);
-      }
-    } catch (err: any) {
-      this.toast.error('Upload ảnh thất bại: ' + (err?.message || 'Lỗi không xác định'));
-      if (side === 'front') this.ekycFrontPreview.set('');
-      else this.ekycBackPreview.set('');
-    } finally {
-      if (side === 'front') this.uploadingFront.set(false);
-      else this.uploadingBack.set(false);
-    }
   }
 
   onSubmitEkyc() {
-    const front = this.ekycFrontUrl();
-    const back = this.ekycBackUrl();
-    if (!front || !back) {
-      this.toast.warning('Vui lòng chờ ảnh tải lên xong hoặc cung cấp đủ 2 mặt CCCD.');
+    if (!this.ekycFrontFile || !this.ekycBackFile) {
+      this.toast.warning('Vui lòng cung cấp đủ 2 mặt CCCD.');
       return;
     }
     this.ekycSubmitting.set(true);
-    this.auth.submitEkyc(front, back);
-    this.ekycSubmitting.set(false);
-    this.toast.success('Gửi xác thực thành công! Vui lòng chờ Admin duyệt.');
+    this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile).subscribe({
+      next: (res) => {
+         this.ekycSubmitting.set(false);
+         if (res.success) {
+           this.toast.success(res.message);
+         } else {
+           this.toast.error(res.message);
+         }
+      },
+      error: () => {
+         this.ekycSubmitting.set(false);
+         this.toast.error('Gửi xác thực thất bại do lỗi máy chủ.');
+      }
+    });
   }
 }

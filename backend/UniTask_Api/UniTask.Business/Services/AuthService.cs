@@ -121,14 +121,31 @@ namespace UniTask.Business.Services
 
             if (userType == UserType.Student)
             {
-                var studentProfile = new StudentProfile { UserId = user.Id };
+                var studentProfile = new StudentProfile 
+                { 
+                    UserId = user.Id,
+                    University = request.University,
+                    Major = request.Major,
+                    Year = request.Year
+                };
                 _context.StudentProfiles.Add(studentProfile);
                 await _context.SaveChangesAsync(); // save to get ID
                 studentProfileId = studentProfile.Id;
             }
             else
             {
-                var employerProfile = new EmployerProfile { UserId = user.Id };
+                var employerProfile = new EmployerProfile 
+                { 
+                    UserId = user.Id,
+                    Position = request.Position
+                };
+
+                if (!string.IsNullOrEmpty(request.CompanyName))
+                {
+                    employerProfile.Company = new Company { Name = request.CompanyName };
+                    _context.Companies.Add(employerProfile.Company);
+                }
+
                 _context.EmployerProfiles.Add(employerProfile);
                 await _context.SaveChangesAsync(); // save to get ID
                 employerProfileId = employerProfile.Id;

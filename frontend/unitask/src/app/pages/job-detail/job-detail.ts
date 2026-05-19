@@ -452,12 +452,17 @@ export class JobDetailComponent implements OnInit {
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    const found = this.jobService.getJobById(id);
-    if (found) {
-      this.job.set(found);
-      this.applied.set(this.auth.hasApplied(id));
-      this.companyInfo.set(this.companyService.getById(found.companyId) || null);
-    }
+    this.jobService.fetchJobDetail(id).subscribe({
+      next: (found) => {
+        this.job.set(found);
+        this.applied.set(this.auth.hasApplied(id));
+        this.companyInfo.set(this.companyService.getById(found.companyId) || null);
+      },
+      error: (err) => {
+        this.toast.error('Không thể tải chi tiết công việc. Vui lòng thử lại sau.');
+        this.router.navigate(['/jobs']);
+      }
+    });
   }
 
   getLogoGradient(): string {
@@ -496,9 +501,17 @@ export class JobDetailComponent implements OnInit {
       return;
     }
 
-    this.auth.applyToJob(job.id);
-    this.jobService.addApplicant(job.id, user.id);
-    this.applied.set(true);
-    this.toast.success('Ứng tuyển thành công! Nhà tuyển dụng sẽ liên hệ nếu phù hợp.');
+    this.jobService.applyJob(job.id, '').subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.applied.set(true);
+          // Optional: this.auth.applyToJob(job.id) if auth service still maintains a local cache
+          this.toast.success('Ứng tuyển thành công! Nhà tuyển dụng sẽ liên hệ nếu phù hợp.');
+        } else {
+          this.toast.error(res.message || 'Bạn đã ứng tuyển công việc này rồi.');
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi ứng tuyển. Vui lòng thử lại.')
+    });
   }
 }

@@ -22,7 +22,7 @@ export interface Job {
   // Phase 4: Escrow & Completion Tracking
   budget?: number;
   commission?: number;
-  status?: 'open' | 'in_progress' | 'pending_confirmation' | 'completed';
+  status?: 'open' | 'in_progress' | 'pending_confirmation' | 'completed' | 'closed';
   selectedStudentId?: number;
   applicants?: number[];
 }

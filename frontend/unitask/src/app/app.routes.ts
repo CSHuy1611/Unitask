@@ -38,6 +38,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/admin/admin-users').then(m => m.AdminUsersComponent),
   },
   {
+    path: 'admin/withdrawals',
+    loadComponent: () => import('./pages/admin/admin-withdrawals').then(m => m.AdminWithdrawalsComponent),
+  },
+  {
     path: 'pricing',
     loadComponent: () => import('./pages/pricing/pricing').then(m => m.PricingComponent),
   },

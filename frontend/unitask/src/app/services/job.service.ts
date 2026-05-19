@@ -1,46 +1,23 @@
-import { Injectable, signal, computed, PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
 import { Job } from '../models/job.model';
-import MOCK_JOBS from '../../assets/data/mock-jobs.json';
+import { API_BASE_URL } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class JobService {
-  private platformId = inject(PLATFORM_ID);
-  private allJobs: Job[] = [];
-
-  constructor() {
-    this.loadJobsFromStorage();
-  }
-
-  private loadJobsFromStorage() {
-    if (isPlatformBrowser(this.platformId)) {
-      const stored = localStorage.getItem('unitask_jobs');
-      if (stored) {
-        this.allJobs = JSON.parse(stored);
-      } else {
-        this.allJobs = MOCK_JOBS as Job[];
-        this.saveJobsToStorage();
-      }
-    } else {
-      this.allJobs = MOCK_JOBS as Job[];
-    }
-  }
-
-  private saveJobsToStorage() {
-    if (isPlatformBrowser(this.platformId)) {
-      localStorage.setItem('unitask_jobs', JSON.stringify(this.allJobs));
-    }
-    // Trigger signal updates if needed, but our signals are computed based on allJobs reference...
-    // To trigger computed, we actually need allJobs to be a signal itself.
-    // For now we will just re-assign.
-  }
+  private http = inject(HttpClient);
+  
+  // Using Signals for synchronous UI access where needed
+  private allJobsSignal = signal<Job[]>([]);
 
   searchQuery = signal('');
   locationFilter = signal('');
   typeFilter = signal('');
 
   jobs = computed(() => {
-    let result = [...this.allJobs];
+    let result = [...this.allJobsSignal()];
     const query = this.searchQuery().toLowerCase();
     const location = this.locationFilter();
     const type = this.typeFilter();
@@ -64,150 +41,189 @@ export class JobService {
     return result;
   });
 
-  featuredJobs = computed(() => this.allJobs.filter(j => j.isUrgent).slice(0, 4));
+  featuredJobs = computed(() => this.allJobsSignal().filter(j => j.isUrgent).slice(0, 4));
   recentJobs = computed(() =>
-    [...this.allJobs].sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime()).slice(0, 6)
+    [...this.allJobsSignal()].sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime()).slice(0, 6)
   );
 
+  constructor() {
+    this.fetchJobs();
+  }
+
+  fetchJobs() {
+    this.http.get<any[]>(`${API_BASE_URL}/job`).pipe(
+      map(dtos => dtos.map(dto => this.mapDtoToJob(dto)))
+    ).subscribe({
+      next: (jobs) => {
+        this.allJobsSignal.set(jobs);
+      },
+      error: (err) => console.error('Failed to load jobs:', err)
+    });
+  }
+
+  private mapDtoToJob(dto: any): Job {
+    const statusMap: Record<number, Job['status']> = {
+      0: 'open',
+      1: 'in_progress',
+      2: 'pending_confirmation',
+      3: 'completed',
+      4: 'closed'
+    };
+    
+    return {
+      id: dto.id,
+      title: dto.title,
+      company: dto.companyName || '',
+      companyId: dto.companyId || 0,
+      companyLogo: dto.companyLogoUrl || 'UT',
+      location: dto.location || '',
+      type: dto.type || 'Part-time',
+      salary: dto.salaryText || '',
+      salaryRange: dto.salaryRange || [0, 0],
+      description: dto.description || '',
+      requirements: Array.isArray(dto.requirements) ? dto.requirements : (typeof dto.requirements === 'string' ? dto.requirements.split(/\r?\n|\\n/) : []),
+      benefits: Array.isArray(dto.benefits) ? dto.benefits : (typeof dto.benefits === 'string' ? dto.benefits.split(/\r?\n|\\n/) : []),
+      tags: typeof dto.tags === 'string' ? dto.tags.split(',') : (dto.tags || []),
+      postedDate: dto.createdAt ? dto.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+      deadline: dto.deadline ? dto.deadline.split('T')[0] : '',
+      views: dto.views || 0,
+      applications: dto.applicationsCount || 0,
+      isUrgent: dto.isUrgent || false,
+      isRemote: dto.isRemote || false,
+      budget: dto.budget || 0,
+      commission: dto.commission || 0,
+      status: statusMap[dto.status] || 'open',
+      applicants: dto.applicants || [],
+      selectedStudentId: dto.selectedStudentId
+    };
+  }
+
   getJobById(id: number): Job | undefined {
-    return this.allJobs.find(j => j.id === id);
+    return this.allJobsSignal().find(j => j.id === id);
+  }
+
+  fetchJobDetail(id: number): Observable<Job> {
+    return this.http.get<any>(`${API_BASE_URL}/job/${id}`).pipe(
+      map(dto => this.mapDtoToJob(dto))
+    );
   }
 
   getJobsByCompanyId(companyId: number): Job[] {
-    return this.allJobs.filter(j => j.companyId === companyId);
+    return this.allJobsSignal().filter(j => j.companyId === companyId);
   }
 
   getJobTypes(): string[] {
-    return [...new Set(this.allJobs.map(j => j.type))];
+    return [...new Set(this.allJobsSignal().map(j => j.type))];
   }
 
   getLocations(): string[] {
-    return [...new Set(this.allJobs.map(j => j.location))];
+    return [...new Set(this.allJobsSignal().map(j => j.location))];
   }
 
   getAllJobs(): Job[] {
-    return [...this.allJobs];
+    return [...this.allJobsSignal()];
   }
 
-  // Force trigger reactivity if using computed that depends on allJobs.
-  // Actually, in Angular signals, if allJobs is a regular property, computed won't detect its internal changes.
-  // But since we just need simple CRUD, it's fine for the mock layer.
-  private triggerUpdate() {
-    const current = [...this.allJobs];
-    this.allJobs = current; // This doesn't trigger signals.
-    this.saveJobsToStorage();
-  }
-
-  addJob(job: Partial<Job>): Job {
-    const newJob: Job = {
-      id: this.allJobs.length + 1,
-      title: job.title || '',
-      company: job.company || '',
-      companyId: job.companyId || 0,
-      companyLogo: job.companyLogo || 'UT',
-      location: job.location || '',
-      type: job.type || 'Part-time',
-      salary: job.salary || '',
-      salaryRange: job.salaryRange || [0, 0],
-      description: job.description || '',
-      requirements: job.requirements || [],
-      benefits: job.benefits || [],
-      tags: job.tags || [],
-      postedDate: new Date().toISOString().split('T')[0],
-      deadline: job.deadline || '',
-      views: 0,
-      applications: 0,
-      isUrgent: job.isUrgent || false,
-      isRemote: job.isRemote || false,
-      budget: job.budget || 0,
-      commission: job.commission || 0,
-      status: 'open',
-      applicants: [],
+  addJob(job: Partial<Job>): Observable<{ success: boolean; message: string }> {
+    const payload = {
+      title: job.title,
+      type: job.type,
+      location: job.location,
+      salaryText: job.salary,
+      budget: job.budget,
+      commission: job.commission,
+      deadline: job.deadline,
+      description: job.description,
+      requirements: Array.isArray(job.requirements) ? job.requirements : [],
+      benefits: Array.isArray(job.benefits) ? job.benefits : [],
+      tags: Array.isArray(job.tags) ? job.tags : [],
+      isRemote: job.isRemote,
+      isUrgent: job.isUrgent
     };
-    this.allJobs.unshift(newJob);
-    this.triggerUpdate();
-    return newJob;
+
+    return this.http.post<any>(`${API_BASE_URL}/job`, payload).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đăng bài tuyển dụng thành công!' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi kết nối máy chủ.' }))
+    );
   }
 
-  // Check if a job is still editable (deadline >= today)
   isJobEditable(job: Job): boolean {
     if (!job.deadline) return true;
     const today = new Date().toISOString().split('T')[0];
     return job.deadline >= today;
   }
 
-  // Update job (only if still within deadline)
-  updateJob(id: number, data: Partial<Job>): { success: boolean; message: string } {
-    const idx = this.allJobs.findIndex(j => j.id === id);
-    if (idx < 0) return { success: false, message: 'Không tìm thấy bài đăng.' };
-
-    const job = this.allJobs[idx];
-    if (!this.isJobEditable(job)) {
-      return { success: false, message: 'Bài đăng đã hết hạn, không thể chỉnh sửa.' };
-    }
-
-    this.allJobs[idx] = {
-      ...job,
-      title: data.title ?? job.title,
-      location: data.location ?? job.location,
-      type: data.type ?? job.type,
-      salary: data.salary ?? job.salary,
-      description: data.description ?? job.description,
-      tags: data.tags ?? job.tags,
-      deadline: data.deadline ?? job.deadline,
-      isRemote: data.isRemote ?? job.isRemote,
-      isUrgent: data.isUrgent ?? job.isUrgent,
+  updateJob(id: number, data: Partial<Job>): Observable<{ success: boolean; message: string }> {
+    const payload = {
+      title: data.title,
+      type: data.type,
+      location: data.location,
+      salaryText: data.salary,
+      budget: data.budget,
+      commission: data.commission,
+      deadline: data.deadline,
+      description: data.description,
+      requirements: Array.isArray(data.requirements) ? data.requirements : [],
+      benefits: Array.isArray(data.benefits) ? data.benefits : [],
+      tags: Array.isArray(data.tags) ? data.tags : [],
+      isRemote: data.isRemote,
+      isUrgent: data.isUrgent
     };
-    this.triggerUpdate();
 
-    return { success: true, message: 'Cập nhật bài đăng thành công!' };
+    return this.http.put<any>(`${API_BASE_URL}/job/${id}`, payload).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Cập nhật bài đăng thành công!' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi cập nhật bài đăng.' }))
+    );
   }
 
-  deleteJob(id: number): void {
-    const idx = this.allJobs.findIndex(j => j.id === id);
-    if (idx >= 0) {
-      this.allJobs.splice(idx, 1);
-      this.triggerUpdate();
-    }
+  deleteJob(id: number): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<any>(`${API_BASE_URL}/job/${id}`).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã xóa bài đăng.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể xóa bài đăng này.' }))
+    );
   }
 
-  // Phase 4: Escrow & Completion Flow
-  addApplicant(jobId: number, studentId: number): void {
-    const job = this.getJobById(jobId);
-    if (job && !job.applicants?.includes(studentId)) {
-      job.applicants = [...(job.applicants || []), studentId];
-      this.triggerUpdate();
-    }
+  // Phase 5: Escrow & Application Flow
+  applyJob(jobId: number, coverLetter: string = ''): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${jobId}`, { coverLetter }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã ứng tuyển thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Ứng tuyển thất bại. Bạn có thể đã ứng tuyển rồi.' }))
+    );
   }
 
-  assignJob(jobId: number, studentId: number): { success: boolean; message: string } {
-    const job = this.getJobById(jobId);
-    if (job && job.status === 'open') {
-      job.status = 'in_progress';
-      job.selectedStudentId = studentId;
-      this.triggerUpdate();
-      return { success: true, message: 'Đã giao việc thành công.' };
-    }
-    return { success: false, message: 'Không thể giao việc.' };
+  getJobApplications(jobId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${API_BASE_URL}/application/job/${jobId}`);
   }
 
-  completeJob(jobId: number): { success: boolean; message: string } {
-    const job = this.getJobById(jobId);
-    if (job && job.status === 'in_progress') {
-      job.status = 'pending_confirmation';
-      this.triggerUpdate();
-      return { success: true, message: 'Đã báo cáo hoàn thành công việc.' };
-    }
-    return { success: false, message: 'Lỗi xác nhận.' };
+  getMyApplications(): Observable<any[]> {
+    return this.http.get<any[]>(`${API_BASE_URL}/application/my`);
   }
 
-  approveJob(jobId: number): { success: boolean; job?: Job; message: string } {
-    const job = this.getJobById(jobId);
-    if (job && job.status === 'pending_confirmation') {
-      job.status = 'completed';
-      this.triggerUpdate();
-      return { success: true, job, message: 'Đã nghiệm thu và thành toán thành công.' };
-    }
-    return { success: false, message: 'Lỗi nghiệm thu.' };
+  assignJob(applicationId: number): Observable<{ success: boolean; message: string }> {
+    return this.http.put<any>(`${API_BASE_URL}/application/${applicationId}/status`, { status: 2 }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã giao việc thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể giao việc.' }))
+    );
+  }
+
+  completeJob(jobId: number): Observable<{ success: boolean; message: string }> {
+    return this.http.put<any>(`${API_BASE_URL}/job/${jobId}/report-completion`, {}).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã báo cáo hoàn thành công việc.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi báo cáo hoàn thành.' }))
+    );
+  }
+
+  approveJob(jobId: number): Observable<{ success: boolean; message: string }> {
+    return this.http.put<any>(`${API_BASE_URL}/job/${jobId}/approve`, {}).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã nghiệm thu và thanh toán thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi nghiệm thu. Vui lòng thử lại.' }))
+    );
   }
 }

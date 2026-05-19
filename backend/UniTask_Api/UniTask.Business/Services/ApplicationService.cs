@@ -133,6 +133,17 @@ namespace UniTask.Business.Services
 
         private static ApplicationDto MapToDto(Application a)
         {
+            var skillsList = new List<string>();
+            if (!string.IsNullOrEmpty(a.StudentProfile?.Skills))
+            {
+                // Handle both comma-separated lists and simple JSON string arrays safely
+                skillsList = a.StudentProfile.Skills
+                    .Split(new[] { ',', '[', ']', '"' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrEmpty(s))
+                    .ToList();
+            }
+
             return new ApplicationDto
             {
                 Id = a.Id,
@@ -141,6 +152,14 @@ namespace UniTask.Business.Services
                 StudentId = a.StudentProfile?.UserId ?? "",
                 StudentName = a.StudentProfile?.User?.FullName ?? "",
                 StudentAvatarUrl = a.StudentProfile?.User?.AvatarUrl,
+                StudentUniversity = a.StudentProfile?.University,
+                StudentMajor = a.StudentProfile?.Major,
+                StudentYear = a.StudentProfile?.Year,
+                StudentBio = a.StudentProfile?.Bio,
+                StudentEkycStatus = a.StudentProfile?.User?.EkycStatus.ToString(),
+                StudentSkills = skillsList,
+                StudentCVUrl = a.StudentProfile?.CVUrl,
+                StudentGpa = a.StudentProfile?.GPA,
                 Status = a.Status,
                 AppliedDate = a.AppliedDate
             };

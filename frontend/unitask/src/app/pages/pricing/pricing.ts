@@ -1,8 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import ADMIN_DATA from '../../../assets/data/mock-admin.json';
+import { ToastService } from '../../services/toast.service';
+import { API_BASE_URL } from '../../config/api.config';
 
 @Component({
   selector: 'app-pricing',
@@ -340,10 +342,16 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
 })
 export class PricingComponent {
   auth = inject(AuthService);
-  router = inject(Router);
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private toast = inject(ToastService);
 
-  // Exclude "Đăng tin lẻ" (ID 4) from subscription grid
-  packages = ADMIN_DATA.packages.filter(p => p.id !== 4);
+  // Package definitions (inline, no longer from mock JSON)
+  packages = [
+    { id: 1, name: 'Gói Cơ bản', price: 500, duration: '1 tháng', description: 'Phù hợp cho doanh nghiệp nhỏ mới bắt đầu' },
+    { id: 2, name: 'Gói Chuyên nghiệp', price: 1200, duration: '3 tháng', description: 'Tiết kiệm 20% - Dành cho nhà tuyển dụng thường xuyên' },
+    { id: 3, name: 'Gói Doanh nghiệp', price: 3000, duration: '12 tháng', description: 'Tiết kiệm 50% - Giải pháp tuyển dụng toàn diện' },
+  ];
 
   showPaymentModal = signal(false);
   paymentType = signal<'deposit' | 'package'>('deposit');
@@ -392,25 +400,24 @@ export class PricingComponent {
   }
 
   processPayment() {
-    this.isProcessing.set(true);
-    
-    // Simulate Backend API call to get PayOS checkoutUrl
-    setTimeout(() => {
-      // ⚠️ TRONG THỰC TẾ: Backend sẽ trả về 1 URL (vd: https://pay.payos.vn/...)
-      // Sau đó ta dùng window.location.href = url; để redirect.
-      // Dưới đây là MÔ PHỎNG việc thanh toán thành công (Webhook đã xử lý ngầm)
-      // và PayOS redirect User quay lại trang /payment/success
-      
-      if (this.paymentType() === 'deposit') {
-         this.auth.addBalance(this.getPayAmount()); // Mock webhook action
-      } else {
-         const pkg = this.selectedPackage();
-         const months = parseInt(pkg.duration);
-         this.auth.updatePackage(pkg.name, isNaN(months) ? 1 : months); // Mock webhook action
-      }
+    const amount = this.getPayAmount();
+    if (amount < 10000) {
+      this.toast.warning('Số tiền tối thiểu là 10.000đ.');
+      return;
+    }
 
-      this.closeModal();
-      this.router.navigate(['/payment/success']);
-    }, 1500);
+    this.isProcessing.set(true);
+
+    // Call Backend API to create PayOS checkout link
+    this.http.post<{ checkoutUrl: string; orderCode: number }>(`${API_BASE_URL}/payment/create`, { amount }).subscribe({
+      next: (res) => {
+        // Redirect user to PayOS hosted checkout page
+        window.location.href = res.checkoutUrl;
+      },
+      error: (err) => {
+        this.isProcessing.set(false);
+        this.toast.error(err.error?.message || 'Không thể tạo link thanh toán. Vui lòng thử lại.');
+      }
+    });
   }
 }

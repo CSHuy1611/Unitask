@@ -207,23 +207,29 @@ export class LoginComponent {
     this.successMsg.set('');
     this.loading.set(true);
 
-    setTimeout(() => {
-      const result = this.auth.login(this.email, this.password);
-      this.loading.set(false);
-
-      if (result.success) {
-        this.successMsg.set(result.message);
-        setTimeout(() => {
-          const user = this.auth.currentUser();
-          if (user?.role === 'employer') {
-            this.router.navigate(['/employer/dashboard']);
-          } else {
-            this.router.navigate(['/']);
-          }
-        }, 500);
-      } else {
-        this.errorMsg.set(result.message);
+    this.auth.login(this.email, this.password).subscribe({
+      next: (result) => {
+        this.loading.set(false);
+        if (result.success) {
+          this.successMsg.set(result.message);
+          setTimeout(() => {
+            const user = this.auth.currentUser();
+            if (user?.role === 'employer') {
+              this.router.navigate(['/employer/dashboard']);
+            } else if (user?.role === 'admin') {
+              this.router.navigate(['/admin/dashboard']);
+            } else {
+              this.router.navigate(['/']);
+            }
+          }, 500);
+        } else {
+          this.errorMsg.set(result.message);
+        }
+      },
+      error: () => {
+        this.loading.set(false);
+        this.errorMsg.set('Đã có lỗi xảy ra khi kết nối máy chủ.');
       }
-    }, 800);
+    });
   }
 }

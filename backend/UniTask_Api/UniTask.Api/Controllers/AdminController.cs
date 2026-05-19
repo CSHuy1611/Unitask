@@ -51,6 +51,13 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "eKYC rejected successfully." });
         }
 
+        [HttpGet("users")]
+        public async Task<IActionResult> GetUsers()
+        {
+            var users = await _adminService.GetAllUsersAsync();
+            return Ok(users);
+        }
+
         // ===== PACKAGE MANAGEMENT =====
         [HttpPost("packages")]
         public async Task<IActionResult> CreatePackage([FromBody] ServicePackageCreateDto dto)
@@ -75,6 +82,22 @@ namespace UniTask.Api.Controllers
             var result = await _adminService.DeletePackageAsync(id);
             if (!result) return NotFound(new { message = "Package not found." });
             return Ok(new { message = "Package deleted (deactivated) successfully." });
+        }
+
+        // ===== WITHDRAWAL MANAGEMENT =====
+        [HttpGet("withdrawals")]
+        public async Task<IActionResult> GetWithdrawals()
+        {
+            var withdrawals = await _adminService.GetWithdrawalsAsync();
+            return Ok(withdrawals);
+        }
+
+        [HttpPut("withdrawals/{id}/complete")]
+        public async Task<IActionResult> CompleteWithdrawal(int id)
+        {
+            var result = await _adminService.CompleteWithdrawalAsync(id);
+            if (!result) return BadRequest(new { message = "Failed to mark withdrawal as completed." });
+            return Ok(new { message = "Withdrawal marked as completed successfully." });
         }
     }
 }

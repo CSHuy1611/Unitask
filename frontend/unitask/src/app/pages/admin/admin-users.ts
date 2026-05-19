@@ -1,8 +1,10 @@
 import { Component, inject, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import { User } from '../../models/user.model';
+import { ToastService } from '../../services/toast.service';
+import { API_BASE_URL } from '../../config/api.config';
 
 @Component({
   selector: 'app-admin-users',
@@ -26,6 +28,9 @@ import { User } from '../../models/user.model';
             </a>
             <a routerLink="/admin/users" class="admin-tab active">
               <span class="material-icons-round">people</span> Quản lý User
+            </a>
+            <a routerLink="/admin/withdrawals" class="admin-tab">
+              <span class="material-icons-round">account_balance_wallet</span> Duyệt rút tiền
             </a>
           </div>
 
@@ -602,22 +607,27 @@ import { User } from '../../models/user.model';
 })
 export class AdminUsersComponent {
   auth = inject(AuthService);
+  private http = inject(HttpClient);
+  private toast = inject(ToastService);
   
-  users = signal<User[]>([]);
+  users = signal<any[]>([]);
   statusFilter = signal<string>('all');
   roleFilter = signal<string>('all');
-  reviewingUser = signal<User | null>(null);
+  reviewingUser = signal<any | null>(null);
   zoomedImage = signal<string>('');
 
   filteredUsers = computed(() => {
     let result = this.users();
     
     if (this.statusFilter() !== 'all') {
-      result = result.filter(u => u.ekycStatus === this.statusFilter());
+      result = result.filter((u: any) => {
+        const status = (u.ekycStatus || 'none').toLowerCase();
+        return status === this.statusFilter();
+      });
     }
     
     if (this.roleFilter() !== 'all') {
-      result = result.filter(u => u.role === this.roleFilter());
+      result = result.filter((u: any) => (u.role || '').toLowerCase() === this.roleFilter());
     }
 
     return result;
@@ -628,13 +638,14 @@ export class AdminUsersComponent {
   }
 
   loadUsers() {
-    this.users.set(this.auth.getAllUsers());
+    this.http.get<any[]>(`${API_BASE_URL}/admin/users`).subscribe({
+      next: (users) => this.users.set(users),
+      error: (err) => console.error('Failed to load users:', err)
+    });
   }
 
-  openReviewModal(user: User) {
-    // Re-fetch user from service to get latest data with images
-    const freshUser = this.auth.getUserById(user.id);
-    this.reviewingUser.set(freshUser || user);
+  openReviewModal(user: any) {
+    this.reviewingUser.set(user);
   }
 
   zoomImage(src: string) {
@@ -644,18 +655,28 @@ export class AdminUsersComponent {
   onApproveEkyc() {
     const user = this.reviewingUser();
     if (user) {
-      this.auth.approveEkyc(user.id);
-      this.reviewingUser.set(null);
-      this.loadUsers();
+      this.http.put<any>(`${API_BASE_URL}/admin/ekyc/${user.id}/approve`, {}).subscribe({
+        next: () => {
+          this.toast.success('Đã phê duyệt eKYC thành công!');
+          this.reviewingUser.set(null);
+          this.loadUsers();
+        },
+        error: () => this.toast.error('Lỗi khi phê duyệt eKYC.')
+      });
     }
   }
 
   onRejectEkyc() {
     const user = this.reviewingUser();
     if (user) {
-      this.auth.rejectEkyc(user.id);
-      this.reviewingUser.set(null);
-      this.loadUsers();
+      this.http.put<any>(`${API_BASE_URL}/admin/ekyc/${user.id}/reject`, {}).subscribe({
+        next: () => {
+          this.toast.success('Đã từ chối eKYC.');
+          this.reviewingUser.set(null);
+          this.loadUsers();
+        },
+        error: () => this.toast.error('Lỗi khi từ chối eKYC.')
+      });
     }
   }
 }

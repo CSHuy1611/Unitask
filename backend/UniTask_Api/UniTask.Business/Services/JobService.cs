@@ -195,6 +195,29 @@ namespace UniTask.Business.Services
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.EmployerId == employerId);
             if (job == null) return false;
 
+            // Only allow deleting jobs that are still in "Open" status (no active students assigned)
+            if (job.Status != DataAcesss.Entities.Enums.JobStatus.Open)
+                return false;
+
+            // Find Employer's Wallet
+            var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
+            if (wallet != null)
+            {
+                var totalRefund = job.Budget + job.Commission;
+                wallet.Balance += totalRefund;
+
+                // Log Refund transaction
+                _context.Transactions.Add(new Transaction
+                {
+                    WalletId = wallet.Id,
+                    Amount = totalRefund,
+                    Type = DataAcesss.Entities.Enums.TransactionType.Refund,
+                    Description = $"Hoàn trả chi phí (Budget + Commission) do hủy tin tuyển dụng: {job.Title}",
+                    RelatedJobId = job.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
             _context.Jobs.Remove(job);
             await _context.SaveChangesAsync();
             return true;

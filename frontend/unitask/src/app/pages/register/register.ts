@@ -315,28 +315,31 @@ export class RegisterComponent {
 
     this.loading.set(true);
 
-    setTimeout(() => {
-      const result = this.auth.register({
-        role: this.activeRole(),
-        fullName: this.fullName,
-        email: this.email,
-        password: this.password,
-        phone: this.phone,
-        university: this.university,
-        major: this.major,
-        year: this.year,
-        companyName: this.companyName,
-        position: this.position,
-      });
-
-      this.loading.set(false);
-
-      if (result.success) {
-        this.successMsg.set(result.message);
-        setTimeout(() => this.router.navigate(['/']), 1000);
-      } else {
-        this.errorMsg.set(result.message);
+    this.auth.register({
+      role: this.activeRole(),
+      fullName: this.fullName,
+      email: this.email,
+      password: this.password,
+      phone: this.phone,
+      university: this.university,
+      major: this.major,
+      year: this.year,
+      companyName: this.companyName,
+      position: this.position,
+    }).subscribe({
+      next: (result) => {
+        this.loading.set(false);
+        if (result.success) {
+          this.successMsg.set(result.message);
+          setTimeout(() => this.router.navigate(['/login']), 1500);
+        } else {
+          this.errorMsg.set(result.message);
+        }
+      },
+      error: () => {
+        this.loading.set(false);
+        this.errorMsg.set('Đã có lỗi xảy ra khi kết nối máy chủ.');
       }
-    }, 800);
+    });
   }
 }

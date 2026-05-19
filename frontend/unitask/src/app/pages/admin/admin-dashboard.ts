@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
-import ADMIN_DATA from '../../../assets/data/mock-admin.json';
+import { API_BASE_URL } from '../../config/api.config';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -27,6 +28,9 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
             <a routerLink="/admin/users" class="admin-tab">
               <span class="material-icons-round">people</span> Quản lý User
             </a>
+            <a routerLink="/admin/withdrawals" class="admin-tab">
+              <span class="material-icons-round">account_balance_wallet</span> Duyệt rút tiền
+            </a>
           </div>
 
           <div class="dashboard-header animate-fade-in-up">
@@ -41,7 +45,7 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
                 <span class="material-icons-round">people</span>
               </div>
               <div>
-                <span class="stat-number">{{ data.summary.totalUsers }}</span>
+                <span class="stat-number">{{ data().summary.totalUsers }}</span>
                 <span class="stat-label">Tổng người dùng</span>
               </div>
             </div>
@@ -50,7 +54,7 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
                 <span class="material-icons-round">work</span>
               </div>
               <div>
-                <span class="stat-number">{{ data.summary.totalJobs }}</span>
+                <span class="stat-number">{{ data().summary.totalJobs }}</span>
                 <span class="stat-label">Tổng việc làm</span>
               </div>
             </div>
@@ -59,7 +63,7 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
                 <span class="material-icons-round">payments</span>
               </div>
               <div>
-                <span class="stat-number">{{ formatCurrency(data.summary.totalRevenue) }}</span>
+                <span class="stat-number">{{ formatCurrency(data().summary.totalRevenue) }}</span>
                 <span class="stat-label">Tổng doanh thu</span>
               </div>
             </div>
@@ -68,7 +72,7 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
                 <span class="material-icons-round">pending_actions</span>
               </div>
               <div>
-                <span class="stat-number">{{ data.summary.ekycPending }}</span>
+                <span class="stat-number">{{ data().summary.ekycPending }}</span>
                 <span class="stat-label">eKYC chờ duyệt</span>
               </div>
             </div>
@@ -78,7 +82,7 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
           <div class="chart-section glass-card animate-fade-in-up" style="animation-delay:0.15s">
             <h3><span class="material-icons-round">trending_up</span> Doanh thu 6 tháng gần nhất</h3>
             <div class="chart-container">
-              @for (item of data.revenueByMonth; track item.month) {
+              @for (item of data().revenueByMonth; track item.month) {
                 <div class="chart-bar-wrapper">
                   <div class="chart-value">{{ formatShortCurrency(item.revenue) }}</div>
                   <div class="chart-bar" [style.height.%]="getBarHeight(item.revenue)">
@@ -95,28 +99,28 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
             <div class="mini-stat glass-card">
               <span class="material-icons-round" style="color:#4F46E5">school</span>
               <div>
-                <strong>{{ data.summary.totalStudents }}</strong>
+                <strong>{{ data().summary.totalStudents }}</strong>
                 <span>Sinh viên</span>
               </div>
             </div>
             <div class="mini-stat glass-card">
               <span class="material-icons-round" style="color:#10B981">business</span>
               <div>
-                <strong>{{ data.summary.totalEmployers }}</strong>
+                <strong>{{ data().summary.totalEmployers }}</strong>
                 <span>Nhà tuyển dụng</span>
               </div>
             </div>
             <div class="mini-stat glass-card">
               <span class="material-icons-round" style="color:#F59E0B">verified</span>
               <div>
-                <strong>{{ data.summary.ekycVerified }}</strong>
+                <strong>{{ data().summary.ekycVerified }}</strong>
                 <span>Đã xác thực</span>
               </div>
             </div>
             <div class="mini-stat glass-card">
               <span class="material-icons-round" style="color:#3B82F6">send</span>
               <div>
-                <strong>{{ data.summary.applicationsThisMonth }}</strong>
+                <strong>{{ data().summary.applicationsThisMonth }}</strong>
                 <span>Ứng tuyển tháng này</span>
               </div>
             </div>
@@ -137,7 +141,7 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
                   </tr>
                 </thead>
                 <tbody>
-                  @for (pkg of data.packages; track pkg.id) {
+                  @for (pkg of data().packages; track pkg.id) {
                     <tr>
                       <td><strong>{{ pkg.name }}</strong></td>
                       <td>{{ pkg.duration }}</td>
@@ -408,14 +412,31 @@ import ADMIN_DATA from '../../../assets/data/mock-admin.json';
     }
   `]
 })
-export class AdminDashboardComponent {
+export class AdminDashboardComponent implements OnInit {
   auth = inject(AuthService);
-  data = ADMIN_DATA;
+  private http = inject(HttpClient);
 
-  maxRevenue = Math.max(...ADMIN_DATA.revenueByMonth.map(r => r.revenue));
+  data = signal<any>({
+    summary: { totalUsers: 0, totalJobs: 0, totalRevenue: 0, ekycPending: 0, totalStudents: 0, totalEmployers: 0, ekycVerified: 0, applicationsThisMonth: 0 },
+    revenueByMonth: [],
+    packages: []
+  });
+
+  maxRevenue = signal(1);
+
+  ngOnInit() {
+    this.http.get<any>(`${API_BASE_URL}/admin/dashboard`).subscribe({
+      next: (res) => {
+        this.data.set(res);
+        const revenues = (res.revenueByMonth || []).map((r: any) => r.revenue);
+        this.maxRevenue.set(Math.max(...revenues, 1));
+      },
+      error: (err) => console.error('Failed to load admin dashboard:', err)
+    });
+  }
 
   getBarHeight(revenue: number): number {
-    return (revenue / this.maxRevenue) * 85;
+    return (revenue / this.maxRevenue()) * 85;
   }
 
   formatCurrency(amount: number): string {

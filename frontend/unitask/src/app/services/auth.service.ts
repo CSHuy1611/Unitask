@@ -1,11 +1,16 @@
 import { Injectable, signal, computed, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
+import { API_BASE_URL } from '../config/api.config';
 import { User } from '../models/user.model';
 import MOCK_USERS from '../../assets/data/mock-users.json';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private platformId = inject(PLATFORM_ID);
+  private http = inject(HttpClient);
   private users: User[] = [];
 
   currentUser = signal<User | null>(null);
@@ -38,6 +43,9 @@ export class AuthService {
           } else {
              this.currentUser.set(user);
           }
+          // Live sync wallet balance and profile details from DB
+          this.fetchBalance().subscribe();
+          this.fetchProfile().subscribe();
         } catch {
           localStorage.removeItem('unitask_user');
         }
@@ -61,122 +69,156 @@ export class AuthService {
     }
   }
 
-  login(email: string, password: string): { success: boolean; message: string } {
-    const user = this.users.find(u => u.email === email && u.password === password);
-    if (user) {
-      this.currentUser.set(user);
-      this.saveToStorage(user);
-      return { success: true, message: 'Đăng nhập thành công!' };
-    }
-    return { success: false, message: 'Email hoặc mật khẩu không đúng.' };
+  login(email: string, password: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/account/login`, { email, password }).pipe(
+      tap(response => {
+        if (response && response.token) {
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('unitask_token', response.token);
+          }
+          // The backend returns Email, FullName, Role, Token in AuthResponseDto.
+          // We map it to the frontend's expected format.
+          const user: User = {
+            id: response.userId || Math.floor(Math.random() * 10000), // Temporary id mapping until full profile fetch
+            email: response.email,
+            password: '', 
+            role: response.role.toLowerCase(), // 'Student' -> 'student'
+            fullName: response.fullName,
+            avatar: response.fullName.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase(),
+            phone: '',
+            ekycStatus: 'none',
+            ekycDate: null,
+            createdAt: new Date().toISOString().split('T')[0],
+            skills: [],
+            appliedJobs: [],
+            savedJobs: [],
+            postedJobs: []
+          };
+          this.currentUser.set(user);
+          this.saveToStorage(user);
+
+          // Live sync wallet balance and profile details from DB
+          this.fetchBalance().subscribe();
+          this.fetchProfile().subscribe();
+        }
+      }),
+      map(() => ({ success: true, message: 'Đăng nhập thành công!' })),
+      catchError(err => {
+        return of({ success: false, message: this.parseError(err, 'Email hoặc mật khẩu không đúng.') });
+      })
+    );
   }
 
   logout(): void {
     this.currentUser.set(null);
     this.saveToStorage(null);
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem('unitask_token');
+    }
   }
 
-  register(userData: Partial<User>): { success: boolean; message: string } {
-    const exists = this.users.find(u => u.email === userData.email);
-    if (exists) {
-      return { success: false, message: 'Email đã được sử dụng.' };
-    }
-
-    const newUser: User = {
-      id: this.users.length + 1,
-      email: userData.email || '',
-      password: userData.password || '',
-      role: userData.role || 'student',
-      fullName: userData.fullName || '',
-      avatar: (userData.fullName || 'U').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase(),
-      phone: userData.phone || '',
-      ekycStatus: 'none',
-      ekycDate: null,
-      createdAt: new Date().toISOString().split('T')[0],
+  register(userData: Partial<User>): Observable<{ success: boolean; message: string }> {
+    const payload = {
+      email: userData.email,
+      password: userData.password,
+      fullName: userData.fullName,
+      phoneNumber: userData.phone,
+      role: userData.role === 'student' ? 'Student' : (userData.role === 'employer' ? 'Employer' : 'Admin'),
+      // Extended fields
       university: userData.university,
       major: userData.major,
       year: userData.year,
-      skills: userData.skills || [],
-      bio: userData.bio,
-      appliedJobs: [],
-      savedJobs: [],
-      companyId: userData.companyId,
       companyName: userData.companyName,
-      position: userData.position,
-      postedJobs: [],
+      position: userData.position
     };
 
-    this.users.push(newUser);
-    this.saveUsersToStorage();
-    this.currentUser.set(newUser);
-    this.saveToStorage(newUser);
-    return { success: true, message: 'Đăng ký thành công!' };
+    return this.http.post<any>(`${API_BASE_URL}/account/register`, payload).pipe(
+      map(() => ({ success: true, message: 'Đăng ký thành công! Vui lòng đăng nhập.' })),
+      catchError(err => {
+        return of({ success: false, message: this.parseError(err, 'Đăng ký thất bại. Vui lòng thử lại.') });
+      })
+    );
   }
 
   // Profile update
-  updateProfile(data: Partial<User>): { success: boolean; message: string } {
+  updateProfile(data: Partial<User>): Observable<{ success: boolean; message: string }> {
     const user = this.currentUser();
-    if (!user) return { success: false, message: 'Chưa đăng nhập.' };
+    if (!user) return of({ success: false, message: 'Chưa đăng nhập.' });
 
-    const updated: User = {
-      ...user,
-      fullName: data.fullName ?? user.fullName,
-      phone: data.phone ?? user.phone,
-      university: data.university ?? user.university,
-      major: data.major ?? user.major,
-      year: data.year ?? user.year,
-      skills: data.skills ?? user.skills,
-      bio: data.bio ?? user.bio,
-      address: data.address ?? user.address,
-      dateOfBirth: data.dateOfBirth ?? user.dateOfBirth,
-      avatar: (data.fullName || user.fullName).split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase(),
-    };
+    const formData = new FormData();
+    if (data.fullName) formData.append('FullName', data.fullName);
+    if (data.phone) formData.append('PhoneNumber', data.phone);
+    if (data.dateOfBirth) formData.append('DateOfBirth', data.dateOfBirth);
+    if (data.address) formData.append('Address', data.address);
 
-    const idx = this.users.findIndex(u => u.id === user.id);
-    if (idx >= 0) {
-      this.users[idx] = updated;
-      this.saveUsersToStorage();
+    const isStudent = user.role === 'student';
+    const endpoint = isStudent ? '/profile/student' : '/profile/employer';
+
+    if (isStudent) {
+      if (data.university) formData.append('University', data.university);
+      if (data.major) formData.append('Major', data.major);
+      if (data.year) formData.append('Year', data.year.toString());
+      if (data.skills) formData.append('Skills', data.skills.join(', '));
+      if (data.bio) formData.append('Bio', data.bio);
+    } else {
+      if (data.companyName) formData.append('CompanyName', data.companyName);
+      if (data.position) formData.append('Position', data.position);
     }
-    this.currentUser.set(updated);
-    this.saveToStorage(updated);
-    return { success: true, message: 'Cập nhật hồ sơ thành công!' };
+
+    return this.http.put<any>(`${API_BASE_URL}${endpoint}`, formData).pipe(
+      tap(() => {
+        // Optimistically update local state
+        const updated = { ...user, ...data };
+        this.currentUser.set(updated);
+        this.saveToStorage(updated);
+      }),
+      map(() => ({ success: true, message: 'Cập nhật hồ sơ thành công!' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Cập nhật thất bại.' }))
+    );
   }
 
   // CV upload
-  uploadCV(fileName: string): void {
-    const user = this.currentUser();
-    if (user) {
-      const updated = { ...user, cvFileName: fileName, cvUploadDate: new Date().toISOString().split('T')[0] };
-      const idx = this.users.findIndex(u => u.id === user.id);
-      if (idx >= 0) {
-        this.users[idx] = updated;
-        this.saveUsersToStorage();
-      }
-      this.currentUser.set(updated);
-      this.saveToStorage(updated);
-    }
+  uploadCV(file: File): Observable<{ success: boolean; message: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<any>(`${API_BASE_URL}/profile/student/cv`, formData).pipe(
+      tap(res => {
+        const user = this.currentUser();
+        if (user && res.cvUrl) {
+          const updated = { ...user, cvFileName: file.name, cvUploadDate: new Date().toISOString().split('T')[0] };
+          this.currentUser.set(updated);
+          this.saveToStorage(updated);
+        }
+      }),
+      map(() => ({ success: true, message: 'Tải CV lên thành công!' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Tải CV thất bại.' }))
+    );
   }
 
-  submitEkyc(frontImage: string, backImage: string): void {
-    const user = this.currentUser();
-    if (user) {
-      const updated = {
-        ...user,
-        ekycStatus: 'pending' as const,
-        ekycDate: new Date().toISOString().split('T')[0],
-        ekycFrontImage: frontImage,
-        ekycBackImage: backImage,
-      };
-      const idx = this.users.findIndex(u => u.id === user.id);
-      if (idx >= 0) {
-        this.users[idx] = updated;
-        this.saveUsersToStorage();
-      }
-      this.currentUser.set(updated);
-      this.saveToStorage(updated);
-    }
+  submitEkyc(frontFile: File, backFile: File): Observable<{ success: boolean; message: string }> {
+    const formData = new FormData();
+    formData.append('FrontImage', frontFile);
+    formData.append('BackImage', backFile);
+    
+    return this.http.post<any>(`${API_BASE_URL}/profile/ekyc`, formData).pipe(
+      tap(() => {
+        const user = this.currentUser();
+        if (user) {
+          const updated = {
+            ...user,
+            ekycStatus: 'pending' as const,
+            ekycDate: new Date().toISOString().split('T')[0]
+          };
+          this.currentUser.set(updated);
+          this.saveToStorage(updated);
+        }
+      }),
+      map(() => ({ success: true, message: 'Đã gửi yêu cầu xác thực.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Gửi xác thực thất bại.' }))
+    );
   }
 
+  // Payment & Packages
   // Payment & Packages
   addBalance(amount: number): { success: boolean; message: string } {
     const user = this.currentUser();
@@ -192,6 +234,115 @@ export class AuthService {
       return { success: true, message: `Nạp thành công ${amount.toLocaleString('vi-VN')}đ` };
     }
     return { success: false, message: 'Lỗi xác thực' };
+  }
+
+  fetchBalance(): Observable<number> {
+    return this.http.get<any>(`${API_BASE_URL}/wallet`).pipe(
+      tap(res => {
+        const user = this.currentUser();
+        if (user) {
+          const updated = { ...user, balance: res.balance };
+          this.currentUser.set(updated);
+          this.saveToStorage(updated);
+        }
+      }),
+      map(res => res.balance),
+      catchError(() => of(0))
+    );
+  }
+
+  fetchProfile(): Observable<any> {
+    return this.http.get<any>(`${API_BASE_URL}/profile`).pipe(
+      tap(res => {
+        if (!res) return;
+        const user = this.currentUser();
+        if (user) {
+          const isStudent = user.role === 'student';
+          let updated: User;
+          
+          const mapEkyc = (val: any): User['ekycStatus'] => {
+            if (val === 1 || val === '1' || val === 'Pending' || val === 'pending') return 'pending';
+            if (val === 2 || val === '2' || val === 'Verified' || val === 'verified') return 'verified';
+            if (val === 3 || val === '3' || val === 'Rejected' || val === 'rejected') return 'rejected';
+            return 'none';
+          };
+
+            if (isStudent) {
+              const userObj = res.user || res.User || {};
+              const skillsVal = res.skills || res.Skills || '';
+              let skillsArray: string[] = [];
+              if (typeof skillsVal === 'string') {
+                skillsArray = skillsVal.split(',').map((s: string) => s.trim()).filter(Boolean);
+              } else if (Array.isArray(skillsVal)) {
+                skillsArray = skillsVal;
+              }
+              
+              const dob = res.dateOfBirth || res.DateOfBirth;
+              const cvUpload = res.cvUploadDate || res.CvUploadDate;
+              const cvUrl = res.cvUrl || res.CvUrl || '';
+
+              updated = {
+                ...user,
+                id: userObj.id || userObj.Id || user.id,
+                fullName: userObj.fullName || userObj.FullName || user.fullName,
+                avatarUrl: userObj.avatarUrl || userObj.AvatarUrl || user.avatarUrl || user.avatar,
+                phone: userObj.phoneNumber || userObj.PhoneNumber || res.phone || user.phone,
+                ekycStatus: mapEkyc(userObj.ekycStatus !== undefined ? userObj.ekycStatus : userObj.EkycStatus),
+                ekycDate: userObj.ekycDate || userObj.EkycDate ? (userObj.ekycDate || userObj.EkycDate).split('T')[0] : user.ekycDate,
+                university: res.university || res.University || user.university,
+                major: res.major || res.Major || user.major,
+                year: res.year || res.Year || user.year,
+                gpa: res.gpa || res.GPA || user.gpa,
+                skills: skillsArray.length ? skillsArray : user.skills,
+                bio: res.bio || res.Bio || user.bio,
+                address: res.address || res.Address || user.address,
+                dateOfBirth: dob ? dob.split('T')[0] : user.dateOfBirth,
+                cvFileName: cvUrl ? cvUrl.substring(cvUrl.lastIndexOf('/') + 1) : user.cvFileName,
+                cvUploadDate: cvUpload ? cvUpload.split('T')[0] : user.cvUploadDate
+              };
+            } else {
+              const userObj = res.user || res.User || {};
+              const companyObj = res.company || res.Company || {};
+              
+              updated = {
+                ...user,
+                id: userObj.id || userObj.Id || user.id,
+                fullName: userObj.fullName || userObj.FullName || user.fullName,
+                avatarUrl: userObj.avatarUrl || userObj.AvatarUrl || user.avatarUrl || user.avatar,
+                phone: userObj.phoneNumber || userObj.PhoneNumber || res.phone || user.phone,
+                ekycStatus: mapEkyc(userObj.ekycStatus !== undefined ? userObj.ekycStatus : userObj.EkycStatus),
+                ekycDate: userObj.ekycDate || userObj.EkycDate ? (userObj.ekycDate || userObj.EkycDate).split('T')[0] : user.ekycDate,
+                companyId: companyObj.id || companyObj.Id || res.companyId || user.companyId,
+                companyName: companyObj.name || companyObj.Name || user.companyName,
+                position: res.position || res.Position || user.position
+              };
+            }
+          this.currentUser.set(updated);
+          this.saveToStorage(updated);
+        }
+      }),
+      catchError(err => {
+        console.error('Failed to sync profile details:', err);
+        return of(null);
+      })
+    );
+  }
+
+  withdraw(amount: number, bank: string, accountNumber: string, accountName: string): Observable<{ success: boolean; message: string }> {
+    const payload = {
+      amount,
+      bank,
+      accountNumber,
+      accountName
+    };
+    return this.http.post<any>(`${API_BASE_URL}/wallet/withdraw`, payload).pipe(
+      tap(() => {
+        // Sync balance from DB after withdrawal
+        this.fetchBalance().subscribe();
+      }),
+      map(() => ({ success: true, message: 'Yêu cầu rút tiền thành công!' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Rút tiền thất bại. Vui lòng thử lại.' }))
+    );
   }
 
   addWorkingJob(studentId: number, jobId: number): void {
@@ -227,23 +378,9 @@ export class AuthService {
   }
 
   deductBalance(amount: number): { success: boolean; message: string } {
-    const user = this.currentUser();
-    if (user) {
-      const currentBalance = user.balance || 0;
-      if (currentBalance >= amount) {
-        const updated = { ...user, balance: currentBalance - amount };
-        const idx = this.users.findIndex(u => u.id === user.id);
-        if (idx >= 0) {
-          this.users[idx] = updated;
-          this.saveUsersToStorage();
-        }
-        this.currentUser.set(updated);
-        this.saveToStorage(updated);
-        return { success: true, message: `Đã trừ ${amount.toLocaleString('vi-VN')}đ` };
-      }
-      return { success: false, message: 'Số dư không đủ' };
-    }
-    return { success: false, message: 'Lỗi xác thực' };
+    // Escrow deductions are handled fully on the backend during job creation.
+    // We return success to maintain dashboard compatibility and fetch balance immediately after.
+    return { success: true, message: 'Tạm trừ số dư' };
   }
 
   updatePackage(pkgName: string, durationMonths: number): { success: boolean; message: string } {
@@ -322,18 +459,73 @@ export class AuthService {
     }
   }
 
-  updateAvatarUrl(avatarUrl: string): { success: boolean; message: string } {
+  updateAvatarUrl(file: File): Observable<{ success: boolean; message: string }> {
     const user = this.currentUser();
-    if (!user) return { success: false, message: 'Chưa đăng nhập' };
+    if (!user) return of({ success: false, message: 'Chưa đăng nhập.' });
 
-    const updated = { ...user, avatarUrl };
-    const idx = this.users.findIndex(u => u.id === user.id);
-    if (idx >= 0) {
-      this.users[idx] = updated;
-      this.saveUsersToStorage();
+    const formData = new FormData();
+    formData.append('AvatarFile', file);
+    
+    const endpoint = user.role === 'student' ? '/profile/student' : '/profile/employer';
+    
+    return this.http.put<any>(`${API_BASE_URL}${endpoint}`, formData).pipe(
+      tap(() => {
+        // Optimistically we assume success and let the user reload or we create a local object URL
+        // A complete implementation would re-fetch the user profile here.
+      }),
+      map(() => ({ success: true, message: 'Cập nhật ảnh đại diện thành công!' })),
+      catchError(err => of({ success: false, message: this.parseError(err, 'Cập nhật ảnh thất bại.') }))
+    );
+  }
+
+  private parseError(err: any, fallbackMessage: string): string {
+    if (!err) return fallbackMessage;
+    
+    // Check for CORS or server downtime
+    if (err.status === 0) {
+      return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra cổng API (5250) đã khởi chạy chưa.';
     }
-    this.currentUser.set(updated);
-    this.saveToStorage(updated);
-    return { success: true, message: 'Cập nhật ảnh đại diện thành công!' };
+
+    if (err.error) {
+      // 1. Standard Identity error array
+      if (Array.isArray(err.error)) {
+        return err.error.map((e: any) => e.description || e.Description || 'Lỗi không xác định.').join(' ');
+      }
+      
+      // 2. ValidationProblemDetails errors dictionary
+      if (err.error.errors && typeof err.error.errors === 'object') {
+        const errorDict = err.error.errors;
+        const messages: string[] = [];
+        for (const key in errorDict) {
+          if (Object.prototype.hasOwnProperty.call(errorDict, key)) {
+            const errs = errorDict[key];
+            if (Array.isArray(errs)) {
+              messages.push(...errs);
+            } else if (typeof errs === 'string') {
+              messages.push(errs);
+            }
+          }
+        }
+        if (messages.length > 0) {
+          return messages.join(' ');
+        }
+      }
+      
+      // 3. Custom error object with message property
+      if (err.error.message || err.error.Message) {
+        return err.error.message || err.error.Message;
+      }
+      
+      // 4. Raw string error
+      if (typeof err.error === 'string') {
+        return err.error;
+      }
+    }
+    
+    if (err.message) {
+      return err.message;
+    }
+
+    return fallbackMessage;
   }
 }

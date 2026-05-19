@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("UniTask.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d95e1bada13662979a3a8322f5abcc3e1b7c7a35")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7aca4c07996f425e447ed4a32504e29962c00ed4")]
 [assembly: System.Reflection.AssemblyProductAttribute("UniTask.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UniTask.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

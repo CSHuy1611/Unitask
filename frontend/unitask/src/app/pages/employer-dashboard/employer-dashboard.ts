@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -271,35 +271,71 @@ import { Job } from '../../models/job.model';
                 </div>
                 
                 <div class="applicants-list d-flex flex-col gap-4">
-                  @for (student of applicantUsers(); track student.id) {
-                    <div class="applicant-card p-4 rounded-lg bg-secondary border border-light d-flex flex-col gap-3">
-                      <div class="d-flex justify-between items-center">
+                  @for (app of jobApplications(); track app.id) {
+                    <div class="applicant-card p-4 rounded-lg d-flex flex-col gap-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; border-radius: 8px;">
+                      <div class="d-flex justify-between items-start" style="flex-wrap: wrap; gap: 12px; width: 100%;">
                         <div class="d-flex items-center gap-3">
-                          <div class="avatar-sm" style="width:48px; height:48px; border-radius:50%; background:var(--primary-gradient); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:1.1rem">
-                            {{ student.avatar }}
+                          <div class="avatar-sm" style="width:52px; height:52px; border-radius:50%; background:var(--primary-gradient); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:1.2rem; overflow:hidden; border: 2px solid var(--primary-light)">
+                            @if (app.studentAvatarUrl) {
+                              <img [src]="app.studentAvatarUrl" alt="Avatar" style="width:100%; height:100%; object-fit:cover" />
+                            } @else {
+                              {{ app.studentName ? app.studentName[0] : 'U' }}
+                            }
                           </div>
                           <div>
-                            <strong style="display:block; color:var(--text-primary); font-size:1.1rem">{{ student.fullName }}</strong>
-                            <span style="font-size:0.875rem; color:var(--text-secondary)">{{ student.university }} - {{ student.major }} (Năm {{ student.year }})</span>
+                            <div class="d-flex items-center gap-2">
+                              <strong style="color:var(--text-primary); font-size:1.15rem">{{ app.studentName }}</strong>
+                              @if (app.studentEkycStatus === 'Verified' || app.studentEkycStatus === 'verified') {
+                                <span class="material-icons-round" style="font-size:18px; color:var(--success)" title="Đã định danh eKYC">verified</span>
+                              }
+                            </div>
+                            <span style="font-size:0.9rem; color:var(--text-secondary); display:block; margin-top:2px;">
+                              🎓 {{ app.studentUniversity }}
+                            </span>
+                            <span style="font-size:0.85rem; color:var(--text-muted); display:block; margin-top:2px;">
+                              📚 Ngành: {{ app.studentMajor }} &bull; Năm thứ {{ app.studentYear }}
+                            </span>
                           </div>
                         </div>
-                        <button class="btn btn-primary btn-sm" (click)="assignJobToUser(student.id)">
-                          Giao việc ngay
-                        </button>
+                        
+                        <div class="d-flex gap-2 items-center">
+                          @if (app.studentCVUrl) {
+                            <a [href]="app.studentCVUrl" target="_blank" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; background: rgba(var(--primary-rgb), 0.15); color: var(--primary-light); border-color: var(--primary-light); font-size: 0.8rem; padding: 6px 10px;" title="Xem CV trên Cloudinary">
+                              <span class="material-icons-round" style="font-size:16px">insert_drive_file</span> Xem CV
+                            </a>
+                          }
+                          @if (app.status === 0) {
+                            <button class="btn btn-primary btn-sm" (click)="userToAssign.set(app.id)" style="display:inline-flex; align-items:center; gap:4px; font-size: 0.8rem; padding: 6px 10px;">
+                              <span class="material-icons-round" style="font-size:16px">handshake</span> Giao việc
+                            </button>
+                          } @else if (app.status === 1) {
+                            <span class="badge badge-success" style="display:inline-flex; align-items:center; gap:4px; padding: 6px 12px; font-size: 0.8rem;">
+                              <span class="material-icons-round" style="font-size:14px">check</span> Đã giao việc
+                            </span>
+                          } @else if (app.status === 2) {
+                            <span class="badge badge-danger" style="display:inline-flex; align-items:center; gap:4px; padding: 6px 12px; font-size: 0.8rem;">
+                              <span class="material-icons-round" style="font-size:14px">close</span> Đã từ chối
+                            </span>
+                          }
+                        </div>
                       </div>
-                      
-                      @if (student.bio) {
-                        <p style="font-size:0.9rem; color:var(--text-secondary); margin:0; line-height:1.5">
-                          "{{ student.bio }}"
-                        </p>
-                      }
 
-                      <div class="d-flex gap-2 items-center" style="flex-wrap:wrap">
-                        @if (student.ekycStatus === 'verified') {
-                          <span class="badge badge-success" style="font-size:0.75rem"><span class="material-icons-round" style="font-size:12px; margin-right:2px">verified</span> Đã định danh</span>
+                      <!-- Student Academics & Bio -->
+                      <div class="student-academic-details" style="padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; border-left: 3px solid var(--primary-light); display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem; width: 100%;">
+                          <span style="color:var(--text-secondary)">Điểm trung bình tích lũy GPA:</span>
+                          <strong style="color:var(--warning); font-size:1rem">{{ app.studentGpa ? app.studentGpa.toFixed(2) : 'Chưa cập nhật' }} / 4.00</strong>
+                        </div>
+                        @if (app.studentBio) {
+                          <div style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5; font-style:italic; margin-top:4px;">
+                            "{{ app.studentBio }}"
+                          </div>
                         }
-                        @for (skill of student.skills; track skill) {
-                          <span class="badge badge-secondary" style="font-size:0.75rem">{{ skill }}</span>
+                      </div>
+
+                      <div class="d-flex gap-2 items-center" style="flex-wrap:wrap; width: 100%;">
+                        @for (skill of app.studentSkills; track skill) {
+                          <span class="badge badge-secondary" style="font-size:0.75rem; background: rgba(255,255,255,0.06); color: var(--text-secondary)">{{ skill }}</span>
                         }
                       </div>
                     </div>
@@ -621,7 +657,7 @@ import { Job } from '../../models/job.model';
     .icon-btn { padding: 4px; display: flex; align-items: center; justify-content: center; }
   `]
 })
-export class EmployerDashboardComponent {
+export class EmployerDashboardComponent implements OnInit {
   auth = inject(AuthService);
   jobService = inject(JobService);
   private toast = inject(ToastService);
@@ -636,12 +672,29 @@ export class EmployerDashboardComponent {
 
   formData = this.getEmptyForm();
 
-  employerJobs = signal(this.getEmployerJobs());
-  totalViews = signal(0);
-  totalApplications = signal(0);
+  employerJobs = computed(() => {
+    const user = this.auth.currentUser();
+    if (user?.companyId) {
+      return this.jobService.getJobsByCompanyId(user.companyId);
+    }
+    return [];
+  });
+  
+  totalViews = computed(() => this.employerJobs().reduce((sum, j) => sum + j.views, 0));
+  totalApplications = computed(() => this.employerJobs().reduce((sum, j) => sum + j.applications, 0));
 
   constructor() {
-    this.updateStats();
+  }
+
+  ngOnInit() {
+    // Refresh latest user profile, balance, and jobs list from DB
+    this.auth.fetchProfile().subscribe({
+      error: (err) => console.error('Failed to refresh employer profile:', err)
+    });
+    this.auth.fetchBalance().subscribe({
+      error: (err) => console.error('Failed to refresh wallet balance:', err)
+    });
+    this.jobService.fetchJobs();
   }
 
   private getEmptyForm() {
@@ -661,19 +714,7 @@ export class EmployerDashboardComponent {
     };
   }
 
-  private getEmployerJobs() {
-    const user = this.auth.currentUser();
-    if (user?.companyId) {
-      return this.jobService.getJobsByCompanyId(user.companyId);
-    }
-    return [];
-  }
-
-  private updateStats() {
-    const jobs = this.employerJobs();
-    this.totalViews.set(jobs.reduce((sum, j) => sum + j.views, 0));
-    this.totalApplications.set(jobs.reduce((sum, j) => sum + j.applications, 0));
-  }
+  // Stats are now computed automatically, no need for manual methods
 
   openNewForm() {
     this.editingJobId.set(null);
@@ -719,7 +760,7 @@ export class EmployerDashboardComponent {
 
     if (this.editingJobId()) {
       // Edit mode (No fee for editing)
-      const result = this.jobService.updateJob(this.editingJobId()!, {
+      this.jobService.updateJob(this.editingJobId()!, {
         title: this.formData.title,
         location: this.formData.location,
         type: this.formData.type,
@@ -732,15 +773,30 @@ export class EmployerDashboardComponent {
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
+      }).subscribe({
+        next: (result) => {
+          this.postSuccess.set(result.success);
+          this.postMessage.set(result.message);
+          if (result.success) {
+            this.toast.success(result.message || 'Cập nhật công việc thành công!');
+            setTimeout(() => this.closeForm(), 1500);
+          } else {
+            this.toast.error(result.message || 'Cập nhật công việc thất bại.');
+          }
+        },
+        error: (err) => {
+          this.postSuccess.set(false);
+          const errMsg = err.error?.message || 'Có lỗi xảy ra khi cập nhật.';
+          this.postMessage.set(errMsg);
+          this.toast.error(errMsg);
+        }
       });
-
-      this.postSuccess.set(result.success);
-      this.postMessage.set(result.message);
     } else {
       // Create mode
       if (user.ekycStatus !== 'verified') {
         this.postSuccess.set(false);
         this.postMessage.set('Tài khoản của bạn chưa được xác nhận danh tính (eKYC). Vui lòng cập nhật CCCD trong hồ sơ và chờ duyệt để đăng tin.');
+        this.toast.error('Vui lòng hoàn thành xác thực eKYC trước khi đăng tin!');
         return;
       }
 
@@ -748,6 +804,7 @@ export class EmployerDashboardComponent {
       if (budget < 50000) {
         this.postSuccess.set(false);
         this.postMessage.set('Ngân sách tối thiểu là 50.000đ.');
+        this.toast.error('Ngân sách tối thiểu là 50.000đ.');
         return;
       }
 
@@ -760,8 +817,10 @@ export class EmployerDashboardComponent {
 
       const balance = user.balance || 0;
       if (balance < totalCost) {
+        const errStr = `Số dư tài khoản không đủ. Tổng cần: ${totalCost.toLocaleString('vi-VN')}đ (Bao gồm tạm giữ lương + 10% phí + ${postingFee}đ đăng tin). Vui lòng nạp thêm tiền.`;
         this.postSuccess.set(false);
-        this.postMessage.set(`Số dư tài khoản không đủ. Tổng cần: ${totalCost.toLocaleString('vi-VN')}đ (Bao gồm tạm giữ lương + 10% phí + ${postingFee}đ đăng tin). Vui lòng nạp thêm tiền.`);
+        this.postMessage.set(errStr);
+        this.toast.error('Số dư ví không đủ để ký quỹ công việc này!');
         return;
       }
       
@@ -770,6 +829,7 @@ export class EmployerDashboardComponent {
       if (!deductResult.success) {
         this.postSuccess.set(false);
         this.postMessage.set('Lỗi trừ phí đăng tin. Vui lòng thử lại.');
+        this.toast.error('Lỗi trừ phí đăng tin.');
         return;
       }
 
@@ -790,66 +850,67 @@ export class EmployerDashboardComponent {
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
+      }).subscribe({
+        next: (result) => {
+          this.postSuccess.set(result.success);
+          this.postMessage.set(result.message);
+          if (result.success) {
+            this.toast.success(result.message || 'Đăng bài tuyển dụng thành công!');
+            this.auth.fetchBalance().subscribe();
+            setTimeout(() => this.closeForm(), 1500);
+          } else {
+            this.toast.error(result.message || 'Đăng bài tuyển dụng thất bại.');
+          }
+        },
+        error: (err) => {
+          this.postSuccess.set(false);
+          const errMsg = err.error?.message || 'Có lỗi xảy ra khi đăng tin.';
+          this.postMessage.set(errMsg);
+          this.toast.error(errMsg);
+        }
       });
-
-      this.postSuccess.set(true);
-      this.postMessage.set('Đăng việc thành công!');
-    }
-
-    this.employerJobs.set(this.getEmployerJobs());
-    this.updateStats();
-
-    if (this.postSuccess()) {
-      this.formData = this.getEmptyForm();
-      setTimeout(() => {
-        this.postMessage.set('');
-        this.showPostForm.set(false);
-        this.editingJobId.set(null);
-      }, 2000);
     }
   }
 
   // --- ESCROW & APPLICANTS LOGIC --- //
   selectedJobForApplicants = signal<Job | null>(null);
-  applicantUsers = computed(() => {
-    const job = this.selectedJobForApplicants();
-    if (!job || !job.applicants) return [];
-    // Assuming authService has access to all users for mockup purposes. Since it exposes getAllUsers():
-    return this.auth.getAllUsers().filter(u => job.applicants?.includes(u.id));
-  });
+  jobApplications = signal<any[]>([]);
 
   viewApplicants(job: Job) {
     this.selectedJobForApplicants.set(job);
+    this.jobApplications.set([]);
+    this.jobService.getJobApplications(job.id).subscribe({
+      next: (apps) => this.jobApplications.set(apps),
+      error: () => this.toast.error('Không thể tải danh sách ứng viên.')
+    });
   }
 
-  assignJobToUser(studentId: number) {
-    const job = this.selectedJobForApplicants();
-    if (job) {
-      const res = this.jobService.assignJob(job.id, studentId);
-      if (res.success) {
-        this.auth.addWorkingJob(studentId, job.id);
-        this.selectedJobForApplicants.set(null); // close modal
-        this.userToAssign.set(null); // close confirm modal
-        this.employerJobs.set(this.getEmployerJobs()); // refresh list
-        this.toast.success('Giao việc thành công!');
-      } else {
-        this.toast.error(res.message || 'Có lỗi xảy ra khi giao việc');
-      }
-    }
+  assignJobToUser(applicationId: number) {
+    this.jobService.assignJob(applicationId).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.selectedJobForApplicants.set(null); // close modal
+          this.userToAssign.set(null); // close confirm modal
+          this.toast.success('Giao việc thành công!');
+        } else {
+          this.toast.error(res.message || 'Có lỗi xảy ra khi giao việc');
+        }
+      },
+      error: () => this.toast.error('Có lỗi xảy ra khi giao việc')
+    });
   }
 
   approveCompletion(job: Job) {
-    const res = this.jobService.approveJob(job.id);
-    if (res.success) {
-      // Pay the student
-      if (job.selectedStudentId && job.budget) {
-        this.auth.payStudent(job.selectedStudentId, job.budget);
-      }
-      this.employerJobs.set(this.getEmployerJobs()); // refresh list
-      this.jobToApprove.set(null); // close modal
-      this.toast.success('Nghiệm thu thành công! Đã giải ngân cho sinh viên.');
-    } else {
-      this.toast.error(res.message || 'Có lỗi xảy ra khi nghiệm thu');
-    }
+    this.jobService.approveJob(job.id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.jobToApprove.set(null); // close modal
+          this.toast.success('Nghiệm thu thành công! Đã giải ngân cho sinh viên.');
+        } else {
+          this.toast.error(res.message || 'Có lỗi xảy ra khi nghiệm thu');
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi nghiệm thu.')
+    });
   }
 }

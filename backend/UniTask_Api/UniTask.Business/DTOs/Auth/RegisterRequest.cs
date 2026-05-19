@@ -19,5 +19,14 @@ namespace UniTask.Business.DTOs.Auth
         public string Role { get; set; } = string.Empty;
         
         public string? PhoneNumber { get; set; }
+
+        // Optional Student Fields
+        public string? University { get; set; }
+        public string? Major { get; set; }
+        public int? Year { get; set; }
+
+        // Optional Employer Fields
+        public string? CompanyName { get; set; }
+        public string? Position { get; set; }
     }
 }

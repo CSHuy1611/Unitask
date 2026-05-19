@@ -28,19 +28,71 @@ namespace UniTask.Business.Services
 
             if (user.UserType == UserType.Student)
             {
-                return await _context.StudentProfiles
+                var profile = await _context.StudentProfiles
                     .Include(p => p.User)
                     .FirstOrDefaultAsync(p => p.UserId == userId);
+                
+                if (profile == null) return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate } };
+
+                return new
+                {
+                    user = new
+                    {
+                        fullName = profile.User.FullName,
+                        email = profile.User.Email,
+                        phoneNumber = profile.User.PhoneNumber,
+                        avatarUrl = profile.User.AvatarUrl,
+                        ekycStatus = profile.User.EkycStatus,
+                        ekycDate = profile.User.EkycDate
+                    },
+                    university = profile.University,
+                    major = profile.Major,
+                    year = profile.Year,
+                    gpa = profile.GPA,
+                    skills = profile.Skills,
+                    bio = profile.Bio,
+                    cvUrl = profile.CVUrl,
+                    cvUploadDate = profile.CVUploadDate,
+                    address = profile.Address,
+                    dateOfBirth = profile.DateOfBirth
+                };
             }
             else if (user.UserType == UserType.Employer)
             {
-                return await _context.EmployerProfiles
+                var profile = await _context.EmployerProfiles
                     .Include(p => p.User)
                     .Include(p => p.Company)
                     .FirstOrDefaultAsync(p => p.UserId == userId);
+
+                if (profile == null) return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate } };
+
+                return new
+                {
+                    user = new
+                    {
+                        fullName = profile.User.FullName,
+                        email = profile.User.Email,
+                        phoneNumber = profile.User.PhoneNumber,
+                        avatarUrl = profile.User.AvatarUrl,
+                        ekycStatus = profile.User.EkycStatus,
+                        ekycDate = profile.User.EkycDate
+                    },
+                    position = profile.Position,
+                    company = profile.Company != null ? new
+                    {
+                        id = profile.Company.Id,
+                        name = profile.Company.Name,
+                        industry = profile.Company.Industry,
+                        size = profile.Company.Size,
+                        location = profile.Company.Location,
+                        description = profile.Company.Description,
+                        website = profile.Company.Website,
+                        logoUrl = profile.Company.LogoUrl
+                    } : null
+                };
             }
 
-            return user;
+            return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate } };
         }
 
         public async Task<bool> UpdateStudentProfileAsync(string userId, StudentProfileUpdateDto dto)
@@ -107,7 +159,16 @@ namespace UniTask.Business.Services
             // Update Profile fields
             if (!string.IsNullOrEmpty(dto.Position)) profile.Position = dto.Position;
 
-            // Update Company info if it exists
+            // Update or Create Company info
+            if (profile.Company == null)
+            {
+                if (!string.IsNullOrEmpty(dto.CompanyName))
+                {
+                    profile.Company = new Company { Name = dto.CompanyName };
+                    _context.Companies.Add(profile.Company);
+                }
+            }
+
             if (profile.Company != null)
             {
                 if (!string.IsNullOrEmpty(dto.CompanyName)) profile.Company.Name = dto.CompanyName;

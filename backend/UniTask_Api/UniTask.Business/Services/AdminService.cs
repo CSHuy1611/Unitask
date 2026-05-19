@@ -17,25 +17,89 @@ namespace UniTask.Business.Services
             _context = context;
         }
 
-        public async Task<DashboardStatsDto> GetDashboardStatsAsync()
+        public async Task<object> GetDashboardStatsAsync()
         {
             var now = DateTime.UtcNow;
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
 
-            return new DashboardStatsDto
+            var summary = new
             {
-                TotalUsers = await _context.Users.CountAsync(),
-                TotalStudents = await _context.StudentProfiles.CountAsync(),
-                TotalEmployers = await _context.EmployerProfiles.CountAsync(),
-                TotalJobs = await _context.Jobs.CountAsync(),
-                TotalRevenue = await _context.Transactions
+                totalUsers = await _context.Users.CountAsync(),
+                totalStudents = await _context.StudentProfiles.CountAsync(),
+                totalEmployers = await _context.EmployerProfiles.CountAsync(),
+                totalJobs = await _context.Jobs.CountAsync(),
+                totalRevenue = await _context.Transactions
                     .Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.PostingFee || t.Type == TransactionType.SubscriptionFee)
-                    .SumAsync(t => t.Amount),
-                EkycPending = await _context.Users.CountAsync(u => u.EkycStatus == EkycStatus.Pending),
-                EkycVerified = await _context.Users.CountAsync(u => u.EkycStatus == EkycStatus.Verified),
-                ApplicationsThisMonth = await _context.Applications
+                    .SumAsync(t => -t.Amount),
+                ekycPending = await _context.Users.CountAsync(u => u.EkycStatus == EkycStatus.Pending),
+                ekycVerified = await _context.Users.CountAsync(u => u.EkycStatus == EkycStatus.Verified),
+                applicationsThisMonth = await _context.Applications
                     .CountAsync(a => a.AppliedDate >= startOfMonth)
             };
+
+            // Calculate live revenue for last 6 months
+            var revenueByMonth = new List<object>();
+            for (int i = 5; i >= 0; i--)
+            {
+                var monthDate = now.AddMonths(-i);
+                var monthStart = new DateTime(monthDate.Year, monthDate.Month, 1);
+                var monthEnd = monthStart.AddMonths(1);
+
+                var revenue = await _context.Transactions
+                    .Where(t => (t.Type == TransactionType.CommissionFee || t.Type == TransactionType.PostingFee || t.Type == TransactionType.SubscriptionFee)
+                                && t.CreatedAt >= monthStart && t.CreatedAt < monthEnd)
+                    .SumAsync(t => -t.Amount);
+
+                revenueByMonth.Add(new
+                {
+                    month = $"Tháng {monthDate.Month:D2}",
+                    revenue = revenue
+                });
+            }
+
+            // Calculate live subscribers per package
+            var packages = await _context.ServicePackages
+                .Where(p => p.IsActive)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    price = p.Price,
+                    duration = $"{p.DurationMonths} tháng",
+                    description = p.Description,
+                    subscribers = _context.Subscriptions.Count(s => s.PackageId == p.Id && s.IsActive && s.EndDate > now)
+                })
+                .ToListAsync();
+
+            return new
+            {
+                summary = summary,
+                revenueByMonth = revenueByMonth,
+                packages = packages
+            };
+        }
+
+        public async Task<IEnumerable<object>> GetAllUsersAsync()
+        {
+            var users = await _context.Users
+                .OrderByDescending(u => u.CreatedAt)
+                .Select(u => new
+                {
+                    id = u.Id,
+                    email = u.Email,
+                    fullName = u.FullName,
+                    phone = u.PhoneNumber,
+                    role = u.UserType == UserType.Student ? "student" : (u.UserType == UserType.Employer ? "employer" : "admin"),
+                    ekycStatus = u.EkycStatus == EkycStatus.Pending ? "pending" : (u.EkycStatus == EkycStatus.Verified ? "verified" : (u.EkycStatus == EkycStatus.Rejected ? "rejected" : "none")),
+                    ekycFrontImage = u.EkycFrontImageUrl,
+                    ekycBackImage = u.EkycBackImageUrl,
+                    university = u.StudentProfile != null ? u.StudentProfile.University : "",
+                    companyName = u.EmployerProfile != null && u.EmployerProfile.Company != null ? u.EmployerProfile.Company.Name : "",
+                    createdAt = u.CreatedAt.ToString("yyyy-MM-dd")
+                })
+                .ToListAsync();
+
+            return users;
         }
 
         public async Task<ServicePackageDto> CreatePackageAsync(ServicePackageCreateDto dto)
@@ -85,6 +149,44 @@ namespace UniTask.Business.Services
 
             // Soft delete by deactivating
             package.IsActive = false;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<object>> GetWithdrawalsAsync()
+        {
+            var withdrawals = await _context.Transactions
+                .Include(t => t.Wallet)
+                .ThenInclude(w => w.User)
+                .Where(t => t.Type == TransactionType.Withdrawal)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new
+                {
+                    id = t.Id,
+                    amount = Math.Abs(t.Amount), // Số tiền yêu cầu rút dương
+                    description = t.Description,
+                    createdAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    userName = t.Wallet.User.FullName,
+                    userEmail = t.Wallet.User.Email
+                })
+                .ToListAsync();
+
+            return withdrawals;
+        }
+
+        public async Task<bool> CompleteWithdrawalAsync(int transactionId)
+        {
+            var transaction = await _context.Transactions.FindAsync(transactionId);
+            if (transaction == null || transaction.Type != TransactionType.Withdrawal) return false;
+
+            if (transaction.Description != null && transaction.Description.StartsWith("[Completed]"))
+            {
+                return true; // Đã xử lý rồi
+            }
+
+            string cleanDesc = transaction.Description ?? "";
+            transaction.Description = "[Completed] " + cleanDesc;
+
             await _context.SaveChangesAsync();
             return true;
         }

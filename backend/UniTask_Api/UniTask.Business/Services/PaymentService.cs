@@ -49,8 +49,8 @@ namespace UniTask.Business.Services
                 OrderCode = orderCode,
                 Amount = (int)dto.Amount,
                 Description = $"Nap tien vao vi UniTask",
-                CancelUrl = $"{domain}/wallet?status=cancel",
-                ReturnUrl = $"{domain}/wallet?status=success"
+                CancelUrl = $"{domain}/payment/cancel",
+                ReturnUrl = $"{domain}/payment/success"
             };
 
             var createPayment = await _payOS.PaymentRequests.CreateAsync(paymentData);
@@ -77,16 +77,39 @@ namespace UniTask.Business.Services
         {
             try
             {
+                System.Console.WriteLine($"[PAYOS_WEBHOOK] Received Webhook call with Code: {webhookBody.Code}");
+                
                 var data = await _payOS.Webhooks.VerifyAsync(webhookBody);
-                if (data == null) return false;
+                if (data == null)
+                {
+                    System.Console.WriteLine("[PAYOS_WEBHOOK] Signature verification failed. VerifyAsync returned null.");
+                    return false;
+                }
+
+                var orderCode = data.OrderCode;
+                var amount = data.Amount;
+                System.Console.WriteLine($"[PAYOS_WEBHOOK] Signature verified successfully. OrderCode: {orderCode}, Amount: {amount}");
+
+                // Check if this is a test webhook from PayOS dashboard configuration
+                if (orderCode == 123 || orderCode == 0)
+                {
+                    System.Console.WriteLine("[PAYOS_WEBHOOK] Ignored test webhook from PayOS configuration successfully.");
+                    return true;
+                }
 
                 if (webhookBody.Code == "00")
                 {
-                    // Payment Success
-                    var orderCode = data.OrderCode;
-                    var amount = data.Amount;
+                    // 1. Check if transaction has already been completed (idempotency check)
+                    var completedTx = await _context.Transactions
+                        .AnyAsync(t => t.Description != null && t.Description.Contains("thành công") && t.Description.Contains(orderCode.ToString()));
+                    
+                    if (completedTx)
+                    {
+                        System.Console.WriteLine($"[PAYOS_WEBHOOK] Transaction for OrderCode {orderCode} was already successfully processed. Skipping.");
+                        return true; // Return true to response with 200 OK to stop retries
+                    }
 
-                    // Find pending transaction
+                    // 2. Find pending transaction
                     var pendingTx = await _context.Transactions
                         .Include(t => t.Wallet)
                         .FirstOrDefaultAsync(t => t.Description != null && t.Description.Contains("[PAYOS_PENDING]") && t.Description.Contains(orderCode.ToString()));
@@ -101,18 +124,26 @@ namespace UniTask.Business.Services
                         pendingTx.CreatedAt = DateTime.UtcNow; // update time
 
                         await _context.SaveChangesAsync();
+                        System.Console.WriteLine($"[PAYOS_WEBHOOK] Successfully completed transaction for OrderCode {orderCode}, added {amount} to wallet.");
 
                         // Notify admin
                         await _hubContext.Clients.All.SendAsync("TransactionOccurred");
 
                         return true;
                     }
+                    else
+                    {
+                        System.Console.WriteLine($"[PAYOS_WEBHOOK] Error: Pending transaction not found for OrderCode {orderCode}");
+                        return false;
+                    }
                 }
 
+                System.Console.WriteLine($"[PAYOS_WEBHOOK] Webhook code is not success: {webhookBody.Code}");
                 return false;
             }
-            catch
+            catch (System.Exception ex)
             {
+                System.Console.WriteLine($"[PAYOS_WEBHOOK_EXCEPTION] Error during verify: {ex.Message}");
                 return false;
             }
         }
