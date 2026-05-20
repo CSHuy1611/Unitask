@@ -94,7 +94,12 @@ export class JobService {
       commission: dto.commission || 0,
       status: statusMap[dto.status] || 'open',
       applicants: dto.applicants || [],
-      selectedStudentId: dto.selectedStudentId
+      selectedStudentId: dto.selectedStudentId,
+      companyDescription: dto.companyDescription,
+      companyIndustry: dto.companyIndustry,
+      companySize: dto.companySize,
+      companyLocation: dto.companyLocation,
+      companyWebsite: dto.companyWebsite
     };
   }
 

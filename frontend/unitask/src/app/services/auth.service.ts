@@ -163,6 +163,11 @@ export class AuthService {
     } else {
       if (data.companyName) formData.append('CompanyName', data.companyName);
       if (data.position) formData.append('Position', data.position);
+      if (data.companyIndustry) formData.append('Industry', data.companyIndustry);
+      if (data.companySize) formData.append('Size', data.companySize);
+      if (data.companyLocation) formData.append('Location', data.companyLocation);
+      if (data.companyDescription) formData.append('Description', data.companyDescription);
+      if (data.companyWebsite) formData.append('Website', data.companyWebsite);
     }
 
     return this.http.put<any>(`${API_BASE_URL}${endpoint}`, formData).pipe(
@@ -185,13 +190,28 @@ export class AuthService {
       tap(res => {
         const user = this.currentUser();
         if (user && res.cvUrl) {
-          const updated = { ...user, cvFileName: file.name, cvUploadDate: new Date().toISOString().split('T')[0] };
+          const updated = { ...user, cvFileName: file.name, cvUploadDate: new Date().toISOString().split('T')[0], cvUrl: res.cvUrl };
           this.currentUser.set(updated);
           this.saveToStorage(updated);
         }
       }),
       map(() => ({ success: true, message: 'Tải CV lên thành công!' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Tải CV thất bại.' }))
+    );
+  }
+
+  deleteCV(): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<any>(`${API_BASE_URL}/profile/student/cv`).pipe(
+      tap(() => {
+        const user = this.currentUser();
+        if (user) {
+          const updated = { ...user, cvFileName: undefined, cvUploadDate: undefined, cvUrl: undefined };
+          this.currentUser.set(updated);
+          this.saveToStorage(updated);
+        }
+      }),
+      map(() => ({ success: true, message: 'Xóa CV thành công!' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Xóa CV thất bại.' }))
     );
   }
 
@@ -298,7 +318,8 @@ export class AuthService {
                 address: res.address || res.Address || user.address,
                 dateOfBirth: dob ? dob.split('T')[0] : user.dateOfBirth,
                 cvFileName: cvUrl ? cvUrl.substring(cvUrl.lastIndexOf('/') + 1) : user.cvFileName,
-                cvUploadDate: cvUpload ? cvUpload.split('T')[0] : user.cvUploadDate
+                cvUploadDate: cvUpload ? cvUpload.split('T')[0] : user.cvUploadDate,
+                cvUrl: cvUrl || user.cvUrl
               };
             } else {
               const userObj = res.user || res.User || {};
@@ -314,7 +335,15 @@ export class AuthService {
                 ekycDate: userObj.ekycDate || userObj.EkycDate ? (userObj.ekycDate || userObj.EkycDate).split('T')[0] : user.ekycDate,
                 companyId: companyObj.id || companyObj.Id || res.companyId || user.companyId,
                 companyName: companyObj.name || companyObj.Name || user.companyName,
-                position: res.position || res.Position || user.position
+                companyIndustry: companyObj.industry || companyObj.Industry || user.companyIndustry,
+                companySize: companyObj.size || companyObj.Size || user.companySize,
+                companyLocation: companyObj.location || companyObj.Location || user.companyLocation,
+                companyDescription: companyObj.description || companyObj.Description || user.companyDescription,
+                companyWebsite: companyObj.website || companyObj.Website || user.companyWebsite,
+                companyLogoUrl: companyObj.logoUrl || companyObj.LogoUrl || user.companyLogoUrl,
+                position: res.position || res.Position || user.position,
+                activePackage: res.activePackage || undefined,
+                packageExpiry: res.packageExpiry || undefined
               };
             }
           this.currentUser.set(updated);

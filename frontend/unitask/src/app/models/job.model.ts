@@ -25,4 +25,9 @@ export interface Job {
   status?: 'open' | 'in_progress' | 'pending_confirmation' | 'completed' | 'closed';
   selectedStudentId?: number;
   applicants?: number[];
+  companyDescription?: string;
+  companyIndustry?: string;
+  companySize?: string;
+  companyLocation?: string;
+  companyWebsite?: string;
 }

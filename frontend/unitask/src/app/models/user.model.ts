@@ -25,12 +25,19 @@ export interface User {
   workingJobs?: number[]; // IDs of jobs assigned to the student (in_progress, pending_confirmation, completed)
   cvFileName?: string;
   cvUploadDate?: string;
+  cvUrl?: string;
   address?: string;
   dateOfBirth?: string;
 
   // Employer fields
   companyId?: number;
   companyName?: string;
+  companyIndustry?: string;
+  companySize?: string;
+  companyLocation?: string;
+  companyDescription?: string;
+  companyWebsite?: string;
+  companyLogoUrl?: string;
   position?: string;
 
   // Payment & Subscriptions

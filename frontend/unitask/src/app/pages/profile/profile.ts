@@ -101,8 +101,8 @@ import { Job } from '../../models/job.model';
                     <span class="material-icons-round" style="color:var(--primary-light)">account_balance_wallet</span>
                     <strong style="color:var(--primary-light)">{{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ</strong>
                   </div>
-                  @if (auth.isStudent()) {
-                    <button class="btn btn-primary btn-sm" (click)="showWithdrawModal.set(true)" [disabled]="(auth.currentUser()?.balance || 0) < 50000" style="padding: 6px 12px; font-size: 13px;">
+                  @if (auth.isStudent() || auth.isEmployer()) {
+                    <button class="btn btn-primary btn-sm" (click)="showWithdrawModal.set(true)" [disabled]="(auth.currentUser()?.balance || 0) < 10000" style="padding: 6px 12px; font-size: 13px;">
                       <span class="material-icons-round" style="font-size:16px">payments</span> Rút tiền
                     </button>
                   }
@@ -203,6 +203,41 @@ import { Job } from '../../models/job.model';
                         <label class="form-label">Giới thiệu bản thân</label>
                         <textarea class="form-textarea" rows="3" [(ngModel)]="editForm.bio" name="bio" placeholder="Viết đôi dòng về bản thân..."></textarea>
                       </div>
+                    } @else {
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label class="form-label">Chức vụ *</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.position" name="position" required placeholder="VD: Giám đốc nhân sự, CEO, Recruiter">
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label">Tên công ty *</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.companyName" name="companyName" required placeholder="VD: Studio Ánh Sáng">
+                        </div>
+                      </div>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label class="form-label">Lĩnh vực hoạt động</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.companyIndustry" name="companyIndustry" placeholder="VD: Nhiếp ảnh / Media, Thời trang">
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label">Quy mô công ty</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.companySize" name="companySize" placeholder="VD: 5-10 nhân viên, Cá nhân">
+                        </div>
+                      </div>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label class="form-label">Địa chỉ công ty</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.companyLocation" name="companyLocation" placeholder="VD: Quận 9, TP. HCM">
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label">Website công ty</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.companyWebsite" name="companyWebsite" placeholder="VD: https://company.com">
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Giới thiệu về công ty</label>
+                        <textarea class="form-textarea" rows="3" [(ngModel)]="editForm.companyDescription" name="companyDescription" placeholder="Mô tả ngắn gọn về công ty của bạn..."></textarea>
+                      </div>
                     }
                     <div class="form-actions">
                       <button type="button" class="btn btn-secondary" (click)="isEditing.set(false)">Hủy</button>
@@ -211,6 +246,53 @@ import { Job } from '../../models/job.model';
                       </button>
                     </div>
                   </form>
+                </div>
+              }
+
+              <!-- Company Info Section (Employer only) -->
+              @if (auth.isEmployer()) {
+                <div class="cv-section glass-card animate-fade-in-up" style="animation-delay:0.1s">
+                  <h3><span class="material-icons-round">business</span> Thông tin công ty / doanh nghiệp</h3>
+                  
+                  <div style="display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-4);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                      <div>
+                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Tên công ty</span>
+                        <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companyName || 'Chưa cập nhật' }}</strong>
+                      </div>
+                      <div>
+                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Lĩnh vực hoạt động</span>
+                        <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companyIndustry || 'Chưa cập nhật' }}</strong>
+                      </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                      <div>
+                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Quy mô</span>
+                        <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companySize || 'Chưa cập nhật' }}</strong>
+                      </div>
+                      <div>
+                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Địa chỉ</span>
+                        <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companyLocation || 'Chưa cập nhật' }}</strong>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Website</span>
+                      @if (auth.currentUser()?.companyWebsite && auth.currentUser()?.companyWebsite !== '#') {
+                        <a [href]="auth.currentUser()?.companyWebsite" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 600; font-size: 14px;">{{ auth.currentUser()?.companyWebsite }}</a>
+                      } @else {
+                        <strong style="color: var(--text-primary); font-size: 14px;">Chưa cập nhật</strong>
+                      }
+                    </div>
+                    
+                    <div>
+                      <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Giới thiệu công ty</span>
+                      <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin: 0; background: rgba(255,255,255,0.03); padding: var(--space-3); border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+                        {{ auth.currentUser()?.companyDescription || 'Chưa cập nhật giới thiệu chi tiết về công ty.' }}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               }
 
@@ -228,17 +310,27 @@ import { Job } from '../../models/job.model';
                           <span class="cv-date">Tải lên: {{ auth.currentUser()?.cvUploadDate }}</span>
                         </div>
                       </div>
-                      <button class="btn btn-secondary btn-sm" (click)="onRemoveCV()">
-                        <span class="material-icons-round" style="font-size:16px">delete</span> Xóa
-                      </button>
+                      <div class="cv-actions" style="display: flex; gap: 8px;">
+                        @if (auth.currentUser()?.cvUrl) {
+                          <a [href]="auth.currentUser()?.cvUrl" target="_blank" class="btn btn-primary btn-sm" style="display: flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 13px;">
+                            <span class="material-icons-round" style="font-size:16px">visibility</span> Xem CV
+                          </a>
+                        }
+                        <button class="btn btn-secondary btn-sm" (click)="cvInput.click()">
+                          <span class="material-icons-round" style="font-size:16px">edit</span> Sửa
+                        </button>
+                        <button class="btn btn-secondary btn-sm" (click)="onRemoveCV()">
+                          <span class="material-icons-round" style="font-size:16px">delete</span> Xóa
+                        </button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="upload-area" (click)="cvInput.click()" (dragover)="onDragOver($event)" (drop)="onDrop($event)">
+                      <span class="material-icons-round upload-icon">cloud_upload</span>
+                      <p><strong>Click để tải lên</strong> hoặc kéo thả file vào đây</p>
+                      <span class="upload-note">Hỗ trợ: PDF, DOC, DOCX (max 10MB)</span>
                     </div>
                   }
-
-                  <div class="upload-area" (click)="cvInput.click()" (dragover)="onDragOver($event)" (drop)="onDrop($event)">
-                    <span class="material-icons-round upload-icon">cloud_upload</span>
-                    <p><strong>Click để tải lên</strong> hoặc kéo thả file vào đây</p>
-                    <span class="upload-note">Hỗ trợ: PDF, DOC, DOCX (max 10MB)</span>
-                  </div>
                   <input #cvInput type="file" accept=".pdf,.doc,.docx" style="display:none" (change)="onCVSelected($event)">
                 </div>
               }
@@ -456,8 +548,8 @@ import { Job } from '../../models/job.model';
             </div>
             <form (ngSubmit)="onSubmitWithdraw()">
               <div class="form-group mb-4">
-                <label class="form-label">Số tiền rút (Tối đa {{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ) *</label>
-                <input type="number" class="form-input" [(ngModel)]="withdrawForm.amount" name="amount" min="50000" [max]="auth.currentUser()?.balance || 0" required>
+                <label class="form-label">Số tiền rút (Tối thiểu 10.000đ, Tối đa {{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ) *</label>
+                <input type="text" class="form-input" [(ngModel)]="withdrawForm.amount" name="amount" placeholder="Ví dụ: 100.000" required>
               </div>
               <div class="form-group mb-4">
                 <label class="form-label">Ngân hàng thụ hưởng *</label>
@@ -1033,7 +1125,7 @@ export class ProfileComponent implements OnInit {
   selectedJobToComplete = signal<Job | null>(null);
   
   withdrawForm = {
-    amount: null as number | null,
+    amount: '' as any,
     bank: '',
     account: '',
     name: ''
@@ -1099,6 +1191,14 @@ export class ProfileComponent implements OnInit {
     year: 3,
     skillsStr: '',
     bio: '',
+    // Employer fields
+    companyName: '',
+    position: '',
+    companyIndustry: '',
+    companySize: '',
+    companyLocation: '',
+    companyDescription: '',
+    companyWebsite: ''
   };
 
   constructor() {
@@ -1138,23 +1238,43 @@ export class ProfileComponent implements OnInit {
           year: user.year || 3,
           skillsStr: (user.skills || []).join(', '),
           bio: user.bio || '',
+          companyName: user.companyName || '',
+          position: user.position || '',
+          companyIndustry: user.companyIndustry || '',
+          companySize: user.companySize || '',
+          companyLocation: user.companyLocation || '',
+          companyDescription: user.companyDescription || '',
+          companyWebsite: user.companyWebsite || ''
         };
       }
     }
   }
 
   onSaveProfile() {
-    this.auth.updateProfile({
+    const payload: any = {
       fullName: this.editForm.fullName,
       phone: this.editForm.phone,
       dateOfBirth: this.editForm.dateOfBirth || undefined,
       address: this.editForm.address || undefined,
-      university: this.editForm.university || undefined,
-      major: this.editForm.major || undefined,
-      year: Number(this.editForm.year),
-      skills: this.editForm.skillsStr.split(',').map(s => s.trim()).filter(Boolean) as any,
-      bio: this.editForm.bio || undefined,
-    }).subscribe({
+    };
+
+    if (this.auth.isStudent()) {
+      payload.university = this.editForm.university || undefined;
+      payload.major = this.editForm.major || undefined;
+      payload.year = Number(this.editForm.year);
+      payload.skills = this.editForm.skillsStr.split(',').map(s => s.trim()).filter(Boolean);
+      payload.bio = this.editForm.bio || undefined;
+    } else {
+      payload.companyName = this.editForm.companyName || undefined;
+      payload.position = this.editForm.position || undefined;
+      payload.companyIndustry = this.editForm.companyIndustry || undefined;
+      payload.companySize = this.editForm.companySize || undefined;
+      payload.companyLocation = this.editForm.companyLocation || undefined;
+      payload.companyDescription = this.editForm.companyDescription || undefined;
+      payload.companyWebsite = this.editForm.companyWebsite || undefined;
+    }
+
+    this.auth.updateProfile(payload).subscribe({
       next: (result) => {
         if (result.success) {
           this.auth.fetchProfile().subscribe(); // Sync profile from database
@@ -1174,32 +1294,41 @@ export class ProfileComponent implements OnInit {
   }
 
   onSubmitWithdraw() {
-    if (!this.withdrawForm.amount || this.withdrawForm.amount < 50000) {
-      this.toast.error('Số tiền rút tối thiểu là 50.000đ');
+    let amountStr = String(this.withdrawForm.amount || '').trim();
+    // If there is a decimal comma/dot followed by cents (e.g. ,00 or .00 at the end), remove it
+    amountStr = amountStr.replace(/[,.]00$/, '');
+    // Strip all remaining non-digits
+    amountStr = amountStr.replace(/\D/g, '');
+    const amount = Number(amountStr);
+
+    if (!amount || isNaN(amount) || amount < 10000) {
+      this.toast.error('Số tiền rút tối thiểu là 10.000đ');
       return;
     }
     const user = this.auth.currentUser();
-    if (user && (user.balance || 0) >= this.withdrawForm.amount) {
-      this.auth.withdraw(
-        this.withdrawForm.amount,
-        this.withdrawForm.bank,
-        this.withdrawForm.account,
-        this.withdrawForm.name
-      ).subscribe({
-        next: (res) => {
-          if (res.success) {
-            this.toast.success('Yêu cầu rút tiền thành công! Tiền sẽ được chuyển trong 24h.');
-            this.showWithdrawModal.set(false);
-            this.withdrawForm = { amount: null, bank: '', account: '', name: '' };
-          } else {
-            this.toast.error('Có lỗi xảy ra: ' + res.message);
-          }
-        },
-        error: () => this.toast.error('Lỗi kết nối máy chủ.')
-      });
-    } else {
-      this.toast.error('Số dư không đủ để rút!');
+    const balance = user?.balance || 0;
+    if (amount > balance) {
+      this.toast.error(`Số dư không đủ! Bạn chỉ có thể rút tối đa ${balance.toLocaleString('vi-VN')}đ`);
+      return;
     }
+
+    this.auth.withdraw(
+      amount,
+      this.withdrawForm.bank,
+      this.withdrawForm.account,
+      this.withdrawForm.name
+    ).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success('Yêu cầu rút tiền thành công! Tiền sẽ được chuyển trong 24h.');
+          this.showWithdrawModal.set(false);
+          this.withdrawForm = { amount: '' as any, bank: '', account: '', name: '' };
+        } else {
+          this.toast.error('Có lỗi xảy ra: ' + res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối máy chủ.')
+    });
   }
 
   // Phase 4: Student confirms completion
@@ -1255,12 +1384,16 @@ export class ProfileComponent implements OnInit {
   }
 
   onRemoveCV() {
-    // In actual implementation, we might call a DELETE endpoint. 
-    // For now, we optimistically update the state.
-    const user = this.auth.currentUser();
-    if (user) {
-      this.auth.currentUser.set({ ...user, cvFileName: undefined, cvUploadDate: undefined } as any);
-    }
+    this.auth.deleteCV().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối máy chủ.')
+    });
   }
 
   avatarUploading = signal(false);

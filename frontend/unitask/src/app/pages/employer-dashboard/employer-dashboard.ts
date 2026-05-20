@@ -181,7 +181,7 @@ import { Job } from '../../models/job.model';
                       <span>Có thể làm Remote</span>
                     </label>
                     <label class="checkbox-label">
-                      <input type="checkbox" [(ngModel)]="formData.isUrgent" name="isUrgent">
+                      <input type="checkbox" [(ngModel)]="formData.isUrgent" name="isUrgent" (change)="onUrgentChange($event)">
                       <span>🔥 Tuyển gấp</span>
                     </label>
                   </div>
@@ -236,7 +236,7 @@ import { Job } from '../../models/job.model';
                     
                     @if (job.status === 'open') {
                       <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
-                        <span class="material-icons-round" style="font-size:16px">group</span> Ứng viên ({{ job.applicants?.length || 0 }})
+                        <span class="material-icons-round" style="font-size:16px">group</span> Ứng viên ({{ job.applications || 0 }})
                       </button>
                     } @else if (job.status === 'in_progress') {
                       <span class="badge badge-warning">Đang thực hiện</span>
@@ -749,10 +749,28 @@ export class EmployerDashboardComponent implements OnInit {
     this.showPostForm.set(true);
   }
 
+  onUrgentChange(event: any) {
+    const user = this.auth.currentUser();
+    if (!user) return;
+    const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
+    if (this.formData.isUrgent && !hasActivePackage) {
+      this.formData.isUrgent = false;
+      this.toast.warning('Chức năng "Tuyển gấp" yêu cầu tài khoản phải đăng ký gói dịch vụ.');
+    }
+  }
+
   onSubmitForm() {
     if (!this.formData.title) return;
     const user = this.auth.currentUser();
     if (!user) return;
+
+    const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
+    if (this.formData.isUrgent && !hasActivePackage) {
+      this.postSuccess.set(false);
+      this.postMessage.set('Chức năng tuyển gấp chỉ dành cho nhà tuyển dụng có gói dịch vụ đang hoạt động. Vui lòng mua gói dịch vụ để sử dụng.');
+      this.toast.error('Vui lòng mua gói dịch vụ để đăng tin tuyển gấp!');
+      return;
+    }
 
     const tags = this.formData.tagsStr.split(',').map(t => t.trim()).filter(Boolean);
     const requirements = this.formData.requirementsStr.split(',').map(r => r.trim()).filter(Boolean);

@@ -82,37 +82,83 @@ import { API_BASE_URL } from '../../config/api.config';
             }
           </div>
 
-          <!-- Mock VNPay Modal -->
+          <!-- Subscription Purchase Confirmation Modal -->
+          @if (showConfirmSubscribeModal()) {
+            <div class="payment-modal-overlay animate-fade-in">
+              <div class="payment-modal glass-card">
+                <div class="modal-header">
+                  <h3>Xác nhận đăng ký gói</h3>
+                  <button class="close-btn" (click)="showConfirmSubscribeModal.set(false)"><span class="material-icons-round">close</span></button>
+                </div>
+                <div class="payment-details">
+                  <p style="margin-bottom: var(--space-4); color: var(--text-secondary); font-size: var(--font-size-sm)">Bạn đang đăng ký gói dịch vụ sau bằng số dư ví:</p>
+                  <div class="bill-info">
+                    <span>Gói dịch vụ:</span>
+                    <strong>{{ selectedPackage()?.name }}</strong>
+                  </div>
+                  <div class="bill-info">
+                    <span>Thời hạn:</span>
+                    <strong>{{ selectedPackage()?.duration }}</strong>
+                  </div>
+                  <div class="bill-info">
+                    <span>Giá gói:</span>
+                    <strong style="color: var(--primary-light)">{{ selectedPackage()?.price.toLocaleString('vi-VN') }}đ</strong>
+                  </div>
+                  <div class="bill-info" style="margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px dashed var(--border-color)">
+                    <span>Số dư ví hiện tại:</span>
+                    <strong>{{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ</strong>
+                  </div>
+                  <div class="bill-info">
+                    <span>Số dư sau khi mua:</span>
+                    <strong style="color: var(--success)">{{ ((auth.currentUser()?.balance || 0) - (selectedPackage()?.price || 0)).toLocaleString('vi-VN') }}đ</strong>
+                  </div>
+                  
+                  <button class="btn btn-primary btn-lg full-width" style="margin-top: var(--space-6)" (click)="confirmSubscription()" [disabled]="isProcessing()">
+                    @if (isProcessing()) {
+                      Đang đăng ký...
+                    } @else {
+                      Xác nhận thanh toán
+                    }
+                  </button>
+                  <button class="btn btn-secondary full-width" style="margin-top: var(--space-2)" (click)="showConfirmSubscribeModal.set(false)" [disabled]="isProcessing()">
+                    Hủy bỏ
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- PayOS Top Up Modal -->
           @if (showPaymentModal()) {
             <div class="payment-modal-overlay animate-fade-in">
               <div class="payment-modal glass-card">
                 <div class="modal-header">
-                  <h3>Thanh toán (Chuẩn bị cho PayOS)</h3>
+                  <h3>{{ paymentType() === 'deposit' ? 'Nạp tiền vào tài khoản' : 'Nạp tiền mua gói dịch vụ' }}</h3>
                   <button class="close-btn" (click)="closeModal()"><span class="material-icons-round">close</span></button>
                 </div>
                 
                 @if (isProcessing()) {
                   <div class="processing-view">
                     <div class="spinner"></div>
-                    <p>Đang xử lý thanh toán...</p>
-                  </div>
-                } @else if (paymentSuccess()) {
-                  <div class="success-view animate-fade-in">
-                    <span class="material-icons-round" style="font-size:64px;color:var(--success)">check_circle</span>
-                    <h3>Thanh toán thành công!</h3>
-                    <p>{{ successMessage() }}</p>
-                    <button class="btn btn-primary btn-lg" (click)="closeModalAndGoHome()">Xong</button>
+                    <p>Đang tạo liên kết thanh toán PayOS...</p>
                   </div>
                 } @else {
                   <div class="payment-details">
-                    <div class="bill-info">
-                      <span>Loại giao dịch:</span>
-                      <strong>{{ paymentType() === 'deposit' ? 'Nạp tiền vào tài khoản' : 'Mua gói đăng tuyển' }}</strong>
-                    </div>
                     @if (paymentType() === 'package') {
+                      <p style="margin-bottom: var(--space-4); color: var(--text-secondary); font-size: var(--font-size-sm)">
+                        Số dư tài khoản không đủ để mua gói <strong>{{ selectedPackage()?.name }}</strong> (Giá: {{ selectedPackage()?.price.toLocaleString('vi-VN') }}đ). Bạn cần nạp tối thiểu <strong>{{ getPayAmount().toLocaleString('vi-VN') }}đ</strong> qua PayOS để tiếp tục.
+                      </p>
                       <div class="bill-info">
-                        <span>Sản phẩm:</span>
+                        <span>Gói dịch vụ:</span>
                         <strong>{{ selectedPackage()?.name }}</strong>
+                      </div>
+                      <div class="bill-info">
+                        <span>Số dư hiện tại:</span>
+                        <strong>{{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ</strong>
+                      </div>
+                      <div class="bill-info" style="margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px dashed var(--border-color)">
+                        <span>Số tiền cần nạp thêm:</span>
+                        <strong style="color: var(--warning)">{{ (selectedPackage()?.price - (auth.currentUser()?.balance || 0)).toLocaleString('vi-VN') }}đ</strong>
                       </div>
                     } @else {
                       <div class="form-group" style="margin-top:var(--space-4)">
@@ -128,14 +174,14 @@ import { API_BASE_URL } from '../../config/api.config';
                     }
 
                     <div class="total-amount" style="margin-top:var(--space-6);padding-top:var(--space-4);border-top:1px dashed var(--border-color);display:flex;justify-content:space-between;align-items:center">
-                      <span style="font-size:var(--font-size-lg);font-weight:600;color:var(--text-secondary)">Tổng thanh toán:</span>
+                      <span style="font-size:var(--font-size-lg);font-weight:600;color:var(--text-secondary)">Tổng nạp PayOS:</span>
                       <span style="font-size:var(--font-size-2xl);font-weight:800;color:var(--primary-light)">
                         {{ getPayAmount().toLocaleString('vi-VN') }}đ
                       </span>
                     </div>
 
                     <button class="btn btn-primary btn-lg full-width" style="margin-top:var(--space-6)" (click)="processPayment()">
-                      Xác nhận thanh toán
+                      Nạp qua PayOS
                     </button>
                     <button class="btn btn-secondary full-width" style="margin-top:var(--space-2)" (click)="closeModal()">
                       Hủy bỏ
@@ -346,14 +392,15 @@ export class PricingComponent {
   private router = inject(Router);
   private toast = inject(ToastService);
 
-  // Package definitions (inline, no longer from mock JSON)
+  // Correct package definitions matching database seed packages
   packages = [
-    { id: 1, name: 'Gói Cơ bản', price: 500, duration: '1 tháng', description: 'Phù hợp cho doanh nghiệp nhỏ mới bắt đầu' },
-    { id: 2, name: 'Gói Chuyên nghiệp', price: 1200, duration: '3 tháng', description: 'Tiết kiệm 20% - Dành cho nhà tuyển dụng thường xuyên' },
-    { id: 3, name: 'Gói Doanh nghiệp', price: 3000, duration: '12 tháng', description: 'Tiết kiệm 50% - Giải pháp tuyển dụng toàn diện' },
+    { id: 1, name: 'Gói 3 tháng', price: 500000, duration: '3 tháng', description: 'Đăng tuyển không giới hạn trong 3 tháng' },
+    { id: 2, name: 'Gói 6 tháng', price: 1029000, duration: '6 tháng', description: 'Đăng tuyển không giới hạn trong 6 tháng + ưu tiên hiển thị' },
+    { id: 3, name: 'Gói 12 tháng', price: 1399000, duration: '12 tháng', description: 'Đăng tuyển không giới hạn + ưu tiên hiển thị + badge Premium' },
   ];
 
   showPaymentModal = signal(false);
+  showConfirmSubscribeModal = signal(false);
   paymentType = signal<'deposit' | 'package'>('deposit');
   selectedPackage = signal<any | null>(null);
   depositAmount = signal<number>(100000);
@@ -373,11 +420,47 @@ export class PricingComponent {
   }
 
   buyPackage(pkg: any) {
-    this.paymentType.set('package');
-    this.selectedPackage.set(pkg);
-    this.isProcessing.set(false);
-    this.paymentSuccess.set(false);
-    this.showPaymentModal.set(true);
+    const user = this.auth.currentUser();
+    if (!user) {
+      this.toast.error('Vui lòng đăng nhập để thực hiện giao dịch.');
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    const balance = user.balance || 0;
+    if (balance >= pkg.price) {
+      this.selectedPackage.set(pkg);
+      this.isProcessing.set(false);
+      this.showConfirmSubscribeModal.set(true);
+    } else {
+      this.paymentType.set('package');
+      this.selectedPackage.set(pkg);
+      this.isProcessing.set(false);
+      this.paymentSuccess.set(false);
+      this.showPaymentModal.set(true);
+    }
+  }
+
+  confirmSubscription() {
+    const pkg = this.selectedPackage();
+    if (!pkg) return;
+
+    this.isProcessing.set(true);
+    this.http.post(`${API_BASE_URL}/subscription/subscribe/${pkg.id}`, {}).subscribe({
+      next: (res: any) => {
+        this.isProcessing.set(false);
+        this.toast.success(res.message || 'Đăng ký gói dịch vụ thành công!');
+        this.showConfirmSubscribeModal.set(false);
+        // Refresh profile & balance in state
+        this.auth.fetchProfile().subscribe();
+        this.auth.fetchBalance().subscribe();
+        this.router.navigate(['/employer/dashboard']);
+      },
+      error: (err) => {
+        this.isProcessing.set(false);
+        this.toast.error(err.error?.message || 'Có lỗi xảy ra khi đăng ký gói.');
+      }
+    });
   }
 
   closeModal() {
@@ -396,7 +479,14 @@ export class PricingComponent {
   }
 
   getPayAmount(): number {
-    return this.paymentType() === 'deposit' ? this.depositAmount() : (this.selectedPackage()?.price || 0);
+    if (this.paymentType() === 'deposit') {
+      return this.depositAmount();
+    } else {
+      const balance = this.auth.currentUser()?.balance || 0;
+      const price = this.selectedPackage()?.price || 0;
+      const needed = price - balance;
+      return needed < 10000 ? 10000 : needed;
+    }
   }
 
   processPayment() {

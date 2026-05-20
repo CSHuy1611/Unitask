@@ -456,7 +456,20 @@ export class JobDetailComponent implements OnInit {
       next: (found) => {
         this.job.set(found);
         this.applied.set(this.auth.hasApplied(id));
-        this.companyInfo.set(this.companyService.getById(found.companyId) || null);
+        const mockCompany = this.companyService.getById(found.companyId);
+        if (mockCompany) {
+          this.companyInfo.set(mockCompany);
+        } else {
+          this.companyInfo.set({
+            name: found.company || 'Doanh nghiệp tuyển dụng',
+            description: found.companyDescription || 'Chưa cập nhật giới thiệu công ty.',
+            industry: found.companyIndustry || 'Chưa cập nhật lĩnh vực hoạt động',
+            size: found.companySize || 'Chưa cập nhật quy mô',
+            location: found.companyLocation || found.location || 'Chưa cập nhật địa chỉ',
+            website: found.companyWebsite || '#',
+            isVerified: true
+          });
+        }
       },
       error: (err) => {
         this.toast.error('Không thể tải chi tiết công việc. Vui lòng thử lại sau.');
