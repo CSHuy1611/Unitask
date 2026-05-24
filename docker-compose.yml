@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: unitask-db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    networks:
+      - unitask-network
+    restart: always
+
+  backend:
+    build:
+      context: ./backend/UniTask_BE
+      dockerfile: Dockerfile
+    container_name: unitask-backend
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=database;Database=UniTaskDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true
+      - Jwt__Key=${JWT_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME}
+      - Cloudinary__ApiKey=${CLOUDINARY_API_KEY}
+      - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
+      - PayOS__ClientId=${PAYOS_CLIENT_ID}
+      - PayOS__ApiKey=${PAYOS_API_KEY}
+      - PayOS__ChecksumKey=${PAYOS_CHECKSUM_KEY}
+    depends_on:
+      - database
+    ports:
+      - "5250:8080" # Expose for direct local calls or fallback support
+    networks:
+      - unitask-network
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend/unitask
+      dockerfile: Dockerfile
+    container_name: unitask-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - unitask-network
+    restart: always
+
+volumes:
+  mssql-data:
+    driver: local
+
+networks:
+  unitask-network:
+    driver: bridge
