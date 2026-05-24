@@ -20,6 +20,15 @@ namespace UniTask.Business.DTOs.Job
         public bool IsUrgent { get; set; }
         public bool IsRemote { get; set; }
         public JobStatus Status { get; set; }
+        public string? SelectedStudentId { get; set; }
+
+        // ===== Dispute Fields =====
+        public string? DisputeReason { get; set; }
+        public string? EmployerEvidenceText { get; set; }
+        public string? EmployerEvidenceUrl { get; set; }
+        public string? StudentEvidenceText { get; set; }
+        public string? StudentEvidenceUrl { get; set; }
+        public DateTime? DisputedDate { get; set; }
 
         public string EmployerId { get; set; } = string.Empty;
         public int CompanyId { get; set; }

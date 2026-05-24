@@ -67,7 +67,8 @@ export class JobService {
       1: 'in_progress',
       2: 'pending_confirmation',
       3: 'completed',
-      4: 'closed'
+      4: 'disputed',
+      5: 'closed'
     };
     
     return {
@@ -99,7 +100,13 @@ export class JobService {
       companyIndustry: dto.companyIndustry,
       companySize: dto.companySize,
       companyLocation: dto.companyLocation,
-      companyWebsite: dto.companyWebsite
+      companyWebsite: dto.companyWebsite,
+      disputeReason: dto.disputeReason,
+      employerEvidenceText: dto.employerEvidenceText,
+      employerEvidenceUrl: dto.employerEvidenceUrl,
+      studentEvidenceText: dto.studentEvidenceText,
+      studentEvidenceUrl: dto.studentEvidenceUrl,
+      disputedDate: dto.disputedDate ? dto.disputedDate.split('T')[0] : undefined
     };
   }
 
@@ -229,6 +236,34 @@ export class JobService {
       tap(() => this.fetchJobs()),
       map(() => ({ success: true, message: 'Đã nghiệm thu và thanh toán thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Lỗi nghiệm thu. Vui lòng thử lại.' }))
+    );
+  }
+
+  rejectCompletion(jobId: number, reason: string, evidenceText: string = '', evidenceUrl: string = ''): Observable<{ success: boolean; message: string }> {
+    return this.http.put<any>(`${API_BASE_URL}/job/${jobId}/reject-completion`, { reason, evidenceText, evidenceUrl }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã báo cáo tranh chấp thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi gửi tranh chấp.' }))
+    );
+  }
+
+  submitStudentEvidence(jobId: number, evidenceText: string, evidenceUrl: string = ''): Observable<{ success: boolean; message: string }> {
+    return this.http.put<any>(`${API_BASE_URL}/job/${jobId}/student-evidence`, { evidenceText, evidenceUrl }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã nộp bằng chứng chứng minh thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi nộp bằng chứng.' }))
+    );
+  }
+
+  getDisputes(): Observable<any[]> {
+    return this.http.get<any[]>(`${API_BASE_URL}/admin/disputes`);
+  }
+
+  resolveDispute(jobId: number, winner: 'Student' | 'Employer'): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/admin/disputes/${jobId}/resolve`, { winner }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã giải quyết tranh chấp thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi giải quyết tranh chấp.' }))
     );
   }
 }

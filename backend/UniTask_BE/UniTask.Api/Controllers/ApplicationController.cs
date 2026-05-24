@@ -25,12 +25,19 @@ namespace UniTask.Api.Controllers
             var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (studentId == null) return Unauthorized();
 
-            var application = await _applicationService.ApplyJobAsync(jobId, studentId, dto);
-            
-            if (application == null)
-                return BadRequest(new { message = "Failed to apply. Job might be closed or you already applied." });
+            try
+            {
+                var application = await _applicationService.ApplyJobAsync(jobId, studentId, dto);
+                
+                if (application == null)
+                    return BadRequest(new { message = "Failed to apply. Job might be closed or you already applied." });
 
-            return Ok(application);
+                return Ok(application);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("job/{jobId}")]

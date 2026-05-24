@@ -34,6 +34,8 @@ namespace UniTask.DataAcesss.Entities
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public int BlacklistCount { get; set; } = 0;
+
         // ===== Navigation Properties =====
         public StudentProfile? StudentProfile { get; set; }
         public EmployerProfile? EmployerProfile { get; set; }

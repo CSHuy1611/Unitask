@@ -31,6 +31,9 @@ import { API_BASE_URL } from '../../config/api.config';
             <a routerLink="/admin/withdrawals" class="admin-tab">
               <span class="material-icons-round">account_balance_wallet</span> Duyệt rút tiền
             </a>
+            <a routerLink="/admin/disputes" class="admin-tab">
+              <span class="material-icons-round">gavel</span> Giải quyết tranh chấp
+            </a>
           </div>
 
           <div class="dashboard-header animate-fade-in-up">

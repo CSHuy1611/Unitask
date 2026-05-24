@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { JobService } from '../../services/job.service';
 import { AuthService } from '../../services/auth.service';
 import { CompanyService } from '../../services/company.service';
@@ -9,7 +10,7 @@ import { Job } from '../../models/job.model';
 @Component({
   selector: 'app-job-detail',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   template: `
     @if (job()) {
       <section class="detail-page">
@@ -89,6 +90,41 @@ import { Job } from '../../models/job.model';
                   }
                 </ul>
               </div>
+
+              <!-- Dispute section for assigned student -->
+              @if (job()!.status === 'disputed' && job()!.selectedStudentId?.toString() === auth.currentUser()?.id?.toString()) {
+                <div class="detail-section glass-card" style="border: 1px solid #EF4444;">
+                  <h2 style="color:#EF4444; margin-bottom:12px"><span class="material-icons-round" style="color:#EF4444; vertical-align:middle; margin-right:6px">gavel</span> Tranh chấp đang diễn ra</h2>
+                  <p style="color:var(--text-secondary); margin-bottom:16px; font-size:0.95rem">Nhà tuyển dụng đã từ chối nghiệm thu với lý do: <strong style="color:var(--text-primary)">"{{ job()!.disputeReason }}"</strong></p>
+                  
+                  @if (job()!.studentEvidenceText) {
+                    <div class="alert alert-success" style="background:rgba(16,185,129,0.1); color:var(--success); padding:10px 14px; border-radius:6px; font-size:0.9rem; margin-bottom:12px">
+                      <span class="material-icons-round" style="font-size:18px; vertical-align:middle; margin-right:4px">check_circle</span> Bạn đã nộp bằng chứng chứng minh. Đang chờ Admin phán quyết.
+                    </div>
+                    <div style="margin-top:12px; padding:12px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.08)">
+                      <strong style="display:block; margin-bottom:6px; font-size:0.9rem">Bằng chứng của bạn:</strong> 
+                      <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5">{{ job()!.studentEvidenceText }}</p>
+                      @if (job()!.studentEvidenceUrl) {
+                        <div style="margin-top:10px">
+                          <a [href]="job()!.studentEvidenceUrl" target="_blank" style="color:var(--primary-light); font-size:0.85rem; font-weight:600; text-decoration:underline">Xem ảnh/tài liệu bằng chứng</a>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="form-group mb-4" style="margin-bottom:16px">
+                      <label class="form-label" style="display:block; margin-bottom:6px; font-size:0.9rem">Mô tả bằng chứng hoàn thành của bạn *</label>
+                      <textarea class="form-input" style="width:100%" rows="3" [(ngModel)]="studentEvidenceText" placeholder="Mô tả cụ thể kết quả công việc đã thực hiện..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group mb-4" style="margin-bottom:16px">
+                      <label class="form-label" style="display:block; margin-bottom:6px; font-size:0.9rem">Link hình ảnh/tài liệu bằng chứng</label>
+                      <input type="text" class="form-input" style="width:100%" [(ngModel)]="studentEvidenceUrl" placeholder="VD: https://res.cloudinary.com/...">
+                    </div>
+
+                    <button class="btn btn-primary" (click)="onSubmitEvidence()" [disabled]="!studentEvidenceText">Nộp bằng chứng</button>
+                  }
+                </div>
+              }
             </div>
 
             <!-- Sidebar -->
@@ -131,7 +167,11 @@ import { Job } from '../../models/job.model';
                 </div>
 
                 @if (auth.isLoggedIn() && auth.isStudent()) {
-                  @if (applied()) {
+                  @if (auth.currentUser()?.blacklistCount !== undefined && auth.currentUser()!.blacklistCount! >= 3) {
+                    <button class="btn btn-danger btn-lg full-width" disabled style="background:#EF4444; border-color:#EF4444; color:white">
+                      <span class="material-icons-round">block</span> Tài khoản bị khóa
+                    </button>
+                  } @else if (applied()) {
                     <button class="btn btn-secondary btn-lg full-width" disabled>
                       <span class="material-icons-round">check</span> Đã ứng tuyển
                     </button>
@@ -450,6 +490,9 @@ export class JobDetailComponent implements OnInit {
   applied = signal(false);
   companyInfo = signal<any>(null);
 
+  studentEvidenceText = '';
+  studentEvidenceUrl = '';
+
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.jobService.fetchJobDetail(id).subscribe({
@@ -506,6 +549,11 @@ export class JobDetailComponent implements OnInit {
       return;
     }
 
+    if (user.blacklistCount !== undefined && user.blacklistCount >= 3) {
+      this.toast.error('Tài khoản của bạn đã bị khóa ứng tuyển do vi phạm chính sách của hệ thống (> 3 cảnh cáo).');
+      return;
+    }
+
     const deadlineDate = new Date(job.deadline);
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Ignore time
@@ -525,6 +573,26 @@ export class JobDetailComponent implements OnInit {
         }
       },
       error: () => this.toast.error('Lỗi kết nối khi ứng tuyển. Vui lòng thử lại.')
+    });
+  }
+
+  onSubmitEvidence() {
+    const job = this.job();
+    if (!job || !this.studentEvidenceText) return;
+
+    this.jobService.submitStudentEvidence(job.id, this.studentEvidenceText, this.studentEvidenceUrl).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success('Đã nộp bằng chứng thành công.');
+          // Reload job details to update UI state
+          this.jobService.fetchJobDetail(job.id).subscribe(updated => {
+            this.job.set(updated);
+          });
+        } else {
+          this.toast.error(res.message || 'Nộp bằng chứng thất bại.');
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi nộp bằng chứng.')
     });
   }
 }

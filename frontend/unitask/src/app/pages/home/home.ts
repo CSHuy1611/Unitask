@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { JobCardComponent } from '../../components/job-card/job-card';
 import { JobService } from '../../services/job.service';
 import { CompanyService } from '../../services/company.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -13,6 +14,18 @@ import { CompanyService } from '../../services/company.service';
     <section class="hero">
       <div class="hero-bg"></div>
       <div class="container hero-content">
+        @if (auth.isLoggedIn() && auth.isStudent() && hasDisputedJobs()) {
+          <div class="alert alert-warning animate-fade-in-up" style="max-width: 800px; width: 100%; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="material-icons-round" style="color: var(--warning); font-size: 32px;">gpp_maybe</span>
+              <div>
+                <strong style="color: var(--text-primary); font-size: 16px; display: block;">Có tranh chấp chưa được giải quyết!</strong>
+                <span style="color: var(--text-secondary); font-size: 14px;">Bạn có công việc đang ở trạng thái Tranh chấp. Vui lòng vào hồ sơ để cung cấp bằng chứng chứng minh.</span>
+              </div>
+            </div>
+            <a routerLink="/profile" class="btn btn-primary btn-sm" style="flex-shrink: 0; padding: 8px 16px; font-size: 14px;">Đến hồ sơ</a>
+          </div>
+        }
         <div class="hero-text animate-fade-in-up">
           <span class="hero-badge">🎓 #1 Nền tảng việc làm cho sinh viên</span>
           <h1 class="hero-title">
@@ -490,6 +503,7 @@ import { CompanyService } from '../../services/company.service';
   `]
 })
 export class HomeComponent {
+  auth = inject(AuthService);
   private jobService = inject(JobService);
   private companyService = inject(CompanyService);
   private router = inject(Router);
@@ -499,6 +513,16 @@ export class HomeComponent {
   featuredJobs = this.jobService.featuredJobs;
   companies = this.companyService.getTopCompanies(6);
   locations = this.jobService.getLocations();
+
+  hasDisputedJobs = computed(() => {
+    const user = this.auth.currentUser();
+    if (!user || user.role !== 'student') return false;
+    return this.jobService.getAllJobs().some(j => 
+      String(j.selectedStudentId) === String(user.id) && 
+      j.status === 'disputed' && 
+      !j.studentEvidenceText
+    );
+  });
 
   onSearch() {
     this.jobService.searchQuery.set(this.searchQuery());

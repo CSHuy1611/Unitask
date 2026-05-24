@@ -91,6 +91,13 @@ namespace UniTask.Business.Services
             var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == employerId);
             if (profile == null || profile.CompanyId == null) return null;
 
+            // Check Blacklist Count
+            var user = await _context.Users.FindAsync(employerId);
+            if (user != null && user.BlacklistCount >= 3)
+            {
+                throw new InvalidOperationException("Tài khoản của bạn đã bị khóa đăng việc do vi phạm chính sách của hệ thống.");
+            }
+
             // Check Wallet Balance
             var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
             var totalCost = dto.Budget + dto.Commission;
@@ -267,6 +274,43 @@ namespace UniTask.Business.Services
             return true;
         }
 
+        public async Task<bool> RejectCompletionAsync(int id, string employerId, JobDisputeCreateDto dto)
+        {
+            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.EmployerId == employerId);
+            if (job == null || job.Status != DataAcesss.Entities.Enums.JobStatus.PendingConfirmation)
+                return false;
+
+            job.Status = DataAcesss.Entities.Enums.JobStatus.Disputed;
+            job.DisputeReason = dto.Reason;
+            job.EmployerEvidenceText = dto.EvidenceText;
+            job.EmployerEvidenceUrl = dto.EvidenceUrl;
+            job.DisputedDate = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // Broadcast real-time event to Admin Dashboard
+            await _hubContext.Clients.All.SendAsync("TransactionOccurred");
+
+            return true;
+        }
+
+        public async Task<bool> SubmitStudentEvidenceAsync(int id, string studentId, StudentEvidenceSubmitDto dto)
+        {
+            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.SelectedStudentId == studentId);
+            if (job == null || job.Status != DataAcesss.Entities.Enums.JobStatus.Disputed)
+                return false;
+
+            job.StudentEvidenceText = dto.EvidenceText;
+            job.StudentEvidenceUrl = dto.EvidenceUrl;
+
+            await _context.SaveChangesAsync();
+
+            // Broadcast real-time event to Admin Dashboard
+            await _hubContext.Clients.All.SendAsync("TransactionOccurred");
+
+            return true;
+        }
+
         private static JobDto MapToDto(Job j)
         {
             var salaryRange = new List<decimal>();
@@ -298,6 +342,13 @@ namespace UniTask.Business.Services
                 IsUrgent = j.IsUrgent,
                 IsRemote = j.IsRemote,
                 Status = j.Status,
+                SelectedStudentId = j.SelectedStudentId,
+                DisputeReason = j.DisputeReason,
+                EmployerEvidenceText = j.EmployerEvidenceText,
+                EmployerEvidenceUrl = j.EmployerEvidenceUrl,
+                StudentEvidenceText = j.StudentEvidenceText,
+                StudentEvidenceUrl = j.StudentEvidenceUrl,
+                DisputedDate = j.DisputedDate,
                 EmployerId = j.EmployerId,
                 CompanyId = j.CompanyId,
                 CompanyName = j.Company?.Name,

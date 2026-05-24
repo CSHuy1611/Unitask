@@ -11,5 +11,7 @@ namespace UniTask.Business.Interfaces
         Task<bool> DeleteJobAsync(int id, string employerId);
         Task<bool> ReportCompletionAsync(int id, string studentId);
         Task<bool> ApproveJobAsync(int id, string employerId);
+        Task<bool> RejectCompletionAsync(int id, string employerId, JobDisputeCreateDto dto);
+        Task<bool> SubmitStudentEvidenceAsync(int id, string studentId, StudentEvidenceSubmitDto dto);
     }
 }

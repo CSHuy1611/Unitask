@@ -25,6 +25,12 @@ namespace UniTask.Business.Services
             var profile = await _context.StudentProfiles.FirstOrDefaultAsync(p => p.UserId == studentId);
             if (profile == null) return null;
 
+            var user = await _context.Users.FindAsync(studentId);
+            if (user != null && user.BlacklistCount >= 3)
+            {
+                throw new System.InvalidOperationException("Tài khoản của bạn đã bị khóa ứng tuyển do vi phạm chính sách của hệ thống.");
+            }
+
             var existingApp = await _context.Applications
                 .FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfileId == profile.Id);
             

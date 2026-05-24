@@ -190,5 +190,107 @@ namespace UniTask.Business.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<IEnumerable<object>> GetDisputesAsync()
+        {
+            var disputes = await _context.Jobs
+                .Include(j => j.Company)
+                .Include(j => j.Employer)
+                .Include(j => j.SelectedStudent)
+                .Where(j => j.Status == JobStatus.Disputed)
+                .OrderByDescending(j => j.DisputedDate)
+                .Select(j => new
+                {
+                    id = j.Id,
+                    title = j.Title,
+                    budget = j.Budget,
+                    commission = j.Commission,
+                    employerName = j.Employer.FullName,
+                    employerEmail = j.Employer.Email,
+                    studentName = j.SelectedStudent != null ? j.SelectedStudent.FullName : "",
+                    studentEmail = j.SelectedStudent != null ? j.SelectedStudent.Email : "",
+                    disputeReason = j.DisputeReason,
+                    employerEvidenceText = j.EmployerEvidenceText,
+                    employerEvidenceUrl = j.EmployerEvidenceUrl,
+                    studentEvidenceText = j.StudentEvidenceText,
+                    studentEvidenceUrl = j.StudentEvidenceUrl,
+                    disputedDate = j.DisputedDate.HasValue ? j.DisputedDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : ""
+                })
+                .ToListAsync();
+
+            return disputes;
+        }
+
+        public async Task<bool> ResolveDisputeAsync(int jobId, DisputeResolveDto dto)
+        {
+            var job = await _context.Jobs
+                .Include(j => j.Employer)
+                .Include(j => j.SelectedStudent)
+                .FirstOrDefaultAsync(j => j.Id == jobId && j.Status == JobStatus.Disputed);
+
+            if (job == null) return false;
+
+            if (dto.Winner == "Student")
+            {
+                // Student wins: Escrow goes to Student, Employer is blacklisted
+                job.Status = JobStatus.Completed;
+
+                if (job.SelectedStudentId != null)
+                {
+                    var studentWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == job.SelectedStudentId);
+                    if (studentWallet != null)
+                    {
+                        studentWallet.Balance += job.Budget;
+
+                        _context.Transactions.Add(new Transaction
+                        {
+                            WalletId = studentWallet.Id,
+                            Amount = job.Budget,
+                            Type = TransactionType.EscrowRelease,
+                            Description = $"Nhận tiền công giải quyết tranh chấp công việc: {job.Title}",
+                            RelatedJobId = job.Id,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+
+                // Increment Employer's Blacklist Count
+                job.Employer.BlacklistCount++;
+            }
+            else if (dto.Winner == "Employer")
+            {
+                // Employer wins: Escrow goes back to Employer (Commission kept by platform), Student is blacklisted
+                job.Status = JobStatus.Closed;
+
+                var employerWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == job.EmployerId);
+                if (employerWallet != null)
+                {
+                    employerWallet.Balance += job.Budget;
+
+                    _context.Transactions.Add(new Transaction
+                    {
+                        WalletId = employerWallet.Id,
+                        Amount = job.Budget,
+                        Type = TransactionType.Refund,
+                        Description = $"Hoàn tiền công giải quyết tranh chấp công việc: {job.Title}",
+                        RelatedJobId = job.Id,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                // Increment Student's Blacklist Count
+                if (job.SelectedStudent != null)
+                {
+                    job.SelectedStudent.BlacklistCount++;
+                }
+            }
+            else
+            {
+                return false;
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

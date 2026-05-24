@@ -107,5 +107,35 @@ namespace UniTask.Api.Controllers
 
             return Ok(new { message = "Job deleted successfully" });
         }
+
+        [HttpPut("{id}/reject-completion")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> RejectCompletion(int id, [FromBody] JobDisputeCreateDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            var result = await _jobService.RejectCompletionAsync(id, employerId, dto);
+            if (!result) return BadRequest(new { message = "Cannot dispute job. Job might not be pending confirmation or you lack permission." });
+
+            return Ok(new { message = "Job reported as disputed. Dispute registered." });
+        }
+
+        [HttpPut("{id}/student-evidence")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> SubmitStudentEvidence(int id, [FromBody] StudentEvidenceSubmitDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (studentId == null) return Unauthorized();
+
+            var result = await _jobService.SubmitStudentEvidenceAsync(id, studentId, dto);
+            if (!result) return BadRequest(new { message = "Cannot submit evidence. Job might not be disputed or you are not the assigned student." });
+
+            return Ok(new { message = "Evidence submitted successfully." });
+        }
     }
 }

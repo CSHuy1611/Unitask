@@ -45,4 +45,5 @@ export interface User {
   activePackage?: string;
   packageExpiry?: string;
   postedJobs?: number[];
+  blacklistCount?: number;
 }

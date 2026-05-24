@@ -80,6 +80,14 @@ namespace UniTask.DataAcesss.Entities
         [ForeignKey(nameof(SelectedStudentId))]
         public ApplicationUser? SelectedStudent { get; set; }
 
+        // ===== Dispute Fields =====
+        public string? DisputeReason { get; set; }
+        public string? EmployerEvidenceText { get; set; }
+        public string? EmployerEvidenceUrl { get; set; }
+        public string? StudentEvidenceText { get; set; }
+        public string? StudentEvidenceUrl { get; set; }
+        public DateTime? DisputedDate { get; set; }
+
         // ===== Navigation Properties =====
         public ICollection<JobRequirement> Requirements { get; set; } = new List<JobRequirement>();
         public ICollection<JobBenefit> Benefits { get; set; } = new List<JobBenefit>();

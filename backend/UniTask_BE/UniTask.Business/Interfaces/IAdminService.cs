@@ -16,5 +16,9 @@ namespace UniTask.Business.Interfaces
         // Withdrawal Payout Management
         Task<IEnumerable<object>> GetWithdrawalsAsync();
         Task<bool> CompleteWithdrawalAsync(int transactionId);
+
+        // Dispute Management
+        Task<IEnumerable<object>> GetDisputesAsync();
+        Task<bool> ResolveDisputeAsync(int jobId, DisputeResolveDto dto);
     }
 }

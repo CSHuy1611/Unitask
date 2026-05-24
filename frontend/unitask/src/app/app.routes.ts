@@ -42,6 +42,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/admin/admin-withdrawals').then(m => m.AdminWithdrawalsComponent),
   },
   {
+    path: 'admin/disputes',
+    loadComponent: () => import('./pages/admin/admin-disputes').then(m => m.AdminDisputesComponent),
+  },
+  {
     path: 'pricing',
     loadComponent: () => import('./pages/pricing/pricing').then(m => m.PricingComponent),
   },

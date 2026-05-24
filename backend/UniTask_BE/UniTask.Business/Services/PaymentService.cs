@@ -48,7 +48,7 @@ namespace UniTask.Business.Services
             {
                 OrderCode = orderCode,
                 Amount = (int)dto.Amount,
-                Description = $"Nap tien vao vi UniTask",
+                Description = "UT demo du an hoc tap",
                 CancelUrl = $"{domain}/payment/cancel",
                 ReturnUrl = $"{domain}/payment/success"
             };
@@ -61,7 +61,7 @@ namespace UniTask.Business.Services
                 WalletId = (await _context.Wallets.FirstAsync(w => w.UserId == userId)).Id,
                 Amount = dto.Amount,
                 Type = TransactionType.Deposit,
-                Description = $"[PAYOS_PENDING] Nạp tiền qua PayOS. Mã ĐH: {orderCode}",
+                Description = $"[PAYOS_PENDING] Nạp tiền qua PayOS (demo dự án học tập). Mã ĐH: {orderCode}",
                 CreatedAt = DateTime.UtcNow
             });
             await _context.SaveChangesAsync();
@@ -120,7 +120,7 @@ namespace UniTask.Business.Services
                         pendingTx.Wallet.Balance += amount;
 
                         // Mark transaction as success
-                        pendingTx.Description = $"Nạp tiền qua PayOS thành công. Mã ĐH: {orderCode}";
+                        pendingTx.Description = $"Nạp tiền qua PayOS thành công (demo dự án học tập). Mã ĐH: {orderCode}";
                         pendingTx.CreatedAt = DateTime.UtcNow; // update time
 
                         await _context.SaveChangesAsync();

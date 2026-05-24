@@ -202,52 +202,95 @@ import { Job } from '../../models/job.model';
             <h2>Việc đã đăng</h2>
             <div class="jobs-table">
               @for (job of employerJobs(); track job.id) {
-                <div class="job-row glass-card" [class.job-expired]="!jobService.isJobEditable(job)">
-                  <div class="job-info">
-                    <div class="job-title-row">
-                      <a [routerLink]="['/jobs', job.id]" class="job-title-link">{{ job.title }}</a>
-                      @if (!jobService.isJobEditable(job)) {
-                        <span class="badge badge-danger">Hết hạn</span>
-                      } @else if (job.isUrgent) {
-                        <span class="badge badge-warning">🔥 Gấp</span>
-                      } @else {
-                        <span class="badge badge-success">Còn hạn</span>
+                <div class="job-row glass-card" [class.job-expired]="!jobService.isJobEditable(job)" style="display: flex; flex-direction: column; align-items: stretch; gap: 12px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
+                    <div class="job-info">
+                      <div class="job-title-row">
+                        <a [routerLink]="['/jobs', job.id]" class="job-title-link">{{ job.title }}</a>
+                        @if (!jobService.isJobEditable(job)) {
+                          <span class="badge badge-danger">Hết hạn</span>
+                        } @else if (job.isUrgent) {
+                          <span class="badge badge-warning">🔥 Gấp</span>
+                        } @else {
+                          <span class="badge badge-success">Còn hạn</span>
+                        }
+                      </div>
+                      <div class="job-meta">
+                        <span>📍 {{ job.location }}</span>
+                        <span>💰 {{ job.salary }}</span>
+                        <span>⏰ {{ job.type }}</span>
+                        <span>📅 Hạn: {{ job.deadline }}</span>
+                      </div>
+                    </div>
+                    <div class="job-actions">
+                      <span class="stat-mini">
+                        <span class="material-icons-round">visibility</span> {{ job.views }}
+                      </span>
+                      <span class="stat-mini">
+                        <span class="material-icons-round">people</span> {{ job.applications }}
+                      </span>
+                      @if (jobService.isJobEditable(job) && job.status === 'open') {
+                        <button class="btn btn-secondary btn-sm" (click)="onEditJob(job)">
+                          <span class="material-icons-round" style="font-size:16px">edit</span> Sửa
+                        </button>
+                      }
+                      
+                      @if (job.status === 'open') {
+                        <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
+                          <span class="material-icons-round" style="font-size:16px">group</span> Ứng viên ({{ job.applications || 0 }})
+                        </button>
+                      } @else if (job.status === 'in_progress') {
+                        <span class="badge badge-warning">Đang thực hiện</span>
+                      } @else if (job.status === 'pending_confirmation') {
+                        <button class="btn btn-success btn-sm" (click)="jobToApprove.set(job)" style="gap:4px">
+                          <span class="material-icons-round" style="font-size:16px">check_circle</span> Trả lương
+                        </button>
+                        <button class="btn btn-danger btn-sm" (click)="jobToDispute.set(job)" style="gap:4px; background:#EF4444; border-color:#EF4444; color:white">
+                          <span class="material-icons-round" style="font-size:16px">gavel</span> Tranh chấp
+                        </button>
+                      } @else if (job.status === 'disputed') {
+                        <span class="badge badge-warning" style="background:rgba(239,68,68,0.15); color:#EF4444">Đang tranh chấp</span>
+                      } @else if (job.status === 'completed') {
+                        <span class="badge badge-success">Đã hoàn thành</span>
+                      } @else if (job.status === 'closed') {
+                        <span class="badge badge-secondary">Đã đóng (Tranh chấp)</span>
                       }
                     </div>
-                    <div class="job-meta">
-                      <span>📍 {{ job.location }}</span>
-                      <span>💰 {{ job.salary }}</span>
-                      <span>⏰ {{ job.type }}</span>
-                      <span>📅 Hạn: {{ job.deadline }}</span>
+                  </div>
+
+                  <!-- Dispute Evidence Box -->
+                  @if (job.status === 'disputed' || (job.status === 'closed' && job.disputeReason)) {
+                    <div class="dispute-evidence-box" style="margin-top: 8px; padding: 16px; background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: var(--radius-lg); border-left: 4px solid #EF4444;">
+                      <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px; color: #EF4444; display: flex; align-items: center; gap: 6px;">
+                        <span class="material-icons-round" style="font-size: 18px;">gavel</span> 
+                        Thông tin Tranh chấp ({{ job.status === 'disputed' ? 'Đang tranh chấp' : 'Đã đóng' }})
+                      </h4>
+                      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 13px;">
+                        <!-- Employer side -->
+                        <div style="padding: 12px; background: rgba(239, 68, 68, 0.03); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.1);">
+                          <strong style="color: #EF4444; display: block; margin-bottom: 6px;">Bằng chứng của bạn:</strong>
+                          <p style="margin: 4px 0; color: var(--text-secondary);"><strong>Lý do từ chối:</strong> {{ job.disputeReason }}</p>
+                          <p style="margin: 4px 0; color: var(--text-secondary);"><strong>Mô tả bằng chứng:</strong> {{ job.employerEvidenceText || 'Không có mô tả' }}</p>
+                          @if (job.employerEvidenceUrl) {
+                            <a [href]="job.employerEvidenceUrl" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 500; display: inline-block; margin-top: 6px;">Xem liên kết bằng chứng</a>
+                          }
+                        </div>
+                        
+                        <!-- Student side -->
+                        <div style="padding: 12px; background: rgba(79, 70, 229, 0.03); border-radius: 8px; border: 1px solid rgba(79, 70, 229, 0.1);">
+                          <strong style="color: var(--primary-light); display: block; margin-bottom: 6px;">Bằng chứng từ sinh viên:</strong>
+                          @if (job.studentEvidenceText) {
+                            <p style="margin: 4px 0; color: var(--text-secondary);"><strong>Mô tả bằng chứng:</strong> {{ job.studentEvidenceText }}</p>
+                            @if (job.studentEvidenceUrl) {
+                              <a [href]="job.studentEvidenceUrl" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 500; display: inline-block; margin-top: 6px;">Xem liên kết bằng chứng</a>
+                            }
+                          } @else {
+                            <p style="margin: 4px 0; color: var(--text-muted); font-style: italic;">Sinh viên chưa nộp bằng chứng chứng minh.</p>
+                          }
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="job-actions">
-                    <span class="stat-mini">
-                      <span class="material-icons-round">visibility</span> {{ job.views }}
-                    </span>
-                    <span class="stat-mini">
-                      <span class="material-icons-round">people</span> {{ job.applications }}
-                    </span>
-                    @if (jobService.isJobEditable(job) && job.status === 'open') {
-                      <button class="btn btn-secondary btn-sm" (click)="onEditJob(job)">
-                        <span class="material-icons-round" style="font-size:16px">edit</span> Sửa
-                      </button>
-                    }
-                    
-                    @if (job.status === 'open') {
-                      <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
-                        <span class="material-icons-round" style="font-size:16px">group</span> Ứng viên ({{ job.applications || 0 }})
-                      </button>
-                    } @else if (job.status === 'in_progress') {
-                      <span class="badge badge-warning">Đang thực hiện</span>
-                    } @else if (job.status === 'pending_confirmation') {
-                      <button class="btn btn-success btn-sm" (click)="jobToApprove.set(job)" style="gap:4px">
-                        <span class="material-icons-round" style="font-size:16px">check_circle</span> Trả lương
-                      </button>
-                    } @else if (job.status === 'completed') {
-                      <span class="badge badge-success">Đã hoàn thành</span>
-                    }
-                  </div>
+                  }
                 </div>
               } @empty {
                 <div class="empty-jobs glass-card">
@@ -375,6 +418,36 @@ import { Job } from '../../models/job.model';
                 <div class="form-actions d-flex justify-center gap-3">
                   <button class="btn btn-secondary" (click)="jobToApprove.set(null)">Hủy</button>
                   <button class="btn btn-success" (click)="approveCompletion(jobToApprove()!)">Nghiệm thu & Trả lương</button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Dispute Completion Modal -->
+          @if (jobToDispute()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 500px; text-align: left;">
+                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Báo cáo tranh chấp công việc</h3>
+                <p style="color:var(--text-secondary); margin-bottom:16px">Vui lòng cung cấp lý do từ chối nghiệm thu và bằng chứng chứng minh sinh viên chưa hoàn thành.</p>
+                
+                <div class="form-group mb-4">
+                  <label class="form-label" style="display:block; margin-bottom:6px">Lý do tranh chấp *</label>
+                  <input type="text" class="form-input" style="width:100%" [(ngModel)]="disputeReasonInput" placeholder="VD: Sinh viên không nộp kết quả đúng hẹn" required>
+                </div>
+                
+                <div class="form-group mb-4">
+                  <label class="form-label" style="display:block; margin-bottom:6px">Mô tả bằng chứng chi tiết *</label>
+                  <textarea class="form-input" style="width:100%" rows="3" [(ngModel)]="disputeEvidenceText" placeholder="Mô tả cụ thể bằng chứng..." required></textarea>
+                </div>
+
+                <div class="form-group mb-6">
+                  <label class="form-label" style="display:block; margin-bottom:6px">Link ảnh/tài liệu bằng chứng</label>
+                  <input type="text" class="form-input" style="width:100%" [(ngModel)]="disputeEvidenceUrl" placeholder="VD: https://res.cloudinary.com/...">
+                </div>
+
+                <div class="form-actions d-flex justify-end gap-3" style="justify-content:flex-end">
+                  <button class="btn btn-secondary" (click)="jobToDispute.set(null)">Hủy</button>
+                  <button class="btn btn-danger" (click)="submitDispute(jobToDispute()!)" [disabled]="!disputeReasonInput || !disputeEvidenceText">Báo cáo tranh chấp</button>
                 </div>
               </div>
             </div>
@@ -669,6 +742,10 @@ export class EmployerDashboardComponent implements OnInit {
 
   userToAssign = signal<number | null>(null);
   jobToApprove = signal<Job | null>(null);
+  jobToDispute = signal<Job | null>(null);
+  disputeReasonInput = '';
+  disputeEvidenceText = '';
+  disputeEvidenceUrl = '';
 
   formData = this.getEmptyForm();
 
@@ -717,6 +794,11 @@ export class EmployerDashboardComponent implements OnInit {
   // Stats are now computed automatically, no need for manual methods
 
   openNewForm() {
+    const user = this.auth.currentUser();
+    if (user && user.blacklistCount !== undefined && user.blacklistCount >= 3) {
+      this.toast.error('Tài khoản của bạn đã bị cấm đăng việc do vi phạm chính sách (> 3 cảnh cáo).');
+      return;
+    }
     this.editingJobId.set(null);
     this.formData = this.getEmptyForm();
     this.postMessage.set('');
@@ -929,6 +1011,24 @@ export class EmployerDashboardComponent implements OnInit {
         }
       },
       error: () => this.toast.error('Lỗi kết nối khi nghiệm thu.')
+    });
+  }
+
+  submitDispute(job: Job) {
+    if (!this.disputeReasonInput || !this.disputeEvidenceText) return;
+    this.jobService.rejectCompletion(job.id, this.disputeReasonInput, this.disputeEvidenceText, this.disputeEvidenceUrl).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.jobToDispute.set(null);
+          this.disputeReasonInput = '';
+          this.disputeEvidenceText = '';
+          this.disputeEvidenceUrl = '';
+          this.toast.success('Đã báo cáo tranh chấp lên Admin.');
+        } else {
+          this.toast.error(res.message || 'Lỗi gửi tranh chấp.');
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi gửi tranh chấp.')
     });
   }
 }

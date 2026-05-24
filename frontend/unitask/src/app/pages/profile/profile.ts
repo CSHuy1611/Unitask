@@ -452,6 +452,8 @@ import { Job } from '../../models/job.model';
                               <span class="badge badge-primary">Chờ NTD nghiệm thu</span>
                             } @else if (job.status === 'completed') {
                               <span class="badge badge-success">Đã hoàn thành</span>
+                            } @else if (job.status === 'disputed') {
+                              <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Tranh chấp</span>
                             }
                           </div>
                           @if (job.status === 'in_progress') {
@@ -459,6 +461,59 @@ import { Job } from '../../models/job.model';
                               <button class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
                                 <span class="material-icons-round" style="font-size:16px">task_alt</span> Báo cáo hoàn thành
                               </button>
+                            </div>
+                          }
+                          @if (job.status === 'disputed') {
+                            <div class="dispute-box" style="margin-top: 8px; padding: 16px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: var(--radius-lg);">
+                              <div style="margin-bottom: 12px; font-size: 13px;">
+                                <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px;">
+                                  <span class="material-icons-round" style="font-size: 18px;">warning</span> Nhà tuyển dụng từ chối thanh toán:
+                                </strong>
+                                <p style="margin: 6px 0; color: var(--text-secondary);"><strong>Lý do:</strong> {{ job.disputeReason || 'Không có lý do chi tiết' }}</p>
+                                @if (job.employerEvidenceText) {
+                                  <p style="margin: 6px 0; color: var(--text-secondary);"><strong>Mô tả của NTD:</strong> {{ job.employerEvidenceText }}</p>
+                                }
+                                @if (job.employerEvidenceUrl) {
+                                  <a [href]="job.employerEvidenceUrl" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 500;">Xem bằng chứng từ NTD</a>
+                                }
+                              </div>
+
+                              @if (!job.studentEvidenceText) {
+                                <div style="margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px;">
+                                  <strong style="font-size: 13px; color: var(--text-primary); display: block; margin-bottom: 8px;">Cung cấp bằng chứng bảo vệ quyền lợi của bạn:</strong>
+                                  <div class="form-group" style="margin-bottom: 8px;">
+                                    <textarea class="form-textarea" rows="2" style="font-size: 13px; padding: 8px;"
+                                              placeholder="Nhập mô tả bằng chứng của bạn (VD: tôi đã làm xong đúng hạn, hình ảnh chat...)"
+                                              [(ngModel)]="studentEvidenceTexts[job.id]"
+                                              name="studentEvText-{{job.id}}"></textarea>
+                                  </div>
+                                  <div class="form-group" style="margin-bottom: 12px;">
+                                    <input type="text" class="form-input" style="font-size: 13px; padding: 8px;"
+                                           placeholder="Link hình ảnh/video bằng chứng (nếu có)"
+                                           [(ngModel)]="studentEvidenceUrls[job.id]"
+                                           name="studentEvUrl-{{job.id}}">
+                                  </div>
+                                  <div style="text-align: right;">
+                                    <button class="btn btn-primary btn-sm" (click)="submitEvidence(job.id)">
+                                      <span class="material-icons-round" style="font-size: 16px;">send</span> Gửi bằng chứng
+                                    </button>
+                                  </div>
+                                </div>
+                              } @else {
+                                <div style="margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; font-size: 13px;">
+                                  <strong style="color: var(--success); display: flex; align-items: center; gap: 4px;">
+                                    <span class="material-icons-round" style="font-size: 18px;">check_circle</span> Bằng chứng bạn đã nộp:
+                                  </strong>
+                                  <p style="margin: 6px 0; color: var(--text-secondary);">{{ job.studentEvidenceText }}</p>
+                                  @if (job.studentEvidenceUrl) {
+                                    <a [href]="job.studentEvidenceUrl" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 500;">Link bằng chứng đã gửi</a>
+                                  }
+                                  <div style="margin-top: 12px; color: var(--warning); display: flex; align-items: center; gap: 4px; font-weight: 600;">
+                                    <span class="material-icons-round" style="font-size: 16px;">hourglass_top</span>
+                                    <span>Đang chờ Admin xét duyệt tranh chấp.</span>
+                                  </div>
+                                </div>
+                              }
                             </div>
                           }
                         </div>
@@ -1132,6 +1187,8 @@ export class ProfileComponent implements OnInit {
   };
 
   myApplications = signal<any[]>([]);
+  studentEvidenceTexts: Record<number, string> = {};
+  studentEvidenceUrls: Record<number, string> = {};
 
   workingJobs = computed(() => {
     const user = this.auth.currentUser();
@@ -1145,7 +1202,7 @@ export class ProfileComponent implements OnInit {
       (j.selectedStudentId === user.id || 
        (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
        acceptedJobIds.includes(j.id)) &&
-      (j.status === 'in_progress' || j.status === 'pending_confirmation')
+      (j.status === 'in_progress' || j.status === 'pending_confirmation' || j.status === 'disputed')
     );
   });
 
@@ -1344,6 +1401,27 @@ export class ProfileComponent implements OnInit {
         }
       },
       error: () => this.toast.error('Lỗi kết nối khi báo cáo.')
+    });
+  }
+
+  submitEvidence(jobId: number) {
+    const text = this.studentEvidenceTexts[jobId] || '';
+    const url = this.studentEvidenceUrls[jobId] || '';
+    if (!text.trim()) {
+      this.toast.warning('Vui lòng nhập mô tả bằng chứng.');
+      return;
+    }
+    this.jobService.submitStudentEvidence(jobId, text, url).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success('Nộp bằng chứng thành công! Vui lòng chờ Admin xem xét.');
+          this.jobService.fetchJobs();
+          this.refreshStudentApplications();
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Gửi bằng chứng thất bại.')
     });
   }
 

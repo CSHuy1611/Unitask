@@ -99,5 +99,22 @@ namespace UniTask.Api.Controllers
             if (!result) return BadRequest(new { message = "Failed to mark withdrawal as completed." });
             return Ok(new { message = "Withdrawal marked as completed successfully." });
         }
+
+        // ===== DISPUTE MANAGEMENT =====
+        [HttpGet("disputes")]
+        public async Task<IActionResult> GetDisputes()
+        {
+            var disputes = await _adminService.GetDisputesAsync();
+            return Ok(disputes);
+        }
+
+        [HttpPost("disputes/{id}/resolve")]
+        public async Task<IActionResult> ResolveDispute(int id, [FromBody] DisputeResolveDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var result = await _adminService.ResolveDisputeAsync(id, dto);
+            if (!result) return BadRequest(new { message = "Failed to resolve dispute. Job might not be in Disputed status." });
+            return Ok(new { message = "Dispute resolved successfully." });
+        }
     }
 }

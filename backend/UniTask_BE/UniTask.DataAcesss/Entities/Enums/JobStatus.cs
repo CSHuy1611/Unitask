@@ -5,6 +5,8 @@ namespace UniTask.DataAcesss.Entities.Enums
         Open = 0,
         InProgress = 1,
         PendingConfirmation = 2,
-        Completed = 3
+        Completed = 3,
+        Disputed = 4,
+        Closed = 5
     }
 }
