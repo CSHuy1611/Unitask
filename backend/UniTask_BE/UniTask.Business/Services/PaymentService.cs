@@ -61,7 +61,7 @@ namespace UniTask.Business.Services
                 WalletId = (await _context.Wallets.FirstAsync(w => w.UserId == userId)).Id,
                 Amount = dto.Amount,
                 Type = TransactionType.Deposit,
-                Description = $"[PAYOS_PENDING] Nạp tiền qua PayOS (demo dự án học tập). Mã ĐH: {orderCode}",
+                Description = $"[PAYOS_PENDING] Nạp tiền qua PayOS. Mã ĐH: {orderCode}",
                 CreatedAt = DateTime.UtcNow
             });
             await _context.SaveChangesAsync();

@@ -13,12 +13,15 @@ RUN dotnet restore
 COPY . .
 
 # Build and publish
-RUN dotnet publish "UniTask.Api/UniTask.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "UniTask.Api/UniTask.Api.csproj" --no-restore -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime Stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-COPY --from=build /app/publish .
+COPY --chown=app:app --from=build /app/publish .
+
+# Run as non-root user (provided by default in .NET 8 images)
+USER app
 
 EXPOSE 8080
 ENV ASPNETCORE_HTTP_PORTS=8080

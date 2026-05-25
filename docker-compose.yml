@@ -7,6 +7,7 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+      - MSSQL_MEMORY_LIMIT_MB=2048 # Giới hạn RAM tối đa cho SQL Server (2GB) để tối ưu hiệu năng host
     ports:
       - "1433:1433"
     volumes:
@@ -14,6 +15,12 @@ services:
     networks:
       - unitask-network
     restart: always
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}", "-C", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -32,7 +39,8 @@ services:
       - PayOS__ApiKey=${PAYOS_API_KEY}
       - PayOS__ChecksumKey=${PAYOS_CHECKSUM_KEY}
     depends_on:
-      - database
+      database:
+        condition: service_healthy # Đảm bảo backend chỉ khởi động khi database đã hoàn toàn sẵn sàng nhận kết nối
     ports:
       - "5250:8080" # Expose for direct local calls or fallback support
     networks:
