@@ -13,11 +13,13 @@ namespace UniTask.Api.Controllers
     {
         private readonly IPaymentService _paymentService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<PaymentController> _logger;
 
-        public PaymentController(IPaymentService paymentService, IConfiguration configuration)
+        public PaymentController(IPaymentService paymentService, IConfiguration configuration, ILogger<PaymentController> logger)
         {
             _paymentService = paymentService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("create")]
@@ -55,8 +57,9 @@ namespace UniTask.Api.Controllers
             }
             domain = domain.TrimEnd('/');
 
-            // Ghi log để kiểm tra trên VPS qua docker compose logs
-            System.Console.WriteLine($"[CREATE_PAYMENT] Referer: {referer}, Origin: {Request.Headers["Origin"]}, ConfigUrl: {_configuration["Frontend:Url"]}, Final Domain: {domain}");
+            // Ghi log bằng ILogger chuẩn của Microsoft để chắc chắn hiển thị trên console logs của Docker
+            _logger.LogInformation("[CREATE_PAYMENT] Referer: {Referer}, Origin: {Origin}, ConfigUrl: {ConfigUrl}, Final Domain: {Domain}", 
+                referer, Request.Headers["Origin"].ToString(), _configuration["Frontend:Url"], domain);
 
             try
             {
