@@ -54,7 +54,7 @@ services:
       dockerfile: Dockerfile
     container_name: unitask-frontend
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT}:80"
     depends_on:
       - backend
     networks:
