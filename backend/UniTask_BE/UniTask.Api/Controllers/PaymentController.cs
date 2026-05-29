@@ -29,13 +29,34 @@ namespace UniTask.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            // Lấy domain từ header Origin của request (tự động nhận diện chính xác cho cả local và production)
-            var domain = Request.Headers["Origin"].ToString();
+            // 1. Thử lấy domain từ header Referer của request (chứa URL trang frontend hiện tại)
+            var domain = "";
+            var referer = Request.Headers["Referer"].ToString();
+            if (!string.IsNullOrEmpty(referer))
+            {
+                try
+                {
+                    var uri = new Uri(referer);
+                    domain = $"{uri.Scheme}://{uri.Authority}";
+                }
+                catch {}
+            }
+
+            // 2. Nếu Referer trống, thử lấy từ header Origin
             if (string.IsNullOrEmpty(domain))
+            {
+                domain = Request.Headers["Origin"].ToString();
+            }
+
+            // 3. Nếu vẫn trống, fallback về cấu hình config hoặc request host
+            if (string.IsNullOrEmpty(domain) || domain.Contains("localhost:5250") || domain.Contains("unitask-backend"))
             {
                 domain = _configuration["Frontend:Url"] ?? $"{Request.Scheme}://{Request.Host}";
             }
             domain = domain.TrimEnd('/');
+
+            // Ghi log để kiểm tra trên VPS qua docker compose logs
+            System.Console.WriteLine($"[CREATE_PAYMENT] Referer: {referer}, Origin: {Request.Headers["Origin"]}, ConfigUrl: {_configuration["Frontend:Url"]}, Final Domain: {domain}");
 
             try
             {
