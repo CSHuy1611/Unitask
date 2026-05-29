@@ -29,8 +29,13 @@ namespace UniTask.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            // Lấy domain của Angular app từ configuration (mặc định fallback về request host)
-            var domain = _configuration["Frontend:Url"] ?? $"{Request.Scheme}://{Request.Host}";
+            // Lấy domain từ header Origin của request (tự động nhận diện chính xác cho cả local và production)
+            var domain = Request.Headers["Origin"].ToString();
+            if (string.IsNullOrEmpty(domain))
+            {
+                domain = _configuration["Frontend:Url"] ?? $"{Request.Scheme}://{Request.Host}";
+            }
+            domain = domain.TrimEnd('/');
 
             try
             {
