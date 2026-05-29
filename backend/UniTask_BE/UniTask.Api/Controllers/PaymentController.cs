@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using UniTask.Business.DTOs.Payment;
 using UniTask.Business.Interfaces;
@@ -11,10 +12,12 @@ namespace UniTask.Api.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
+        private readonly IConfiguration _configuration;
 
-        public PaymentController(IPaymentService paymentService)
+        public PaymentController(IPaymentService paymentService, IConfiguration configuration)
         {
             _paymentService = paymentService;
+            _configuration = configuration;
         }
 
         [HttpPost("create")]
@@ -26,10 +29,8 @@ namespace UniTask.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            // Lấy domain hiện tại để config cancel/return URL (hoặc lấy từ frontend gửi lên)
-            var domain = $"{Request.Scheme}://{Request.Host}";
-            // Trong thực tế, bạn có thể truyền domain của Angular app vào (VD: http://localhost:4200)
-            domain = "http://localhost:4200"; // Hardcode for local testing MVP
+            // Lấy domain của Angular app từ configuration (mặc định fallback về request host)
+            var domain = _configuration["Frontend:Url"] ?? $"{Request.Scheme}://{Request.Host}";
 
             try
             {

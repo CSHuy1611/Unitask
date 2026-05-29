@@ -38,6 +38,7 @@ services:
       - PayOS__ClientId=${PAYOS_CLIENT_ID}
       - PayOS__ApiKey=${PAYOS_API_KEY}
       - PayOS__ChecksumKey=${PAYOS_CHECKSUM_KEY}
+      - Frontend__Url=${FRONTEND_URL}
     depends_on:
       database:
         condition: service_healthy # Đảm bảo backend chỉ khởi động khi database đã hoàn toàn sẵn sàng nhận kết nối
