@@ -48,6 +48,10 @@ import { AuthService } from '../../services/auth.service';
             <a routerLink="/profile" routerLinkActive="active" class="nav-link" (click)="closeMenu()">
               <span class="material-icons-round nav-icon">person</span> Hồ sơ
             </a>
+            <!-- Logout link inside mobile menu -->
+            <button class="nav-link nav-mobile-only nav-logout-btn" (click)="onLogout()">
+              <span class="material-icons-round nav-icon">logout</span> Đăng xuất
+            </button>
           } @else {
             <a routerLink="/login" routerLinkActive="active" class="nav-link nav-mobile-only" (click)="closeMenu()">
               <span class="material-icons-round nav-icon">login</span> Đăng nhập
@@ -67,13 +71,13 @@ import { AuthService } from '../../services/auth.service';
                 <div class="user-avatar">{{ auth.currentUser()?.avatar }}</div>
               }
               <span class="user-name">{{ auth.currentUser()?.fullName }}</span>
-              <button class="btn btn-secondary btn-sm" (click)="onLogout()">
+              <button class="btn btn-secondary btn-sm btn-logout-desktop" (click)="onLogout()">
                 <span class="material-icons-round" style="font-size:16px">logout</span> Đăng xuất
               </button>
             </div>
           } @else {
-            <a routerLink="/login" class="btn btn-secondary btn-sm">Đăng nhập</a>
-            <a routerLink="/register" class="btn btn-primary btn-sm">Đăng ký</a>
+            <a routerLink="/login" class="btn btn-secondary btn-sm btn-auth-desktop">Đăng nhập</a>
+            <a routerLink="/register" class="btn btn-primary btn-sm btn-auth-desktop">Đăng ký</a>
           }
 
           <button class="hamburger" (click)="toggleMenu()" [class.hamburger-open]="menuOpen()">
@@ -84,18 +88,22 @@ import { AuthService } from '../../services/auth.service';
     </header>
   `,
   styles: [`
+    /* ===== HEADER BAR ===== */
     .header {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
+      width: 100%;
       z-index: 1000;
       background: rgba(15, 23, 42, 0.85);
       backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border-light);
       height: 70px;
       display: flex;
       align-items: center;
+      overflow: hidden;
     }
 
     .header-inner {
@@ -104,8 +112,10 @@ import { AuthService } from '../../services/auth.service';
       justify-content: space-between;
       gap: var(--space-8);
       width: 100%;
+      min-width: 0;
     }
 
+    /* ===== LOGO ===== */
     .logo {
       display: flex;
       align-items: center;
@@ -115,11 +125,12 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .logo:hover { opacity: 0.9; }
-    
-    .logo-icon { 
-      width: 40px; 
-      height: 40px; 
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
       display: flex;
+      flex-shrink: 0;
     }
 
     .logo-text {
@@ -136,11 +147,13 @@ import { AuthService } from '../../services/auth.service';
       -webkit-text-fill-color: transparent;
     }
 
+    /* ===== DESKTOP NAV ===== */
     .nav {
       display: flex;
       align-items: center;
       gap: var(--space-1);
       flex: 1;
+      min-width: 0;
     }
 
     .nav-link {
@@ -155,6 +168,10 @@ import { AuthService } from '../../services/auth.service';
       transition: all var(--transition-fast);
       text-decoration: none;
       white-space: nowrap;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-family: var(--font-family);
     }
 
     .nav-link:hover {
@@ -169,10 +186,20 @@ import { AuthService } from '../../services/auth.service';
 
     .nav-icon { font-size: 18px; }
 
+    /* Hidden on desktop, shown only in mobile menu */
     .nav-mobile-only {
       display: none !important;
     }
 
+    .nav-logout-btn {
+      color: var(--danger) !important;
+      margin-top: var(--space-2);
+      border-top: 1px solid var(--border-light);
+      padding-top: var(--space-3) !important;
+      border-radius: var(--radius-lg);
+    }
+
+    /* ===== HEADER ACTIONS (right side) ===== */
     .header-actions {
       display: flex;
       align-items: center;
@@ -197,12 +224,17 @@ import { AuthService } from '../../services/auth.service';
       font-size: var(--font-size-xs);
       font-weight: 700;
       color: white;
+      flex-shrink: 0;
     }
 
     .user-name {
       font-size: var(--font-size-sm);
       font-weight: 500;
       color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
     }
 
     .user-avatar-img {
@@ -211,17 +243,21 @@ import { AuthService } from '../../services/auth.service';
       border-radius: 50%;
       object-fit: cover;
       border: 2px solid var(--primary-light);
+      flex-shrink: 0;
     }
 
+    /* ===== HAMBURGER (hidden on desktop) ===== */
     .hamburger {
       display: none;
       flex-direction: column;
       gap: 5px;
       background: none;
       padding: var(--space-2);
+      flex-shrink: 0;
     }
 
     .hamburger span {
+      display: block;
       width: 24px;
       height: 2px;
       background: var(--text-primary);
@@ -233,58 +269,145 @@ import { AuthService } from '../../services/auth.service';
     .hamburger-open span:nth-child(2) { opacity: 0; }
     .hamburger-open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
 
+    /* ==============================================
+       TABLET & MOBILE BREAKPOINT (≤ 768px)
+       ============================================== */
     @media (max-width: 768px) {
-      .nav-mobile-only {
-        display: flex !important;
+      .header {
+        height: 60px;
       }
 
+      .header-inner {
+        gap: var(--space-3);
+      }
+
+      /* -- Logo shrinks -- */
       .logo-text {
         font-size: 26px;
       }
 
       .logo-icon {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
       }
 
-      .hamburger { display: flex; }
+      /* -- Show hamburger -- */
+      .hamburger {
+        display: flex;
+      }
 
+      /* -- Hide ALL desktop auth/user buttons -- */
+      .btn-auth-desktop {
+        display: none !important;
+      }
+
+      .btn-logout-desktop {
+        display: none !important;
+      }
+
+      .user-name {
+        display: none !important;
+      }
+
+      .user-avatar,
+      .user-avatar-img {
+        display: none !important;
+      }
+
+      .user-menu {
+        display: none !important;
+      }
+
+      /* -- Show mobile-only nav items -- */
+      .nav-mobile-only {
+        display: flex !important;
+      }
+
+      /* -- Mobile slide-down nav panel -- */
       .nav {
         position: fixed;
-        top: 70px;
+        top: 60px;
         left: 0;
         right: 0;
-        background: var(--bg-secondary);
+        bottom: auto;
+        background: rgba(15, 23, 42, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         flex-direction: column;
-        padding: var(--space-4);
-        gap: var(--space-2);
-        transform: translateY(-110%);
+        padding: var(--space-4) var(--space-4) var(--space-6);
+        gap: var(--space-1);
+        transform: translateY(-120%);
         transition: transform var(--transition-base);
         border-bottom: 1px solid var(--border-light);
         z-index: 999;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        max-height: calc(100vh - 60px);
+        overflow-y: auto;
       }
 
-      .nav-open { transform: translateY(0); }
+      .nav-open {
+        transform: translateY(0);
+      }
 
       .nav-link {
         width: 100%;
         padding: var(--space-3) var(--space-4);
+        font-size: var(--font-size-base);
+        border-radius: var(--radius-md);
       }
 
-      .user-name { display: none; }
+      .nav-link:active {
+        background: rgba(79, 70, 229, 0.15);
+      }
 
-      .header-actions .btn-primary {
-        display: none !important;
+      /* -- header-actions: only hamburger visible -- */
+      .header-actions {
+        gap: var(--space-2);
       }
     }
 
+    /* ==============================================
+       SMALL PHONE BREAKPOINT (≤ 480px)
+       ============================================== */
     @media (max-width: 480px) {
-      .header-actions .btn-secondary {
-        display: none !important;
+      .header {
+        height: 56px;
       }
 
-      .header-actions {
+      .header-inner {
         gap: var(--space-2);
+      }
+
+      .logo-text {
+        font-size: 22px;
+      }
+
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+      }
+
+      .logo {
+        gap: 6px;
+      }
+
+      .nav {
+        top: 56px;
+        max-height: calc(100vh - 56px);
+        padding: var(--space-3);
+      }
+
+      .nav-link {
+        padding: var(--space-3);
+        font-size: var(--font-size-sm);
+      }
+
+      .hamburger {
+        padding: var(--space-1);
+      }
+
+      .hamburger span {
+        width: 22px;
       }
     }
   `]
