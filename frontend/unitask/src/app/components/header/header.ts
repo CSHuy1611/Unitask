@@ -48,6 +48,13 @@ import { AuthService } from '../../services/auth.service';
             <a routerLink="/profile" routerLinkActive="active" class="nav-link" (click)="closeMenu()">
               <span class="material-icons-round nav-icon">person</span> Hồ sơ
             </a>
+          } @else {
+            <a routerLink="/login" routerLinkActive="active" class="nav-link nav-mobile-only" (click)="closeMenu()">
+              <span class="material-icons-round nav-icon">login</span> Đăng nhập
+            </a>
+            <a routerLink="/register" routerLinkActive="active" class="nav-link nav-mobile-only" (click)="closeMenu()">
+              <span class="material-icons-round nav-icon">person_add</span> Đăng ký
+            </a>
           }
         </nav>
 
@@ -86,7 +93,9 @@ import { AuthService } from '../../services/auth.service';
       background: rgba(15, 23, 42, 0.85);
       backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border-light);
-      padding: var(--space-3) 0;
+      height: 70px;
+      display: flex;
+      align-items: center;
     }
 
     .header-inner {
@@ -94,6 +103,7 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       justify-content: space-between;
       gap: var(--space-8);
+      width: 100%;
     }
 
     .logo {
@@ -159,6 +169,10 @@ import { AuthService } from '../../services/auth.service';
 
     .nav-icon { font-size: 18px; }
 
+    .nav-mobile-only {
+      display: none !important;
+    }
+
     .header-actions {
       display: flex;
       align-items: center;
@@ -220,11 +234,24 @@ import { AuthService } from '../../services/auth.service';
     .hamburger-open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
 
     @media (max-width: 768px) {
+      .nav-mobile-only {
+        display: flex !important;
+      }
+
+      .logo-text {
+        font-size: 26px;
+      }
+
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+      }
+
       .hamburger { display: flex; }
 
       .nav {
         position: fixed;
-        top: 60px;
+        top: 70px;
         left: 0;
         right: 0;
         background: var(--bg-secondary);
@@ -234,6 +261,7 @@ import { AuthService } from '../../services/auth.service';
         transform: translateY(-110%);
         transition: transform var(--transition-base);
         border-bottom: 1px solid var(--border-light);
+        z-index: 999;
       }
 
       .nav-open { transform: translateY(0); }
@@ -244,6 +272,20 @@ import { AuthService } from '../../services/auth.service';
       }
 
       .user-name { display: none; }
+
+      .header-actions .btn-primary {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header-actions .btn-secondary {
+        display: none !important;
+      }
+
+      .header-actions {
+        gap: var(--space-2);
+      }
     }
   `]
 })
