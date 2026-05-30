@@ -1,2 +1,3 @@
 # Ignore environment configuration files
 .env
+.env.example
