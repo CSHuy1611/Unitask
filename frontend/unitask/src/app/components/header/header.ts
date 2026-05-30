@@ -8,8 +8,9 @@ import { AuthService } from '../../services/auth.service';
   imports: [RouterLink, RouterLinkActive],
   template: `
     <header class="header">
-      <div class="container header-inner">
-        <a routerLink="/" class="logo">
+      <div class="header-bar">
+        <!-- LEFT: Logo -->
+        <a routerLink="/" class="logo" (click)="closeMenu()">
           <svg class="logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M 30 20 L 30 70 A 20 20 0 0 0 70 70 L 70 45" stroke="url(#logoGrad)" stroke-width="22" stroke-linecap="round"/>
             <circle cx="70" cy="18" r="11" fill="#1CD4D4"/>
@@ -23,46 +24,36 @@ import { AuthService } from '../../services/auth.service';
           <span class="logo-text">Uni<span class="logo-accent">Task</span></span>
         </a>
 
-        <nav class="nav" [class.nav-open]="menuOpen()">
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link" (click)="closeMenu()">
+        <!-- CENTER: Desktop nav links -->
+        <nav class="desktop-nav">
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
             <span class="material-icons-round nav-icon">home</span> Trang chủ
           </a>
-          <a routerLink="/jobs" routerLinkActive="active" class="nav-link" (click)="closeMenu()">
+          <a routerLink="/jobs" routerLinkActive="active" class="nav-link">
             <span class="material-icons-round nav-icon">work</span> Việc làm
           </a>
-
           @if (auth.isLoggedIn()) {
             @if (auth.isAdmin()) {
-              <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-link" (click)="closeMenu()">
+              <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-link">
                 <span class="material-icons-round nav-icon">admin_panel_settings</span> Admin Panel
               </a>
             }
             @if (auth.isEmployer()) {
-              <a routerLink="/employer/dashboard" routerLinkActive="active" class="nav-link" (click)="closeMenu()">
+              <a routerLink="/employer/dashboard" routerLinkActive="active" class="nav-link">
                 <span class="material-icons-round nav-icon">dashboard</span> Dashboard
               </a>
-              <a routerLink="/pricing" routerLinkActive="active" class="nav-link" (click)="closeMenu()" style="color:var(--primary-light)">
+              <a routerLink="/pricing" routerLinkActive="active" class="nav-link" style="color:var(--primary-light)">
                 <span class="material-icons-round nav-icon">account_balance_wallet</span> Nạp tiền
               </a>
             }
-            <a routerLink="/profile" routerLinkActive="active" class="nav-link" (click)="closeMenu()">
+            <a routerLink="/profile" routerLinkActive="active" class="nav-link">
               <span class="material-icons-round nav-icon">person</span> Hồ sơ
-            </a>
-            <!-- Logout link inside mobile menu -->
-            <button class="nav-link nav-mobile-only nav-logout-btn" (click)="onLogout()">
-              <span class="material-icons-round nav-icon">logout</span> Đăng xuất
-            </button>
-          } @else {
-            <a routerLink="/login" routerLinkActive="active" class="nav-link nav-mobile-only" (click)="closeMenu()">
-              <span class="material-icons-round nav-icon">login</span> Đăng nhập
-            </a>
-            <a routerLink="/register" routerLinkActive="active" class="nav-link nav-mobile-only" (click)="closeMenu()">
-              <span class="material-icons-round nav-icon">person_add</span> Đăng ký
             </a>
           }
         </nav>
 
-        <div class="header-actions">
+        <!-- RIGHT: Desktop actions -->
+        <div class="desktop-actions">
           @if (auth.isLoggedIn()) {
             <div class="user-menu">
               @if (auth.currentUser()?.avatarUrl) {
@@ -71,51 +62,103 @@ import { AuthService } from '../../services/auth.service';
                 <div class="user-avatar">{{ auth.currentUser()?.avatar }}</div>
               }
               <span class="user-name">{{ auth.currentUser()?.fullName }}</span>
-              <button class="btn btn-secondary btn-sm btn-logout-desktop" (click)="onLogout()">
+              <button class="btn btn-secondary btn-sm" (click)="onLogout()">
                 <span class="material-icons-round" style="font-size:16px">logout</span> Đăng xuất
               </button>
             </div>
           } @else {
-            <a routerLink="/login" class="btn btn-secondary btn-sm btn-auth-desktop">Đăng nhập</a>
-            <a routerLink="/register" class="btn btn-primary btn-sm btn-auth-desktop">Đăng ký</a>
+            <a routerLink="/login" class="btn btn-secondary btn-sm">Đăng nhập</a>
+            <a routerLink="/register" class="btn btn-primary btn-sm">Đăng ký</a>
           }
-
-          <button class="hamburger" (click)="toggleMenu()" [class.hamburger-open]="menuOpen()">
-            <span></span><span></span><span></span>
-          </button>
         </div>
+
+        <!-- RIGHT: Hamburger (mobile only) -->
+        <button class="hamburger" (click)="toggleMenu()" [attr.aria-label]="'Menu'" [class.hamburger-open]="menuOpen()">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+
+      <!-- MOBILE DROPDOWN MENU (completely separate from header bar) -->
+      @if (menuOpen()) {
+        <div class="mobile-backdrop" (click)="closeMenu()"></div>
+      }
+      <div class="mobile-menu" [class.mobile-menu-open]="menuOpen()">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="mobile-link" (click)="closeMenu()">
+          <span class="material-icons-round">home</span> Trang chủ
+        </a>
+        <a routerLink="/jobs" routerLinkActive="active" class="mobile-link" (click)="closeMenu()">
+          <span class="material-icons-round">work</span> Việc làm
+        </a>
+
+        @if (auth.isLoggedIn()) {
+          @if (auth.isAdmin()) {
+            <a routerLink="/admin/dashboard" routerLinkActive="active" class="mobile-link" (click)="closeMenu()">
+              <span class="material-icons-round">admin_panel_settings</span> Admin Panel
+            </a>
+          }
+          @if (auth.isEmployer()) {
+            <a routerLink="/employer/dashboard" routerLinkActive="active" class="mobile-link" (click)="closeMenu()">
+              <span class="material-icons-round">dashboard</span> Dashboard
+            </a>
+            <a routerLink="/pricing" routerLinkActive="active" class="mobile-link" (click)="closeMenu()">
+              <span class="material-icons-round">account_balance_wallet</span> Nạp tiền
+            </a>
+          }
+          <a routerLink="/profile" routerLinkActive="active" class="mobile-link" (click)="closeMenu()">
+            <span class="material-icons-round">person</span> Hồ sơ
+          </a>
+          <div class="mobile-divider"></div>
+          <button class="mobile-link mobile-logout" (click)="onLogout()">
+            <span class="material-icons-round">logout</span> Đăng xuất
+          </button>
+        } @else {
+          <div class="mobile-divider"></div>
+          <a routerLink="/login" routerLinkActive="active" class="mobile-link" (click)="closeMenu()">
+            <span class="material-icons-round">login</span> Đăng nhập
+          </a>
+          <a routerLink="/register" routerLinkActive="active" class="mobile-link mobile-register" (click)="closeMenu()">
+            <span class="material-icons-round">person_add</span> Đăng ký
+          </a>
+        }
       </div>
     </header>
   `,
   styles: [`
-    /* ===== HEADER BAR ===== */
+    /* ==========================================
+       HEADER CONTAINER
+       ========================================== */
+    :host {
+      display: block;
+    }
+
     .header {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
-      width: 100%;
       z-index: 1000;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border-light);
-      height: 70px;
-      display: flex;
-      align-items: center;
-      overflow: hidden;
     }
 
-    .header-inner {
+    /* ==========================================
+       HEADER BAR (the visible top bar)
+       ========================================== */
+    .header-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: var(--space-8);
-      width: 100%;
-      min-width: 0;
+      height: 70px;
+      padding: 0 24px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      z-index: 1002;
     }
 
-    /* ===== LOGO ===== */
+    /* ==========================================
+       LOGO
+       ========================================== */
     .logo {
       display: flex;
       align-items: center;
@@ -129,12 +172,11 @@ import { AuthService } from '../../services/auth.service';
     .logo-icon {
       width: 40px;
       height: 40px;
-      display: flex;
       flex-shrink: 0;
     }
 
     .logo-text {
-      font-size: 38px;
+      font-size: 32px;
       font-weight: 800;
       letter-spacing: 0.5px;
       color: white;
@@ -147,94 +189,81 @@ import { AuthService } from '../../services/auth.service';
       -webkit-text-fill-color: transparent;
     }
 
-    /* ===== DESKTOP NAV ===== */
-    .nav {
+    /* ==========================================
+       DESKTOP NAV (hidden on mobile)
+       ========================================== */
+    .desktop-nav {
       display: flex;
       align-items: center;
-      gap: var(--space-1);
+      gap: 4px;
       flex: 1;
-      min-width: 0;
+      margin: 0 24px;
     }
 
     .nav-link {
       display: flex;
       align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-2) var(--space-4);
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
+      gap: 8px;
+      padding: 8px 16px;
+      color: #94A3B8;
+      font-size: 14px;
       font-weight: 500;
-      border-radius: var(--radius-lg);
-      transition: all var(--transition-fast);
+      border-radius: 10px;
+      transition: all 150ms ease;
       text-decoration: none;
       white-space: nowrap;
-      border: none;
-      background: none;
-      cursor: pointer;
-      font-family: var(--font-family);
     }
 
     .nav-link:hover {
-      color: var(--text-primary);
-      background: var(--bg-glass);
+      color: #F1F5F9;
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .nav-link.active {
-      color: var(--primary-light);
+      color: #818CF8;
       background: rgba(79, 70, 229, 0.1);
     }
 
     .nav-icon { font-size: 18px; }
 
-    /* Hidden on desktop, shown only in mobile menu */
-    .nav-mobile-only {
-      display: none !important;
-    }
-
-    .nav-logout-btn {
-      color: var(--danger) !important;
-      margin-top: var(--space-2);
-      border-top: 1px solid var(--border-light);
-      padding-top: var(--space-3) !important;
-      border-radius: var(--radius-lg);
-    }
-
-    /* ===== HEADER ACTIONS (right side) ===== */
-    .header-actions {
+    /* ==========================================
+       DESKTOP ACTIONS (hidden on mobile)
+       ========================================== */
+    .desktop-actions {
       display: flex;
       align-items: center;
-      gap: var(--space-3);
+      gap: 12px;
       flex-shrink: 0;
     }
 
     .user-menu {
       display: flex;
       align-items: center;
-      gap: var(--space-3);
+      gap: 12px;
     }
 
     .user-avatar {
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: var(--primary-gradient);
+      background: linear-gradient(135deg, #4F46E5, #7C3AED);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: var(--font-size-xs);
+      font-size: 12px;
       font-weight: 700;
       color: white;
       flex-shrink: 0;
     }
 
     .user-name {
-      font-size: var(--font-size-sm);
+      font-size: 14px;
       font-weight: 500;
-      color: var(--text-primary);
-      white-space: nowrap;
+      color: #F1F5F9;
+      max-width: 120px;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 120px;
+      white-space: nowrap;
     }
 
     .user-avatar-img {
@@ -242,144 +271,199 @@ import { AuthService } from '../../services/auth.service';
       height: 36px;
       border-radius: 50%;
       object-fit: cover;
-      border: 2px solid var(--primary-light);
+      border: 2px solid #818CF8;
       flex-shrink: 0;
     }
 
-    /* ===== HAMBURGER (hidden on desktop) ===== */
+    /* ==========================================
+       HAMBURGER (hidden on desktop)
+       ========================================== */
     .hamburger {
-      display: none;
+      display: none;  /* shown via media query */
       flex-direction: column;
+      justify-content: center;
       gap: 5px;
       background: none;
-      padding: var(--space-2);
+      border: none;
+      padding: 8px;
+      cursor: pointer;
       flex-shrink: 0;
+      z-index: 1003;
     }
 
     .hamburger span {
       display: block;
       width: 24px;
-      height: 2px;
-      background: var(--text-primary);
+      height: 2.5px;
+      background: #F1F5F9;
       border-radius: 2px;
-      transition: all var(--transition-base);
+      transition: all 250ms ease;
+      transform-origin: center;
     }
 
-    .hamburger-open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
-    .hamburger-open span:nth-child(2) { opacity: 0; }
-    .hamburger-open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+    .hamburger-open span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+    .hamburger-open span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger-open span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
 
-    /* ==============================================
-       TABLET & MOBILE BREAKPOINT (≤ 768px)
-       ============================================== */
+    /* ==========================================
+       MOBILE MENU (hidden on desktop)
+       ========================================== */
+    .mobile-backdrop {
+      display: none;
+    }
+
+    .mobile-menu {
+      display: none;  /* shown via media query */
+    }
+
+    .mobile-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      color: #94A3B8;
+      font-size: 16px;
+      font-weight: 500;
+      text-decoration: none;
+      border: none;
+      background: none;
+      cursor: pointer;
+      width: 100%;
+      font-family: inherit;
+      border-radius: 8px;
+      transition: all 150ms ease;
+    }
+
+    .mobile-link:hover,
+    .mobile-link:active {
+      color: #F1F5F9;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .mobile-link.active {
+      color: #818CF8;
+      background: rgba(79, 70, 229, 0.12);
+    }
+
+    .mobile-link .material-icons-round {
+      font-size: 22px;
+    }
+
+    .mobile-logout {
+      color: #EF4444 !important;
+    }
+
+    .mobile-logout:hover,
+    .mobile-logout:active {
+      background: rgba(239, 68, 68, 0.1) !important;
+    }
+
+    .mobile-register {
+      color: #818CF8;
+    }
+
+    .mobile-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 8px 16px;
+    }
+
+    /* ==========================================
+       RESPONSIVE: MOBILE (max-width: 768px)
+       ========================================== */
     @media (max-width: 768px) {
-      .header {
-        height: 60px;
+      /* Header bar: shorter */
+      .header-bar {
+        height: 56px;
+        padding: 0 16px;
       }
 
-      .header-inner {
-        gap: var(--space-3);
-      }
-
-      /* -- Logo shrinks -- */
-      .logo-text {
-        font-size: 26px;
-      }
-
+      /* Logo: smaller */
       .logo-icon {
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
       }
 
-      /* -- Show hamburger -- */
+      .logo-text {
+        font-size: 24px;
+      }
+
+      .logo {
+        gap: 8px;
+      }
+
+      /* HIDE desktop nav & actions completely */
+      .desktop-nav {
+        display: none !important;
+      }
+
+      .desktop-actions {
+        display: none !important;
+      }
+
+      /* SHOW hamburger */
       .hamburger {
         display: flex;
       }
 
-      /* -- Hide ALL desktop auth/user buttons -- */
-      .btn-auth-desktop {
-        display: none !important;
-      }
-
-      .btn-logout-desktop {
-        display: none !important;
-      }
-
-      .user-name {
-        display: none !important;
-      }
-
-      .user-avatar,
-      .user-avatar-img {
-        display: none !important;
-      }
-
-      .user-menu {
-        display: none !important;
-      }
-
-      /* -- Show mobile-only nav items -- */
-      .nav-mobile-only {
-        display: flex !important;
-      }
-
-      /* -- Mobile slide-down nav panel -- */
-      .nav {
+      /* MOBILE MENU: slide down from header */
+      .mobile-menu {
+        display: flex;
+        flex-direction: column;
         position: fixed;
-        top: 60px;
+        top: 56px;
         left: 0;
         right: 0;
-        bottom: auto;
         background: rgba(15, 23, 42, 0.98);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        flex-direction: column;
-        padding: var(--space-4) var(--space-4) var(--space-6);
-        gap: var(--space-1);
-        transform: translateY(-120%);
-        transition: transform var(--transition-base);
-        border-bottom: 1px solid var(--border-light);
-        z-index: 999;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-        max-height: calc(100vh - 60px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 8px;
+        z-index: 1001;
+        transform: translateY(-110%);
+        opacity: 0;
+        transition: transform 250ms ease, opacity 200ms ease;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        max-height: calc(100vh - 56px);
+        max-height: calc(100dvh - 56px);
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
-      .nav-open {
+      .mobile-menu-open {
         transform: translateY(0);
+        opacity: 1;
       }
 
-      .nav-link {
-        width: 100%;
-        padding: var(--space-3) var(--space-4);
-        font-size: var(--font-size-base);
-        border-radius: var(--radius-md);
-      }
-
-      .nav-link:active {
-        background: rgba(79, 70, 229, 0.15);
-      }
-
-      /* -- header-actions: only hamburger visible -- */
-      .header-actions {
-        gap: var(--space-2);
+      /* Backdrop to close menu on tap outside */
+      .mobile-backdrop {
+        display: block;
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 1000;
       }
     }
 
-    /* ==============================================
-       SMALL PHONE BREAKPOINT (≤ 480px)
-       ============================================== */
-    @media (max-width: 480px) {
-      .header {
-        height: 56px;
-      }
-
-      .header-inner {
-        gap: var(--space-2);
+    /* ==========================================
+       VERY SMALL PHONES (max-width: 380px)
+       ========================================== */
+    @media (max-width: 380px) {
+      .header-bar {
+        padding: 0 12px;
       }
 
       .logo-text {
-        font-size: 22px;
+        font-size: 20px;
       }
 
       .logo-icon {
@@ -391,23 +475,9 @@ import { AuthService } from '../../services/auth.service';
         gap: 6px;
       }
 
-      .nav {
-        top: 56px;
-        max-height: calc(100vh - 56px);
-        padding: var(--space-3);
-      }
-
-      .nav-link {
-        padding: var(--space-3);
-        font-size: var(--font-size-sm);
-      }
-
-      .hamburger {
-        padding: var(--space-1);
-      }
-
-      .hamburger span {
-        width: 22px;
+      .mobile-link {
+        padding: 12px 16px;
+        font-size: 15px;
       }
     }
   `]
