@@ -94,10 +94,14 @@ namespace UniTask.Business.Services
 
         public async Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10)
         {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+
             var query = _context.Users;
 
             var sortedQuery = query
-                .OrderBy(u => u.EkycStatus == EkycStatus.Pending ? 0 : (u.EkycStatus == EkycStatus.None ? 1 : 2))
+                .OrderByDescending(u => u.EkycStatus == EkycStatus.Pending)
+                .ThenByDescending(u => u.EkycStatus == EkycStatus.None)
                 .ThenByDescending(u => u.CreatedAt);
 
             var totalCount = await query.CountAsync();
@@ -181,13 +185,16 @@ namespace UniTask.Business.Services
 
         public async Task<object> GetWithdrawalsAsync(int page = 1, int pageSize = 10)
         {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+
             var query = _context.Transactions
                 .Include(t => t.Wallet)
                 .ThenInclude(w => w.User)
                 .Where(t => t.Type == TransactionType.Withdrawal);
 
             var sortedQuery = query
-                .OrderBy(t => (t.Description != null && t.Description.StartsWith("[Completed]")) ? 1 : 0)
+                .OrderBy(t => t.Description != null && t.Description.StartsWith("[Completed]"))
                 .ThenByDescending(t => t.CreatedAt);
 
             var totalCount = await query.CountAsync();
@@ -260,6 +267,9 @@ namespace UniTask.Business.Services
 
         public async Task<object> GetDisputesAsync(int page = 1, int pageSize = 10)
         {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+
             var query = _context.Jobs
                 .Include(j => j.Company)
                 .Include(j => j.Employer)

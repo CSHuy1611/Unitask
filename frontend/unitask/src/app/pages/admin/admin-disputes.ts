@@ -228,6 +228,24 @@ interface DisputeItem {
         </div>
       </div>
     }
+
+    @if (showConfirmResolveModal()) {
+      <div class="modal-overlay animate-fade-in" style="z-index:1100">
+        <div class="modal-content glass-card p-6" style="width: 100%; max-width: 480px; text-align: center;">
+          <span class="material-icons-round text-warning" style="font-size:64px; margin-bottom:16px; color:#F59E0B">warning</span>
+          <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận phân xử tranh chấp</h3>
+          <p style="color:var(--text-secondary); margin-bottom:24px; font-size: 0.95rem;">
+            Bạn chắc chắn muốn phân quyết: <strong>{{ resolveWinner() === 'Student' ? 'Sinh viên thắng (Giải ngân)' : 'Nhà tuyển dụng thắng (Hoàn tiền)' }}</strong>? Quyết định này không thể hoàn tác.
+          </p>
+          <div style="display:flex; gap:12px; justify-content:center">
+            <button type="button" class="btn btn-secondary" style="flex:1" (click)="showConfirmResolveModal.set(false)">Hủy</button>
+            <button type="button" class="btn btn-primary" style="flex:1; background:var(--primary-light)" (click)="executeResolve()">
+              Xác nhận
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: [`
     .admin-page {
@@ -402,6 +420,10 @@ export class AdminDisputesComponent implements OnInit {
   isLoading = signal<boolean>(false);
   totalDisputesCount = signal<number>(0);
 
+  showConfirmResolveModal = signal(false);
+  resolveWinner = signal<'Student' | 'Employer' | null>(null);
+  pendingResolveJobId = signal<number | null>(null);
+
   ngOnInit() {
     if (this.auth.isAdmin()) {
       this.loadDisputes();
@@ -435,21 +457,29 @@ export class AdminDisputesComponent implements OnInit {
   }
 
   resolve(jobId: number, winner: 'Student' | 'Employer') {
-    const winnerText = winner === 'Student' ? 'Sinh viên thắng (Giải ngân)' : 'Nhà tuyển dụng thắng (Hoàn tiền)';
-    if (confirm(`Bạn chắc chắn muốn phân quyết: ${winnerText}? Quyết định này không thể hoàn tác.`)) {
-      this.jobService.resolveDispute(jobId, winner).subscribe({
-        next: (res) => {
-          if (res.success) {
-            this.toast.success(res.message || 'Phân xử tranh chấp thành công.');
-            this.selectedDispute.set(null);
-            this.loadDisputes(1);
-          } else {
-            this.toast.error(res.message || 'Lỗi khi phân xử tranh chấp.');
-          }
-        },
-        error: () => this.toast.error('Gặp lỗi kết nối máy chủ khi xử lý.')
-      });
-    }
+    this.pendingResolveJobId.set(jobId);
+    this.resolveWinner.set(winner);
+    this.showConfirmResolveModal.set(true);
+  }
+
+  executeResolve() {
+    const jobId = this.pendingResolveJobId();
+    const winner = this.resolveWinner();
+    if (!jobId || !winner) return;
+
+    this.showConfirmResolveModal.set(false);
+    this.jobService.resolveDispute(jobId, winner).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message || 'Phân xử tranh chấp thành công.');
+          this.selectedDispute.set(null);
+          this.loadDisputes(1);
+        } else {
+          this.toast.error(res.message || 'Lỗi khi phân xử tranh chấp.');
+        }
+      },
+      error: () => this.toast.error('Gặp lỗi kết nối máy chủ khi xử lý.')
+    });
   }
 
   formatCurrency(value: number): string {

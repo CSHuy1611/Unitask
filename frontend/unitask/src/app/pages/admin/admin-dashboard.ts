@@ -281,6 +281,23 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
               </div>
             </div>
           }
+          @if (showConfirmDeletePackageModal()) {
+            <div class="modal-overlay animate-fade-in" style="z-index:1100">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 480px; text-align: center;">
+                <span class="material-icons-round text-warning" style="font-size:64px; margin-bottom:16px; color:#F59E0B">warning</span>
+                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận vô hiệu hóa</h3>
+                <p style="color:var(--text-secondary); margin-bottom:24px; font-size: 0.95rem;">
+                  Bạn có chắc chắn muốn vô hiệu hóa gói dịch vụ này? Gói sẽ không hiển thị cho người mua nữa.
+                </p>
+                <div style="display:flex; gap:12px; justify-content:center">
+                  <button type="button" class="btn btn-secondary" style="flex:1" (click)="showConfirmDeletePackageModal.set(false)">Hủy</button>
+                  <button type="button" class="btn btn-danger" style="flex:1; background:#EF4444" (click)="executeDeletePackage()">
+                    Xác nhận vô hiệu hóa
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
         }
       </div>
     </section>
@@ -720,6 +737,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     isActive: true
   };
 
+  showConfirmDeletePackageModal = signal(false);
+
   private hubConnection?: HubConnection;
 
   ngOnInit() {
@@ -842,10 +861,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   deletePackage() {
-    if (!confirm('Bạn có chắc chắn muốn vô hiệu hóa gói dịch vụ này? Gói sẽ không hiển thị cho người mua nữa.')) {
-      return;
-    }
+    this.showConfirmDeletePackageModal.set(true);
+  }
 
+  executeDeletePackage() {
+    this.showConfirmDeletePackageModal.set(false);
     this.http.delete<any>(`${API_BASE_URL}/admin/packages/${this.packageForm.id}`).subscribe({
       next: () => {
         this.toast.success('Vô hiệu hóa gói dịch vụ thành công!');

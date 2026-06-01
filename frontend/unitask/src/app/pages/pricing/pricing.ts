@@ -55,7 +55,7 @@ import { API_BASE_URL } from '../../config/api.config';
           </div>
 
           <div class="packages-grid animate-fade-in-up" style="animation-delay:0.15s">
-            @for (pkg of packages; track pkg.id) {
+            @for (pkg of packages(); track pkg.id) {
               <div class="price-card glass-card" [class.popular]="pkg.id === 2">
                 @if (pkg.id === 2) {
                   <div class="popular-badge">Phổ biến nhất</div>
@@ -404,7 +404,7 @@ export class PricingComponent implements OnInit {
   private router = inject(Router);
   private toast = inject(ToastService);
 
-  packages: any[] = [];
+  packages = signal<any[]>([]);
 
   showPaymentModal = signal(false);
   showConfirmSubscribeModal = signal(false);
@@ -424,10 +424,11 @@ export class PricingComponent implements OnInit {
   loadPackages() {
     this.http.get<any[]>(`${API_BASE_URL}/subscription/packages`).subscribe({
       next: (data) => {
-        this.packages = data.map(p => ({
+        const mapped = data.map(p => ({
           ...p,
           duration: `${p.durationMonths} tháng`
         }));
+        this.packages.set(mapped);
       },
       error: (err) => {
         console.error('Failed to load packages:', err);
@@ -453,14 +454,7 @@ export class PricingComponent implements OnInit {
       return;
     }
 
-    // Check if user already has an active package
-    const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
-    if (hasActivePackage) {
-      const confirmMsg = `Tài khoản của bạn hiện đang sử dụng gói "${user.activePackage}" (hết hạn ngày ${user.packageExpiry}).\n\nNếu bạn tiếp tục mua gói "${pkg.name}", thời hạn sử dụng mới sẽ được CỘNG DỒN thêm vào sau ngày hết hạn cũ.\n\nBạn có chắc chắn muốn mua không?`;
-      if (!confirm(confirmMsg)) {
-        return;
-      }
-    }
+    // Modal warning is displayed inside the subscription checkout modal directly
 
     const balance = user.balance || 0;
     if (balance >= pkg.price) {
