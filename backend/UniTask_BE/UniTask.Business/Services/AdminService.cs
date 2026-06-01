@@ -78,6 +78,7 @@ namespace UniTask.Business.Services
                     name = p.Name,
                     price = p.Price,
                     duration = $"{p.DurationMonths} tháng",
+                    durationMonths = p.DurationMonths,
                     description = p.Description,
                     subscribers = _context.Subscriptions.Count(s => s.PackageId == p.Id && s.IsActive && s.EndDate > now)
                 })

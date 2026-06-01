@@ -1,14 +1,17 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
+import { ToastService } from '../../services/toast.service';
 import { API_BASE_URL } from '../../config/api.config';
+import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   template: `
     <section class="admin-page">
       <div class="container">
@@ -184,7 +187,12 @@ import { API_BASE_URL } from '../../config/api.config';
 
           <!-- Packages Table -->
           <div class="packages-section glass-card animate-fade-in-up" style="animation-delay:0.2s">
-            <h3><span class="material-icons-round">inventory_2</span> Gói dịch vụ</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
+              <h3 style="margin-bottom: 0;"><span class="material-icons-round">inventory_2</span> Gói dịch vụ</h3>
+              <button class="btn btn-primary btn-sm" (click)="openCreatePackageModal()">
+                <span class="material-icons-round" style="font-size:16px;">add</span> Thêm gói mới
+              </button>
+            </div>
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
@@ -194,6 +202,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     <th>Giá</th>
                     <th>Mô tả</th>
                     <th>Số lượng KH</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -206,12 +215,72 @@ import { API_BASE_URL } from '../../config/api.config';
                       <td>
                         <span class="badge badge-primary">{{ pkg.subscribers }}</span>
                       </td>
+                      <td>
+                        <button class="btn btn-secondary btn-sm" (click)="openEditPackageModal(pkg)">
+                          <span class="material-icons-round" style="font-size: 16px;">edit</span> Sửa
+                        </button>
+                      </td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
           </div>
+
+          <!-- Package Edit Modal -->
+          @if (editingPackage()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card">
+                <div class="modal-header">
+                  <h3>{{ editingPackage()?.id ? 'Chỉnh sửa gói dịch vụ' : 'Thêm gói dịch vụ mới' }}</h3>
+                  <button class="close-btn" (click)="closePackageModal()">
+                    <span class="material-icons-round">close</span>
+                  </button>
+                </div>
+                
+                <form (submit)="savePackage($event)" class="package-form">
+                  <div class="form-group" style="margin-bottom: var(--space-4);">
+                    <label style="display: block; margin-bottom: var(--space-2); font-weight: 600; font-size: var(--font-size-sm); color: var(--text-secondary);">Tên gói dịch vụ</label>
+                    <input type="text" name="name" [(ngModel)]="packageForm.name" required class="form-input" placeholder="Ví dụ: Gói 3 tháng" style="width: 100%;" />
+                  </div>
+
+                  <div class="form-group-row" style="display: flex; gap: var(--space-4); margin-bottom: var(--space-4);">
+                    <div class="form-group" style="flex: 1;">
+                      <label style="display: block; margin-bottom: var(--space-2); font-weight: 600; font-size: var(--font-size-sm); color: var(--text-secondary);">Giá (VND)</label>
+                      <input type="number" name="price" [(ngModel)]="packageForm.price" required class="form-input" placeholder="Ví dụ: 300000" style="width: 100%;" />
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                      <label style="display: block; margin-bottom: var(--space-2); font-weight: 600; font-size: var(--font-size-sm); color: var(--text-secondary);">Thời hạn (tháng)</label>
+                      <input type="number" name="durationMonths" [(ngModel)]="packageForm.durationMonths" required class="form-input" placeholder="Ví dụ: 3" style="width: 100%;" />
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: var(--space-4);">
+                    <label style="display: block; margin-bottom: var(--space-2); font-weight: 600; font-size: var(--font-size-sm); color: var(--text-secondary);">Mô tả gói</label>
+                    <textarea name="description" [(ngModel)]="packageForm.description" class="form-input" rows="3" placeholder="Nhập mô tả các đặc quyền của gói..." style="width: 100%; font-family: inherit;"></textarea>
+                  </div>
+
+                  @if (editingPackage()?.id) {
+                    <div class="form-group-checkbox" style="margin-bottom: var(--space-6); display: flex; align-items: center; gap: var(--space-2);">
+                      <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); cursor: pointer; color: var(--text-secondary);">
+                        <input type="checkbox" name="isActive" [(ngModel)]="packageForm.isActive" style="width: 16px; height: 16px;" /> Hoạt động (hiển thị cho khách hàng)
+                      </label>
+                    </div>
+                  }
+
+                  <div class="modal-actions" style="margin-top: var(--space-6); display: flex; gap: var(--space-4); justify-content: flex-end;">
+                    @if (editingPackage()?.id) {
+                      <button type="button" class="btn btn-danger" (click)="deletePackage()" style="margin-right: auto;">
+                        <span class="material-icons-round" style="font-size:16px;">delete</span> Vô hiệu hóa
+                      </button>
+                    }
+                    <button type="button" class="btn btn-secondary" (click)="closePackageModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu lại</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          }
         }
       </div>
     </section>
@@ -540,8 +609,69 @@ import { API_BASE_URL } from '../../config/api.config';
       font-size: var(--font-size-xs);
     }
 
-    @media (max-width: 1024px) {
-      .dashboard-row { grid-template-columns: 1fr; }
+    /* Modal Overlay & Content */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: var(--space-4);
+    }
+
+    .modal-content {
+      width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto;
+      padding: var(--space-8);
+      background: var(--bg-glass);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+    }
+
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: var(--space-6);
+    }
+
+    .modal-header h3 { font-size: var(--font-size-xl); font-weight: 700; }
+
+    .close-btn {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      padding: var(--space-1);
+    }
+    .close-btn:hover { color: var(--text-primary); }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .form-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3) var(--space-4);
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+      transition: all var(--transition-fast);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: var(--space-1) var(--space-2);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      border-radius: var(--radius-full);
+    }
+
+    .badge-primary {
+      background: rgba(79, 70, 229, 0.1);
+      color: var(--primary-light);
     }
 
     @media (max-width: 768px) {
@@ -555,9 +685,10 @@ import { API_BASE_URL } from '../../config/api.config';
     }
   `]
 })
-export class AdminDashboardComponent implements OnInit {
+export class AdminDashboardComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private http = inject(HttpClient);
+  private toast = inject(ToastService);
 
   data = signal<any>({
     summary: { 
@@ -579,8 +710,32 @@ export class AdminDashboardComponent implements OnInit {
   });
 
   maxRevenue = signal(1);
+  editingPackage = signal<any | null>(null);
+  packageForm = {
+    id: 0,
+    name: '',
+    price: 0,
+    durationMonths: 1,
+    description: '',
+    isActive: true
+  };
+
+  private hubConnection?: HubConnection;
 
   ngOnInit() {
+    this.loadStats();
+    this.connectSignalR();
+  }
+
+  ngOnDestroy() {
+    if (this.hubConnection) {
+      this.hubConnection.stop()
+        .then(() => console.log('SignalR connection stopped.'))
+        .catch((err) => console.error('Error stopping SignalR:', err));
+    }
+  }
+
+  loadStats() {
     this.http.get<any>(`${API_BASE_URL}/admin/dashboard`).subscribe({
       next: (res) => {
         this.data.set(res);
@@ -588,6 +743,119 @@ export class AdminDashboardComponent implements OnInit {
         this.maxRevenue.set(Math.max(...revenues, 1));
       },
       error: (err) => console.error('Failed to load admin dashboard:', err)
+    });
+  }
+
+  private connectSignalR() {
+    const hubUrl = API_BASE_URL.endsWith('/api')
+      ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) + '/hub/dashboard'
+      : '/hub/dashboard';
+
+    this.hubConnection = new HubConnectionBuilder()
+      .withUrl(hubUrl)
+      .withAutomaticReconnect()
+      .build();
+
+    this.hubConnection.on('TransactionOccurred', () => {
+      console.log('[SignalR] TransactionOccurred event received, reloading stats.');
+      this.loadStats();
+    });
+
+    this.hubConnection.on('JobCreated', () => {
+      console.log('[SignalR] JobCreated event received, reloading stats.');
+      this.loadStats();
+    });
+
+    this.hubConnection.on('UserRegistered', () => {
+      console.log('[SignalR] UserRegistered event received, reloading stats.');
+      this.loadStats();
+    });
+
+    this.hubConnection.start()
+      .then(() => console.log('SignalR connection established successfully.'))
+      .catch((err) => console.error('Error starting SignalR connection:', err));
+  }
+
+  openCreatePackageModal() {
+    this.packageForm = {
+      id: 0,
+      name: '',
+      price: 0,
+      durationMonths: 1,
+      description: '',
+      isActive: true
+    };
+    this.editingPackage.set({ id: 0 });
+  }
+
+  openEditPackageModal(pkg: any) {
+    this.packageForm = {
+      id: pkg.id,
+      name: pkg.name,
+      price: pkg.price,
+      durationMonths: pkg.durationMonths || 1,
+      description: pkg.description || '',
+      isActive: true
+    };
+    this.editingPackage.set(pkg);
+  }
+
+  closePackageModal() {
+    this.editingPackage.set(null);
+  }
+
+  savePackage(event: Event) {
+    event.preventDefault();
+    const payload = {
+      name: this.packageForm.name,
+      price: this.packageForm.price,
+      durationMonths: this.packageForm.durationMonths,
+      description: this.packageForm.description,
+      isActive: this.packageForm.isActive
+    };
+
+    if (this.packageForm.id === 0) {
+      this.http.post<any>(`${API_BASE_URL}/admin/packages`, payload).subscribe({
+        next: () => {
+          this.toast.success('Thêm gói dịch vụ mới thành công!');
+          this.closePackageModal();
+          this.loadStats();
+        },
+        error: (err) => {
+          const msg = err.error?.message || 'Không thể tạo gói dịch vụ mới.';
+          this.toast.error(msg);
+        }
+      });
+    } else {
+      this.http.put<any>(`${API_BASE_URL}/admin/packages/${this.packageForm.id}`, payload).subscribe({
+        next: () => {
+          this.toast.success('Cập nhật gói dịch vụ thành công!');
+          this.closePackageModal();
+          this.loadStats();
+        },
+        error: (err) => {
+          const msg = err.error?.message || 'Không thể cập nhật gói dịch vụ.';
+          this.toast.error(msg);
+        }
+      });
+    }
+  }
+
+  deletePackage() {
+    if (!confirm('Bạn có chắc chắn muốn vô hiệu hóa gói dịch vụ này? Gói sẽ không hiển thị cho người mua nữa.')) {
+      return;
+    }
+
+    this.http.delete<any>(`${API_BASE_URL}/admin/packages/${this.packageForm.id}`).subscribe({
+      next: () => {
+        this.toast.success('Vô hiệu hóa gói dịch vụ thành công!');
+        this.closePackageModal();
+        this.loadStats();
+      },
+      error: (err) => {
+        const msg = err.error?.message || 'Không thể vô hiệu hóa gói dịch vụ.';
+        this.toast.error(msg);
+      }
     });
   }
 
