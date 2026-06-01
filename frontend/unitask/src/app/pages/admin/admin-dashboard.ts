@@ -871,7 +871,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   formatCurrency(amount: number): string {
     if (amount >= 1000000) {
-      return (amount / 1000000).toFixed(1) + 'M';
+      return (amount / 1000000).toFixed(1) + 'tr';
     }
     return amount.toLocaleString('vi-VN') + 'đ';
   }

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -91,6 +91,12 @@ import { API_BASE_URL } from '../../config/api.config';
                   <button class="close-btn" (click)="showConfirmSubscribeModal.set(false)"><span class="material-icons-round">close</span></button>
                 </div>
                 <div class="payment-details">
+                  @if (auth.currentUser()?.activePackage) {
+                    <div class="alert alert-warning" style="margin-bottom: var(--space-4); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #F59E0B; padding: var(--space-3); border-radius: var(--radius-lg); font-size: var(--font-size-sm); display: flex; align-items: center; gap: 8px;">
+                      <span class="material-icons-round" style="font-size: 20px;">warning</span>
+                      <span>Tài khoản đang có gói hoạt động. Giao dịch này sẽ cộng dồn thời hạn.</span>
+                    </div>
+                  }
                   <p style="margin-bottom: var(--space-4); color: var(--text-secondary); font-size: var(--font-size-sm)">Bạn đang đăng ký gói dịch vụ sau bằng số dư ví:</p>
                   <div class="bill-info">
                     <span>Gói dịch vụ:</span>
@@ -144,6 +150,12 @@ import { API_BASE_URL } from '../../config/api.config';
                   </div>
                 } @else {
                   <div class="payment-details">
+                    @if (auth.currentUser()?.activePackage && paymentType() === 'package') {
+                      <div class="alert alert-warning" style="margin-bottom: var(--space-4); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #F59E0B; padding: var(--space-3); border-radius: var(--radius-lg); font-size: var(--font-size-sm); display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="font-size: 20px;">warning</span>
+                        <span>Tài khoản đang có gói hoạt động. Nạp tiền mua gói sẽ cộng dồn thời hạn.</span>
+                      </div>
+                    }
                     @if (paymentType() === 'package') {
                       <p style="margin-bottom: var(--space-4); color: var(--text-secondary); font-size: var(--font-size-sm)">
                         Số dư tài khoản không đủ để mua gói <strong>{{ selectedPackage()?.name }}</strong> (Giá: {{ selectedPackage()?.price.toLocaleString('vi-VN') }}đ). Bạn cần nạp tối thiểu <strong>{{ getPayAmount().toLocaleString('vi-VN') }}đ</strong> qua PayOS để tiếp tục.
@@ -386,18 +398,13 @@ import { API_BASE_URL } from '../../config/api.config';
     }
   `]
 })
-export class PricingComponent {
+export class PricingComponent implements OnInit {
   auth = inject(AuthService);
   private http = inject(HttpClient);
   private router = inject(Router);
   private toast = inject(ToastService);
 
-  // Correct package definitions matching database seed packages
-  packages = [
-    { id: 1, name: 'Gói 3 tháng', price: 500000, duration: '3 tháng', description: 'Đăng tuyển không giới hạn trong 3 tháng' },
-    { id: 2, name: 'Gói 6 tháng', price: 1029000, duration: '6 tháng', description: 'Đăng tuyển không giới hạn trong 6 tháng + ưu tiên hiển thị' },
-    { id: 3, name: 'Gói 12 tháng', price: 1399000, duration: '12 tháng', description: 'Đăng tuyển không giới hạn + ưu tiên hiển thị + badge Premium' },
-  ];
+  packages: any[] = [];
 
   showPaymentModal = signal(false);
   showConfirmSubscribeModal = signal(false);
@@ -409,6 +416,25 @@ export class PricingComponent {
   isProcessing = signal(false);
   paymentSuccess = signal(false);
   successMessage = signal('');
+
+  ngOnInit() {
+    this.loadPackages();
+  }
+
+  loadPackages() {
+    this.http.get<any[]>(`${API_BASE_URL}/subscription/packages`).subscribe({
+      next: (data) => {
+        this.packages = data.map(p => ({
+          ...p,
+          duration: `${p.durationMonths} tháng`
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to load packages:', err);
+        this.toast.error('Không thể tải danh sách gói dịch vụ.');
+      }
+    });
+  }
 
   openDepositModal() {
     this.paymentType.set('deposit');
@@ -425,6 +451,15 @@ export class PricingComponent {
       this.toast.error('Vui lòng đăng nhập để thực hiện giao dịch.');
       this.router.navigate(['/login']);
       return;
+    }
+
+    // Check if user already has an active package
+    const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
+    if (hasActivePackage) {
+      const confirmMsg = `Tài khoản của bạn hiện đang sử dụng gói "${user.activePackage}" (hết hạn ngày ${user.packageExpiry}).\n\nNếu bạn tiếp tục mua gói "${pkg.name}", thời hạn sử dụng mới sẽ được CỘNG DỒN thêm vào sau ngày hết hạn cũ.\n\nBạn có chắc chắn muốn mua không?`;
+      if (!confirm(confirmMsg)) {
+        return;
+      }
     }
 
     const balance = user.balance || 0;

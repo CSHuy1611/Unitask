@@ -135,8 +135,19 @@ import { API_BASE_URL } from '../../config/api.config';
                     </tr>
                   }
                 </tbody>
-              </table>
+               </table>
             </div>
+            @if (hasMore()) {
+              <div style="text-align: center; margin-top: var(--space-6); margin-bottom: var(--space-2);">
+                <button class="btn btn-secondary btn-sm" (click)="loadMore()" [disabled]="isLoading()" style="display: inline-flex; align-items: center; gap: 8px;">
+                  @if (isLoading()) {
+                    <span class="material-icons-round spinner-icon" style="font-size:16px;">sync</span> Đang tải...
+                  } @else {
+                    <span class="material-icons-round" style="font-size:16px;">expand_more</span> Tải thêm
+                  }
+                </button>
+              </div>
+            }
           </div>
 
           <!-- eKYC Review Modal -->
@@ -619,6 +630,11 @@ export class AdminUsersComponent {
   reviewingUser = signal<any | null>(null);
   zoomedImage = signal<string>('');
 
+  currentPage = signal<number>(1);
+  pageSize = 10;
+  hasMore = signal<boolean>(false);
+  isLoading = signal<boolean>(false);
+ 
   filteredUsers = computed(() => {
     let result = this.users();
     
@@ -640,11 +656,30 @@ export class AdminUsersComponent {
     this.loadUsers();
   }
 
-  loadUsers() {
-    this.http.get<any[]>(`${API_BASE_URL}/admin/users`).subscribe({
-      next: (users) => this.users.set(users),
-      error: (err) => console.error('Failed to load users:', err)
+  loadUsers(page: number = 1) {
+    this.isLoading.set(true);
+    this.http.get<any>(`${API_BASE_URL}/admin/users?page=${page}&pageSize=${this.pageSize}`).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        const newUsers = res.items || [];
+        if (page === 1) {
+          this.users.set(newUsers);
+        } else {
+          this.users.update(current => [...current, ...newUsers]);
+        }
+        this.currentPage.set(page);
+        this.hasMore.set(res.hasMore || false);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        console.error('Failed to load users:', err);
+        this.toast.error('Không thể tải danh sách người dùng.');
+      }
     });
+  }
+
+  loadMore() {
+    this.loadUsers(this.currentPage() + 1);
   }
 
   openReviewModal(user: any) {
@@ -662,7 +697,7 @@ export class AdminUsersComponent {
         next: () => {
           this.toast.success('Đã phê duyệt eKYC thành công!');
           this.reviewingUser.set(null);
-          this.loadUsers();
+          this.loadUsers(1);
         },
         error: () => this.toast.error('Lỗi khi phê duyệt eKYC.')
       });
@@ -676,7 +711,7 @@ export class AdminUsersComponent {
         next: () => {
           this.toast.success('Đã từ chối eKYC.');
           this.reviewingUser.set(null);
-          this.loadUsers();
+          this.loadUsers(1);
         },
         error: () => this.toast.error('Lỗi khi từ chối eKYC.')
       });

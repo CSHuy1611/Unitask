@@ -52,9 +52,9 @@ namespace UniTask.Api.Controllers
         }
 
         [HttpGet("users")]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var users = await _adminService.GetAllUsersAsync();
+            var users = await _adminService.GetAllUsersAsync(page, pageSize);
             return Ok(users);
         }
 
@@ -86,9 +86,9 @@ namespace UniTask.Api.Controllers
 
         // ===== WITHDRAWAL MANAGEMENT =====
         [HttpGet("withdrawals")]
-        public async Task<IActionResult> GetWithdrawals()
+        public async Task<IActionResult> GetWithdrawals([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var withdrawals = await _adminService.GetWithdrawalsAsync();
+            var withdrawals = await _adminService.GetWithdrawalsAsync(page, pageSize);
             return Ok(withdrawals);
         }
 
@@ -102,9 +102,9 @@ namespace UniTask.Api.Controllers
 
         // ===== DISPUTE MANAGEMENT =====
         [HttpGet("disputes")]
-        public async Task<IActionResult> GetDisputes()
+        public async Task<IActionResult> GetDisputes([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var disputes = await _adminService.GetDisputesAsync();
+            var disputes = await _adminService.GetDisputesAsync(page, pageSize);
             return Ok(disputes);
         }
 

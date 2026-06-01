@@ -6,7 +6,7 @@ namespace UniTask.Business.Interfaces
     public interface IAdminService
     {
         Task<object> GetDashboardStatsAsync();
-        Task<IEnumerable<object>> GetAllUsersAsync();
+        Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10);
         
         // Package Management
         Task<ServicePackageDto> CreatePackageAsync(ServicePackageCreateDto dto);
@@ -14,11 +14,11 @@ namespace UniTask.Business.Interfaces
         Task<bool> DeletePackageAsync(int id);
 
         // Withdrawal Payout Management
-        Task<IEnumerable<object>> GetWithdrawalsAsync();
+        Task<object> GetWithdrawalsAsync(int page = 1, int pageSize = 10);
         Task<bool> CompleteWithdrawalAsync(int transactionId);
 
         // Dispute Management
-        Task<IEnumerable<object>> GetDisputesAsync();
+        Task<object> GetDisputesAsync(int page = 1, int pageSize = 10);
         Task<bool> ResolveDisputeAsync(int jobId, DisputeResolveDto dto);
     }
 }

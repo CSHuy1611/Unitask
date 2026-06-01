@@ -80,7 +80,7 @@ interface Withdrawal {
               </div>
               <div>
                 <span class="stat-number">{{ formatCurrency(totalWithdrawalAmount()) }}</span>
-                <span class="stat-label">Tổng yêu cầu rút ({{ withdrawals().length }} y/c)</span>
+                <span class="stat-label">Tổng yêu cầu rút ({{ totalWithdrawalsCount() }} y/c)</span>
               </div>
             </div>
           </div>
@@ -90,7 +90,7 @@ interface Withdrawal {
             <div class="filter-bar d-flex justify-between items-center mb-6">
               <div class="tab-filters">
                 <button class="filter-btn" [class.active]="activeFilter() === 'all'" (click)="activeFilter.set('all')">
-                  Tất cả ({{ withdrawals().length }})
+                  Tất cả ({{ totalWithdrawalsCount() }})
                 </button>
                 <button class="filter-btn" [class.active]="activeFilter() === 'pending'" (click)="activeFilter.set('pending')">
                   Chờ chuyển tiền ({{ pendingCount() }})
@@ -99,7 +99,7 @@ interface Withdrawal {
                   Đã giải ngân ({{ completedCount() }})
                 </button>
               </div>
-              <button class="refresh-btn btn btn-secondary btn-sm" (click)="loadWithdrawals()">
+              <button class="refresh-btn btn btn-secondary btn-sm" (click)="loadWithdrawals(1)">
                 <span class="material-icons-round spinner-icon">sync</span> Làm mới
               </button>
             </div>
@@ -201,6 +201,17 @@ interface Withdrawal {
                   </tbody>
                 </table>
               </div>
+              @if (hasMore()) {
+                <div style="text-align: center; margin-top: var(--space-6); margin-bottom: var(--space-2);">
+                  <button class="btn btn-secondary btn-sm" (click)="loadMore()" [disabled]="isLoading()" style="display: inline-flex; align-items: center; gap: 8px;">
+                    @if (isLoading()) {
+                      <span class="material-icons-round spinner-icon" style="font-size:16px;">sync</span> Đang tải...
+                    } @else {
+                      <span class="material-icons-round" style="font-size:16px;">expand_more</span> Tải thêm
+                    }
+                  </button>
+                </div>
+              }
             }
           </div>
         }
@@ -590,6 +601,18 @@ export class AdminWithdrawalsComponent implements OnInit {
   activeFilter = signal<'all' | 'pending' | 'completed'>('all');
   selectedWithdrawal = signal<Withdrawal | null>(null);
 
+  currentPage = signal<number>(1);
+  pageSize = 10;
+  hasMore = signal<boolean>(false);
+  isLoading = signal<boolean>(false);
+
+  totalPendingAmount = signal<number>(0);
+  totalCompletedAmount = signal<number>(0);
+  totalWithdrawalAmount = signal<number>(0);
+  pendingCount = signal<number>(0);
+  completedCount = signal<number>(0);
+  totalWithdrawalsCount = signal<number>(0);
+
   filteredWithdrawals = computed(() => {
     const list = this.withdrawals();
     const filter = this.activeFilter();
@@ -598,39 +621,46 @@ export class AdminWithdrawalsComponent implements OnInit {
     return list;
   });
 
-  totalPendingAmount = computed(() => {
-    return this.withdrawals()
-      .filter(w => !w.isCompleted)
-      .reduce((sum, w) => sum + w.amount, 0);
-  });
-
-  totalCompletedAmount = computed(() => {
-    return this.withdrawals()
-      .filter(w => w.isCompleted)
-      .reduce((sum, w) => sum + w.amount, 0);
-  });
-
-  totalWithdrawalAmount = computed(() => {
-    return this.withdrawals().reduce((sum, w) => sum + w.amount, 0);
-  });
-
-  pendingCount = computed(() => this.withdrawals().filter(w => !w.isCompleted).length);
-  completedCount = computed(() => this.withdrawals().filter(w => w.isCompleted).length);
-
   ngOnInit() {
     if (this.auth.isAdmin()) {
       this.loadWithdrawals();
     }
   }
 
-  loadWithdrawals() {
-    this.http.get<any[]>(`${API_BASE_URL}/admin/withdrawals`).subscribe({
-      next: (data) => {
-        const parsed = data.map(tx => this.parseWithdrawal(tx));
-        this.withdrawals.set(parsed);
+  loadWithdrawals(page: number = 1) {
+    this.isLoading.set(true);
+    this.http.get<any>(`${API_BASE_URL}/admin/withdrawals?page=${page}&pageSize=${this.pageSize}`).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        const dataItems = res.items || [];
+        const parsed = dataItems.map((tx: any) => this.parseWithdrawal(tx));
+        
+        if (page === 1) {
+          this.withdrawals.set(parsed);
+        } else {
+          this.withdrawals.update(current => [...current, ...parsed]);
+        }
+        
+        this.currentPage.set(page);
+        this.hasMore.set(res.hasMore || false);
+
+        // Update counts and totals from backend response
+        this.totalPendingAmount.set(res.totalPendingAmount || 0);
+        this.totalCompletedAmount.set(res.totalCompletedAmount || 0);
+        this.totalWithdrawalAmount.set(res.totalWithdrawalAmount || 0);
+        this.pendingCount.set(res.pendingCount || 0);
+        this.completedCount.set(res.completedCount || 0);
+        this.totalWithdrawalsCount.set(res.totalCount || 0);
       },
-      error: () => this.toast.error('Không thể tải danh sách yêu cầu rút tiền.')
+      error: () => {
+        this.isLoading.set(false);
+        this.toast.error('Không thể tải danh sách yêu cầu rút tiền.');
+      }
     });
+  }
+
+  loadMore() {
+    this.loadWithdrawals(this.currentPage() + 1);
   }
 
   parseWithdrawal(tx: any): Withdrawal {
@@ -684,7 +714,7 @@ export class AdminWithdrawalsComponent implements OnInit {
       next: (res) => {
         this.toast.success('Xác nhận giải ngân thành công!');
         this.selectedWithdrawal.set(null);
-        this.loadWithdrawals(); // Reload list
+        this.loadWithdrawals(1);
       },
       error: (err) => {
         this.toast.error(err.error?.message || 'Có lỗi xảy ra khi xác nhận chuyển tiền.');

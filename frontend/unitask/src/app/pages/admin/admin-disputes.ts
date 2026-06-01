@@ -64,8 +64,8 @@ interface DisputeItem {
           <!-- Disputes List -->
           <div class="main-content-section glass-card animate-fade-in-up" style="animation-delay:0.1s">
             <div class="filter-bar d-flex justify-between items-center mb-6" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
-              <h3 style="font-size:1.15rem; font-weight:700">Yêu cầu cần xử lý ({{ disputes().length }})</h3>
-              <button class="btn btn-secondary btn-sm" (click)="loadDisputes()" style="display:flex; align-items:center; gap:4px">
+              <h3 style="font-size:1.15rem; font-weight:700">Yêu cầu cần xử lý ({{ totalDisputesCount() }})</h3>
+              <button class="btn btn-secondary btn-sm" (click)="loadDisputes(1)" style="display:flex; align-items:center; gap:4px">
                 <span class="material-icons-round">sync</span> Làm mới
               </button>
             </div>
@@ -126,6 +126,17 @@ interface DisputeItem {
                   </tbody>
                 </table>
               </div>
+              @if (hasMore()) {
+                <div style="text-align: center; margin-top: var(--space-6); margin-bottom: var(--space-2);">
+                  <button class="btn btn-secondary btn-sm" (click)="loadMore()" [disabled]="isLoading()" style="display: inline-flex; align-items: center; gap: 8px;">
+                    @if (isLoading()) {
+                      <span class="material-icons-round spinner-icon" style="font-size:16px;">sync</span> Đang tải...
+                    } @else {
+                      <span class="material-icons-round" style="font-size:16px;">expand_more</span> Tải thêm
+                    }
+                  </button>
+                </div>
+              }
             }
           </div>
         }
@@ -385,19 +396,42 @@ export class AdminDisputesComponent implements OnInit {
   disputes = signal<DisputeItem[]>([]);
   selectedDispute = signal<DisputeItem | null>(null);
 
+  currentPage = signal<number>(1);
+  pageSize = 10;
+  hasMore = signal<boolean>(false);
+  isLoading = signal<boolean>(false);
+  totalDisputesCount = signal<number>(0);
+
   ngOnInit() {
     if (this.auth.isAdmin()) {
       this.loadDisputes();
     }
   }
 
-  loadDisputes() {
-    this.jobService.getDisputes().subscribe({
-      next: (data) => {
-        this.disputes.set(data);
+  loadDisputes(page: number = 1) {
+    this.isLoading.set(true);
+    this.jobService.getDisputes(page, this.pageSize).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        const dataItems = res.items || [];
+        if (page === 1) {
+          this.disputes.set(dataItems);
+        } else {
+          this.disputes.update(current => [...current, ...dataItems]);
+        }
+        this.currentPage.set(page);
+        this.hasMore.set(res.hasMore || false);
+        this.totalDisputesCount.set(res.totalCount || 0);
       },
-      error: () => this.toast.error('Không thể tải danh sách tranh chấp từ máy chủ.')
+      error: () => {
+        this.isLoading.set(false);
+        this.toast.error('Không thể tải danh sách tranh chấp từ máy chủ.');
+      }
     });
+  }
+
+  loadMore() {
+    this.loadDisputes(this.currentPage() + 1);
   }
 
   resolve(jobId: number, winner: 'Student' | 'Employer') {
@@ -408,7 +442,7 @@ export class AdminDisputesComponent implements OnInit {
           if (res.success) {
             this.toast.success(res.message || 'Phân xử tranh chấp thành công.');
             this.selectedDispute.set(null);
-            this.loadDisputes();
+            this.loadDisputes(1);
           } else {
             this.toast.error(res.message || 'Lỗi khi phân xử tranh chấp.');
           }

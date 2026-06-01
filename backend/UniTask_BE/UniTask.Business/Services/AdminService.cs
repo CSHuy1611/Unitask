@@ -92,10 +92,18 @@ namespace UniTask.Business.Services
             };
         }
 
-        public async Task<IEnumerable<object>> GetAllUsersAsync()
+        public async Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10)
         {
-            var users = await _context.Users
-                .OrderByDescending(u => u.CreatedAt)
+            var query = _context.Users;
+
+            var sortedQuery = query
+                .OrderBy(u => u.EkycStatus == EkycStatus.Pending ? 0 : (u.EkycStatus == EkycStatus.None ? 1 : 2))
+                .ThenByDescending(u => u.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await sortedQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(u => new
                 {
                     id = u.Id,
@@ -112,7 +120,12 @@ namespace UniTask.Business.Services
                 })
                 .ToListAsync();
 
-            return users;
+            return new
+            {
+                items = items,
+                totalCount = totalCount,
+                hasMore = page * pageSize < totalCount
+            };
         }
 
         public async Task<ServicePackageDto> CreatePackageAsync(ServicePackageCreateDto dto)
@@ -166,13 +179,44 @@ namespace UniTask.Business.Services
             return true;
         }
 
-        public async Task<IEnumerable<object>> GetWithdrawalsAsync()
+        public async Task<object> GetWithdrawalsAsync(int page = 1, int pageSize = 10)
         {
-            var withdrawals = await _context.Transactions
+            var query = _context.Transactions
                 .Include(t => t.Wallet)
                 .ThenInclude(w => w.User)
-                .Where(t => t.Type == TransactionType.Withdrawal)
-                .OrderByDescending(t => t.CreatedAt)
+                .Where(t => t.Type == TransactionType.Withdrawal);
+
+            var sortedQuery = query
+                .OrderBy(t => (t.Description != null && t.Description.StartsWith("[Completed]")) ? 1 : 0)
+                .ThenByDescending(t => t.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+
+            // Calculate overall stats for the dashboard cards over all withdrawals
+            var allWithdrawals = await query
+                .Select(t => new { t.Amount, t.Description })
+                .ToListAsync();
+
+            var totalPendingAmount = allWithdrawals
+                .Where(w => !(w.Description != null && w.Description.StartsWith("[Completed]")))
+                .Sum(w => Math.Abs(w.Amount));
+
+            var pendingCount = allWithdrawals
+                .Count(w => !(w.Description != null && w.Description.StartsWith("[Completed]")));
+
+            var totalCompletedAmount = allWithdrawals
+                .Where(w => w.Description != null && w.Description.StartsWith("[Completed]"))
+                .Sum(w => Math.Abs(w.Amount));
+
+            var completedCount = allWithdrawals
+                .Count(w => w.Description != null && w.Description.StartsWith("[Completed]"));
+
+            var totalWithdrawalAmount = allWithdrawals
+                .Sum(w => Math.Abs(w.Amount));
+
+            var items = await sortedQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(t => new
                 {
                     id = t.Id,
@@ -184,7 +228,17 @@ namespace UniTask.Business.Services
                 })
                 .ToListAsync();
 
-            return withdrawals;
+            return new
+            {
+                items = items,
+                totalCount = totalCount,
+                hasMore = page * pageSize < totalCount,
+                totalPendingAmount = totalPendingAmount,
+                pendingCount = pendingCount,
+                totalCompletedAmount = totalCompletedAmount,
+                completedCount = completedCount,
+                totalWithdrawalAmount = totalWithdrawalAmount
+            };
         }
 
         public async Task<bool> CompleteWithdrawalAsync(int transactionId)
@@ -204,14 +258,21 @@ namespace UniTask.Business.Services
             return true;
         }
 
-        public async Task<IEnumerable<object>> GetDisputesAsync()
+        public async Task<object> GetDisputesAsync(int page = 1, int pageSize = 10)
         {
-            var disputes = await _context.Jobs
+            var query = _context.Jobs
                 .Include(j => j.Company)
                 .Include(j => j.Employer)
                 .Include(j => j.SelectedStudent)
-                .Where(j => j.Status == JobStatus.Disputed)
-                .OrderByDescending(j => j.DisputedDate)
+                .Where(j => j.Status == JobStatus.Disputed);
+
+            var sortedQuery = query
+                .OrderByDescending(j => j.DisputedDate);
+
+            var totalCount = await query.CountAsync();
+            var items = await sortedQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(j => new
                 {
                     id = j.Id,
@@ -231,7 +292,12 @@ namespace UniTask.Business.Services
                 })
                 .ToListAsync();
 
-            return disputes;
+            return new
+            {
+                items = items,
+                totalCount = totalCount,
+                hasMore = page * pageSize < totalCount
+            };
         }
 
         public async Task<bool> ResolveDisputeAsync(int jobId, DisputeResolveDto dto)

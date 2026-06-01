@@ -255,8 +255,8 @@ export class JobService {
     );
   }
 
-  getDisputes(): Observable<any[]> {
-    return this.http.get<any[]>(`${API_BASE_URL}/admin/disputes`);
+  getDisputes(page: number = 1, pageSize: number = 10): Observable<any> {
+    return this.http.get<any>(`${API_BASE_URL}/admin/disputes?page=${page}&pageSize=${pageSize}`);
   }
 
   resolveDispute(jobId: number, winner: 'Student' | 'Employer'): Observable<{ success: boolean; message: string }> {

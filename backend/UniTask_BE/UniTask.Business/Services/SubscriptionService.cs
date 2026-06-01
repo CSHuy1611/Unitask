@@ -66,10 +66,16 @@ namespace UniTask.Business.Services
                 var existingSub = await _context.Subscriptions
                     .FirstOrDefaultAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow);
 
+                DateTime newEndDate;
                 if (existingSub != null)
                 {
-                    // Extend existing subscription or overwrite
-                    existingSub.IsActive = false; // Mark old as inactive
+                    // Extend duration based on old subscription EndDate
+                    newEndDate = existingSub.EndDate.AddMonths(package.DurationMonths);
+                    existingSub.IsActive = false; // Mark old subscription as inactive so the new one takes over
+                }
+                else
+                {
+                    newEndDate = DateTime.UtcNow.AddMonths(package.DurationMonths);
                 }
 
                 _context.Subscriptions.Add(new Subscription
@@ -77,7 +83,7 @@ namespace UniTask.Business.Services
                     UserId = employerId,
                     PackageId = packageId,
                     StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddMonths(package.DurationMonths),
+                    EndDate = newEndDate,
                     IsActive = true
                 });
 
