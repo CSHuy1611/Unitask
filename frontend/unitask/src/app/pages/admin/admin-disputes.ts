@@ -435,15 +435,15 @@ export class AdminDisputesComponent implements OnInit {
     this.jobService.getDisputes(page, this.pageSize).subscribe({
       next: (res) => {
         this.isLoading.set(false);
-        const dataItems = res.items || [];
+        const dataItems = Array.isArray(res) ? res : (res?.items || []);
         if (page === 1) {
           this.disputes.set(dataItems);
         } else {
           this.disputes.update(current => [...current, ...dataItems]);
         }
         this.currentPage.set(page);
-        this.hasMore.set(res.hasMore || false);
-        this.totalDisputesCount.set(res.totalCount || 0);
+        this.hasMore.set(Array.isArray(res) ? false : (res?.hasMore || false));
+        this.totalDisputesCount.set(Array.isArray(res) ? dataItems.length : (res?.totalCount || 0));
       },
       error: () => {
         this.isLoading.set(false);

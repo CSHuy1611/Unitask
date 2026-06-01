@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("UniTask.DataAcesss")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bd16c567f33364d2f7352feb816535870335791a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4541342aac85d80dcfc9bec6312044ef9a35adac")]
 [assembly: System.Reflection.AssemblyProductAttribute("UniTask.DataAcesss")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UniTask.DataAcesss")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -632,7 +632,7 @@ export class AdminWithdrawalsComponent implements OnInit {
     this.http.get<any>(`${API_BASE_URL}/admin/withdrawals?page=${page}&pageSize=${this.pageSize}`).subscribe({
       next: (res) => {
         this.isLoading.set(false);
-        const dataItems = res.items || [];
+        const dataItems = Array.isArray(res) ? res : (res?.items || []);
         const parsed = dataItems.map((tx: any) => this.parseWithdrawal(tx));
         
         if (page === 1) {
@@ -642,15 +642,30 @@ export class AdminWithdrawalsComponent implements OnInit {
         }
         
         this.currentPage.set(page);
-        this.hasMore.set(res.hasMore || false);
+        this.hasMore.set(Array.isArray(res) ? false : (res?.hasMore || false));
 
-        // Update counts and totals from backend response
-        this.totalPendingAmount.set(res.totalPendingAmount || 0);
-        this.totalCompletedAmount.set(res.totalCompletedAmount || 0);
-        this.totalWithdrawalAmount.set(res.totalWithdrawalAmount || 0);
-        this.pendingCount.set(res.pendingCount || 0);
-        this.completedCount.set(res.completedCount || 0);
-        this.totalWithdrawalsCount.set(res.totalCount || 0);
+        if (Array.isArray(res)) {
+          // Compute client-side totals
+          const pending = parsed.filter((w: Withdrawal) => !w.isCompleted);
+          const completed = parsed.filter((w: Withdrawal) => w.isCompleted);
+          
+          this.totalPendingAmount.set(pending.reduce((acc: number, w: Withdrawal) => acc + Math.abs(w.amount), 0));
+          this.pendingCount.set(pending.length);
+          
+          this.totalCompletedAmount.set(completed.reduce((acc: number, w: Withdrawal) => acc + Math.abs(w.amount), 0));
+          this.completedCount.set(completed.length);
+          
+          this.totalWithdrawalAmount.set(parsed.reduce((acc: number, w: Withdrawal) => acc + Math.abs(w.amount), 0));
+          this.totalWithdrawalsCount.set(parsed.length);
+        } else {
+          // Update counts and totals from backend response
+          this.totalPendingAmount.set(res.totalPendingAmount || 0);
+          this.totalCompletedAmount.set(res.totalCompletedAmount || 0);
+          this.totalWithdrawalAmount.set(res.totalWithdrawalAmount || 0);
+          this.pendingCount.set(res.pendingCount || 0);
+          this.completedCount.set(res.completedCount || 0);
+          this.totalWithdrawalsCount.set(res.totalCount || 0);
+        }
       },
       error: () => {
         this.isLoading.set(false);

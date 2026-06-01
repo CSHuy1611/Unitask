@@ -45,7 +45,7 @@ import { API_BASE_URL } from '../../config/api.config';
             <div class="header-actions">
               <div class="filter-group">
                 <span class="material-icons-round">filter_list</span>
-                <select class="form-select status-select" [(ngModel)]="statusFilter">
+                <select class="form-select status-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
                   <option value="all">Tất cả trạng thái eKYC</option>
                   <option value="pending">Chờ duyệt</option>
                   <option value="verified">Đã xác thực</option>
@@ -55,7 +55,7 @@ import { API_BASE_URL } from '../../config/api.config';
               </div>
               <div class="filter-group">
                 <span class="material-icons-round">category</span>
-                <select class="form-select role-select" [(ngModel)]="roleFilter">
+                <select class="form-select role-select" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
                   <option value="all">Tất cả vai trò</option>
                   <option value="student">Sinh viên</option>
                   <option value="employer">Nhà tuyển dụng</option>
@@ -661,14 +661,14 @@ export class AdminUsersComponent {
     this.http.get<any>(`${API_BASE_URL}/admin/users?page=${page}&pageSize=${this.pageSize}`).subscribe({
       next: (res) => {
         this.isLoading.set(false);
-        const newUsers = res.items || [];
+        const newUsers = Array.isArray(res) ? res : (res?.items || []);
         if (page === 1) {
           this.users.set(newUsers);
         } else {
           this.users.update(current => [...current, ...newUsers]);
         }
         this.currentPage.set(page);
-        this.hasMore.set(res.hasMore || false);
+        this.hasMore.set(Array.isArray(res) ? false : (res?.hasMore || false));
       },
       error: (err) => {
         this.isLoading.set(false);
