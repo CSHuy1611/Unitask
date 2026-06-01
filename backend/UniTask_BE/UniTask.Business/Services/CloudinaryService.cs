@@ -29,17 +29,30 @@ namespace UniTask.Business.Services
             var uploadParams = new ImageUploadParams
             {
                 File = new FileDescription(file.FileName, stream),
-                Folder = $"UniTask/{folder}",
-                Transformation = new Transformation().Quality("auto").FetchFormat("auto")
+                Folder = $"UniTask/{folder}"
             };
+
+            // Only apply auto-format for non-eKYC images (eKYC needs original quality)
+            if (!folder.Equals("eKYC", System.StringComparison.OrdinalIgnoreCase))
+            {
+                uploadParams.Transformation = new Transformation().Quality("auto").FetchFormat("auto");
+            }
 
             var uploadResult = await _cloudinary.UploadAsync(uploadParams);
 
             if (uploadResult.Error != null)
             {
-                throw new Exception(uploadResult.Error.Message);
+                System.Console.WriteLine($"[Cloudinary] Upload error for folder '{folder}': {uploadResult.Error.Message}");
+                throw new Exception($"Cloudinary upload failed: {uploadResult.Error.Message}");
             }
 
+            if (uploadResult.SecureUrl == null)
+            {
+                System.Console.WriteLine($"[Cloudinary] Upload returned null URL for folder '{folder}'");
+                throw new Exception("Cloudinary returned no URL after upload.");
+            }
+
+            System.Console.WriteLine($"[Cloudinary] Upload success: {uploadResult.SecureUrl}");
             return uploadResult.SecureUrl.ToString();
         }
 

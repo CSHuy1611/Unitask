@@ -82,10 +82,17 @@ namespace UniTask.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            var result = await _profileService.UpdateEkycAsync(userId, dto);
-            if (!result) return BadRequest(new { message = "Failed to submit eKYC" });
+            try
+            {
+                var result = await _profileService.UpdateEkycAsync(userId, dto);
+                if (!result) return BadRequest(new { message = "Failed to submit eKYC" });
 
-            return Ok(new { message = "eKYC documents submitted for review" });
+                return Ok(new { message = "eKYC documents submitted for review" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("student/cv")]

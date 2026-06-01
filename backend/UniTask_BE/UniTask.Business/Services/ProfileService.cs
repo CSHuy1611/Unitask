@@ -238,8 +238,8 @@ namespace UniTask.Business.Services
             }
             catch (System.Exception ex)
             {
-                System.Console.WriteLine($"[Cloudinary Error] FrontImage upload failed: {ex.Message}. Using placeholder.");
-                user.EkycFrontImageUrl = "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=500";
+                System.Console.WriteLine($"[eKYC Error] FrontImage upload failed for user {userId}: {ex.Message}");
+                throw new System.Exception($"Upload ảnh mặt trước CCCD thất bại: {ex.Message}");
             }
 
             try
@@ -248,8 +248,8 @@ namespace UniTask.Business.Services
             }
             catch (System.Exception ex)
             {
-                System.Console.WriteLine($"[Cloudinary Error] BackImage upload failed: {ex.Message}. Using placeholder.");
-                user.EkycBackImageUrl = "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=500";
+                System.Console.WriteLine($"[eKYC Error] BackImage upload failed for user {userId}: {ex.Message}");
+                throw new System.Exception($"Upload ảnh mặt sau CCCD thất bại: {ex.Message}");
             }
 
             user.EkycStatus = EkycStatus.Pending;

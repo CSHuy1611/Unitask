@@ -179,8 +179,16 @@ import { API_BASE_URL } from '../../config/api.config';
                 <div class="cccd-images">
                   <div class="cccd-card">
                     <h4>Mặt trước CCCD</h4>
-                    @if (reviewingUser()?.ekycFrontImage) {
-                      <img [src]="reviewingUser()?.ekycFrontImage" alt="CCCD Mặt trước" class="cccd-img" (click)="zoomImage(reviewingUser()!.ekycFrontImage!)" />
+                    @if (reviewingUser()?.ekycFrontImage && !isPlaceholderImage(reviewingUser()?.ekycFrontImage)) {
+                      <img [src]="reviewingUser()?.ekycFrontImage" alt="CCCD Mặt trước" class="cccd-img" 
+                           (click)="zoomImage(reviewingUser()!.ekycFrontImage!)" 
+                           (error)="onImageError($event)" />
+                    } @else if (reviewingUser()?.ekycFrontImage && isPlaceholderImage(reviewingUser()?.ekycFrontImage)) {
+                      <div class="no-image placeholder-warning">
+                        <span class="material-icons-round">warning</span>
+                        <span>Ảnh CCCD bị lỗi upload</span>
+                        <span class="text-caption">Sinh viên cần gửi lại</span>
+                      </div>
                     } @else {
                       <div class="no-image">
                         <span class="material-icons-round">image_not_supported</span>
@@ -190,8 +198,16 @@ import { API_BASE_URL } from '../../config/api.config';
                   </div>
                   <div class="cccd-card">
                     <h4>Mặt sau CCCD</h4>
-                    @if (reviewingUser()?.ekycBackImage) {
-                      <img [src]="reviewingUser()?.ekycBackImage" alt="CCCD Mặt sau" class="cccd-img" (click)="zoomImage(reviewingUser()!.ekycBackImage!)" />
+                    @if (reviewingUser()?.ekycBackImage && !isPlaceholderImage(reviewingUser()?.ekycBackImage)) {
+                      <img [src]="reviewingUser()?.ekycBackImage" alt="CCCD Mặt sau" class="cccd-img" 
+                           (click)="zoomImage(reviewingUser()!.ekycBackImage!)" 
+                           (error)="onImageError($event)" />
+                    } @else if (reviewingUser()?.ekycBackImage && isPlaceholderImage(reviewingUser()?.ekycBackImage)) {
+                      <div class="no-image placeholder-warning">
+                        <span class="material-icons-round">warning</span>
+                        <span>Ảnh CCCD bị lỗi upload</span>
+                        <span class="text-caption">Sinh viên cần gửi lại</span>
+                      </div>
                     } @else {
                       <div class="no-image">
                         <span class="material-icons-round">image_not_supported</span>
@@ -581,6 +597,15 @@ import { API_BASE_URL } from '../../config/api.config';
 
     .no-image .material-icons-round { font-size: 32px; }
 
+    .placeholder-warning {
+      background: rgba(245, 158, 11, 0.1) !important;
+      border-color: rgba(245, 158, 11, 0.4) !important;
+      border-style: solid !important;
+    }
+    .placeholder-warning .material-icons-round { color: #F59E0B !important; }
+    .placeholder-warning span { color: #F59E0B; }
+    .placeholder-warning .text-caption { color: var(--text-muted); font-size: var(--font-size-xs); }
+
     .review-actions {
       display: flex; gap: var(--space-4); justify-content: center;
     }
@@ -684,6 +709,22 @@ export class AdminUsersComponent {
 
   openReviewModal(user: any) {
     this.reviewingUser.set(user);
+  }
+
+  isPlaceholderImage(url: string | null | undefined): boolean {
+    if (!url) return false;
+    // Detect known placeholder URLs (Unsplash gradient, etc.)
+    return url.includes('unsplash.com') || url.includes('placeholder') || url.includes('via.placeholder');
+  }
+
+  onImageError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+    // Insert a fallback message after the broken image
+    const fallback = document.createElement('div');
+    fallback.innerHTML = '<span style="color: var(--text-muted); font-size: 14px;">⚠️ Ảnh không thể tải</span>';
+    fallback.style.cssText = 'padding: 32px; text-align: center; background: var(--bg-secondary); border-radius: 12px; border: 1px dashed var(--border-color);';
+    img.parentElement?.appendChild(fallback);
   }
 
   zoomImage(src: string) {
