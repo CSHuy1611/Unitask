@@ -912,12 +912,12 @@ export class EmployerDashboardComponent implements OnInit {
       const commission = budget * 0.1;
       const escrowTotal = budget + commission;
       const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
-      const postingFee = hasActivePackage ? 0 : 200;
+      const postingFee = hasActivePackage ? 0 : 2000;
       const totalCost = escrowTotal + postingFee;
 
       const balance = user.balance || 0;
       if (balance < totalCost) {
-        const errStr = `Số dư tài khoản không đủ. Tổng cần: ${totalCost.toLocaleString('vi-VN')}đ (Bao gồm tạm giữ lương + 10% phí + ${postingFee}đ đăng tin). Vui lòng nạp thêm tiền.`;
+        const errStr = `Số dư tài khoản không đủ. Tổng cần: ${totalCost.toLocaleString('vi-VN')}đ (Bao gồm tạm giữ lương + 10% phí + ${postingFee.toLocaleString('vi-VN')}đ đăng tin). Vui lòng nạp thêm tiền.`;
         this.postSuccess.set(false);
         this.postMessage.set(errStr);
         this.toast.error('Số dư ví không đủ để ký quỹ công việc này!');

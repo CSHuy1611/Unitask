@@ -62,12 +62,21 @@ import { API_BASE_URL } from '../../config/api.config';
               </div>
             </div>
             <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#F59E0B,#F97316)">
+              <div class="stat-icon" style="background:linear-gradient(135deg,#0D9488,#14B8A6)">
+                <span class="material-icons-round">account_balance_wallet</span>
+              </div>
+              <div>
+                <span class="stat-number">{{ formatCurrency(data().summary.totalDeposits || 0) }}</span>
+                <span class="stat-label">Dòng tiền nạp vào</span>
+              </div>
+            </div>
+            <div class="stat-card glass-card">
+              <div class="stat-icon" style="background:linear-gradient(135deg,#6366F1,#4F46E5)">
                 <span class="material-icons-round">payments</span>
               </div>
               <div>
-                <span class="stat-number">{{ formatCurrency(data().summary.totalRevenue) }}</span>
-                <span class="stat-label">Tổng doanh thu</span>
+                <span class="stat-number">{{ formatCurrency(data().summary.totalRevenue || 0) }}</span>
+                <span class="stat-label">Doanh thu thực tế</span>
               </div>
             </div>
             <div class="stat-card glass-card">
@@ -81,19 +90,63 @@ import { API_BASE_URL } from '../../config/api.config';
             </div>
           </div>
 
-          <!-- Revenue Chart -->
-          <div class="chart-section glass-card animate-fade-in-up" style="animation-delay:0.15s">
-            <h3><span class="material-icons-round">trending_up</span> Doanh thu 6 tháng gần nhất</h3>
-            <div class="chart-container">
-              @for (item of data().revenueByMonth; track item.month) {
-                <div class="chart-bar-wrapper">
-                  <div class="chart-value">{{ formatShortCurrency(item.revenue) }}</div>
-                  <div class="chart-bar" [style.height.%]="getBarHeight(item.revenue)">
-                    <div class="chart-bar-fill"></div>
+          <!-- Revenue Details Row -->
+          <div class="dashboard-row animate-fade-in-up" style="animation-delay:0.15s">
+            <!-- Revenue Chart -->
+            <div class="chart-section glass-card" style="margin-bottom: 0;">
+              <h3><span class="material-icons-round">trending_up</span> Doanh thu 6 tháng gần nhất</h3>
+              <div class="chart-container">
+                @for (item of data().revenueByMonth; track item.month) {
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-value">{{ formatShortCurrency(item.revenue) }}</div>
+                    <div class="chart-bar" [style.height.%]="getBarHeight(item.revenue)">
+                      <div class="chart-bar-fill"></div>
+                    </div>
+                    <div class="chart-label">{{ item.month }}</div>
                   </div>
-                  <div class="chart-label">{{ item.month }}</div>
+                }
+              </div>
+            </div>
+
+            <!-- Revenue Breakdown -->
+            <div class="breakdown-section glass-card">
+              <h3><span class="material-icons-round">pie_chart</span> Cấu trúc doanh thu thực tế</h3>
+              <div class="breakdown-container">
+                <div class="breakdown-item">
+                  <div class="breakdown-info">
+                    <span class="breakdown-name">Phí hoa hồng (10%)</span>
+                    <span class="breakdown-val">{{ formatCurrency(data().summary.commissionRevenue || 0) }} ({{ getPercentage(data().summary.commissionRevenue || 0) }}%)</span>
+                  </div>
+                  <div class="breakdown-progress-bg">
+                    <div class="breakdown-progress-fill" [style.width.%]="getPercentage(data().summary.commissionRevenue || 0)" style="background: linear-gradient(90deg, #10B981, #059669)"></div>
+                  </div>
                 </div>
-              }
+
+                <div class="breakdown-item">
+                  <div class="breakdown-info">
+                    <span class="breakdown-name">Phí đăng tin (2.000đ)</span>
+                    <span class="breakdown-val">{{ formatCurrency(data().summary.postingFeeRevenue || 0) }} ({{ getPercentage(data().summary.postingFeeRevenue || 0) }}%)</span>
+                  </div>
+                  <div class="breakdown-progress-bg">
+                    <div class="breakdown-progress-fill" [style.width.%]="getPercentage(data().summary.postingFeeRevenue || 0)" style="background: linear-gradient(90deg, #F59E0B, #F97316)"></div>
+                  </div>
+                </div>
+
+                <div class="breakdown-item">
+                  <div class="breakdown-info">
+                    <span class="breakdown-name">Gói dịch vụ</span>
+                    <span class="breakdown-val">{{ formatCurrency(data().summary.subscriptionRevenue || 0) }} ({{ getPercentage(data().summary.subscriptionRevenue || 0) }}%)</span>
+                  </div>
+                  <div class="breakdown-progress-bg">
+                    <div class="breakdown-progress-fill" [style.width.%]="getPercentage(data().summary.subscriptionRevenue || 0)" style="background: linear-gradient(90deg, #6366F1, #4F46E5)"></div>
+                  </div>
+                </div>
+
+                <div class="breakdown-total">
+                  <span>Tổng doanh thu thực tế:</span>
+                  <strong>{{ formatCurrency(data().summary.totalRevenue || 0) }}</strong>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -238,7 +291,7 @@ import { API_BASE_URL } from '../../config/api.config';
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: var(--space-5);
       margin-bottom: var(--space-8);
     }
@@ -276,6 +329,89 @@ import { API_BASE_URL } from '../../config/api.config';
     /* Chart */
     .chart-section, .packages-section {
       margin-bottom: var(--space-8);
+    }
+
+    .dashboard-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--space-5);
+      margin-bottom: var(--space-8);
+    }
+
+    .breakdown-section h3 {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      margin-bottom: var(--space-6);
+    }
+
+    .breakdown-section h3 .material-icons-round {
+      color: var(--primary-light);
+    }
+
+    .breakdown-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .breakdown-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .breakdown-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+    }
+
+    .breakdown-name {
+      color: var(--text-secondary);
+    }
+
+    .breakdown-val {
+      color: var(--text-primary);
+    }
+
+    .breakdown-progress-bg {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      border: 1px solid var(--border-light);
+    }
+
+    .breakdown-progress-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width 0.6s ease;
+    }
+
+    .breakdown-total {
+      margin-top: var(--space-2);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: var(--font-size-sm);
+    }
+
+    .breakdown-total span {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .breakdown-total strong {
+      font-size: var(--font-size-lg);
+      color: var(--primary-light);
+      font-weight: 800;
     }
 
     .chart-section h3, .packages-section h3 {
@@ -404,6 +540,10 @@ import { API_BASE_URL } from '../../config/api.config';
       font-size: var(--font-size-xs);
     }
 
+    @media (max-width: 1024px) {
+      .dashboard-row { grid-template-columns: 1fr; }
+    }
+
     @media (max-width: 768px) {
       .stats-grid, .extra-stats { grid-template-columns: 1fr 1fr; }
       .chart-container { height: 160px; }
@@ -420,7 +560,20 @@ export class AdminDashboardComponent implements OnInit {
   private http = inject(HttpClient);
 
   data = signal<any>({
-    summary: { totalUsers: 0, totalJobs: 0, totalRevenue: 0, ekycPending: 0, totalStudents: 0, totalEmployers: 0, ekycVerified: 0, applicationsThisMonth: 0 },
+    summary: { 
+      totalUsers: 0, 
+      totalJobs: 0, 
+      totalRevenue: 0, 
+      totalDeposits: 0, 
+      commissionRevenue: 0, 
+      postingFeeRevenue: 0, 
+      subscriptionRevenue: 0, 
+      ekycPending: 0, 
+      totalStudents: 0, 
+      totalEmployers: 0, 
+      ekycVerified: 0, 
+      applicationsThisMonth: 0 
+    },
     revenueByMonth: [],
     packages: []
   });
@@ -440,6 +593,12 @@ export class AdminDashboardComponent implements OnInit {
 
   getBarHeight(revenue: number): number {
     return (revenue / this.maxRevenue()) * 85;
+  }
+
+  getPercentage(amount: number): number {
+    const total = this.data().summary.totalRevenue || 0;
+    if (total === 0) return 0;
+    return Math.round((amount / total) * 100);
   }
 
   formatCurrency(amount: number): string {

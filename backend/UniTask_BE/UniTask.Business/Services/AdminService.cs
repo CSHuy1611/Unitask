@@ -31,6 +31,18 @@ namespace UniTask.Business.Services
                 totalRevenue = await _context.Transactions
                     .Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.PostingFee || t.Type == TransactionType.SubscriptionFee)
                     .SumAsync(t => -t.Amount),
+                totalDeposits = await _context.Transactions
+                    .Where(t => t.Type == TransactionType.Deposit && !(t.Description != null && t.Description.Contains("[PAYOS_PENDING]")))
+                    .SumAsync(t => t.Amount),
+                commissionRevenue = await _context.Transactions
+                    .Where(t => t.Type == TransactionType.CommissionFee)
+                    .SumAsync(t => -t.Amount),
+                postingFeeRevenue = await _context.Transactions
+                    .Where(t => t.Type == TransactionType.PostingFee)
+                    .SumAsync(t => -t.Amount),
+                subscriptionRevenue = await _context.Transactions
+                    .Where(t => t.Type == TransactionType.SubscriptionFee)
+                    .SumAsync(t => -t.Amount),
                 ekycPending = await _context.Users.CountAsync(u => u.EkycStatus == EkycStatus.Pending),
                 ekycVerified = await _context.Users.CountAsync(u => u.EkycStatus == EkycStatus.Verified),
                 applicationsThisMonth = await _context.Applications

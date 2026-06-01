@@ -98,9 +98,12 @@ namespace UniTask.Business.Services
                 throw new InvalidOperationException("Tài khoản của bạn đã bị khóa đăng việc do vi phạm chính sách của hệ thống.");
             }
 
-            // Check Wallet Balance
+            // Check Wallet Balance & Active subscription for posting fee
             var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
-            var totalCost = dto.Budget + dto.Commission;
+            var hasActivePackage = await _context.Subscriptions
+                .AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow);
+            decimal postingFee = hasActivePackage ? 0 : 2000;
+            var totalCost = dto.Budget + dto.Commission + postingFee;
             
             if (wallet == null || wallet.Balance < totalCost)
             {
@@ -154,6 +157,19 @@ namespace UniTask.Business.Services
                 RelatedJobId = job.Id,
                 CreatedAt = DateTime.UtcNow
             });
+
+            if (postingFee > 0)
+            {
+                _context.Transactions.Add(new Transaction
+                {
+                    WalletId = wallet.Id,
+                    Amount = -postingFee,
+                    Type = DataAcesss.Entities.Enums.TransactionType.PostingFee,
+                    Description = $"Phí đăng tin (không mua gói) cho công việc: {job.Title}",
+                    RelatedJobId = job.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
 
             await _context.SaveChangesAsync();
 
