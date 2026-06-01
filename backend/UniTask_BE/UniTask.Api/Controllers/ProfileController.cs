@@ -56,6 +56,26 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "Profile updated successfully" });
         }
 
+        [HttpPut("admin")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateAdminProfile([FromForm] AdminProfileUpdateDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            try
+            {
+                var result = await _profileService.UpdateAdminProfileAsync(userId, dto);
+                if (!result) return BadRequest(new { message = "Failed to update profile" });
+
+                return Ok(new { message = "Profile updated successfully" });
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("ekyc")]
         public async Task<IActionResult> UpdateEkyc([FromForm] EkycUpdateDto dto)
         {

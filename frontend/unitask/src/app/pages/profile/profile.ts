@@ -46,6 +46,8 @@ import { Job } from '../../models/job.model';
               <p class="profile-role">
                 @if (auth.isStudent()) {
                   🎓 Sinh viên
+                } @else if (auth.isAdmin()) {
+                  🛠️ Admin
                 } @else {
                   🏢 Nhà tuyển dụng
                 }
@@ -80,7 +82,7 @@ import { Job } from '../../models/job.model';
                     <span class="material-icons-round">menu_book</span>
                     <span>{{ auth.currentUser()?.major }} - Năm {{ auth.currentUser()?.year }}</span>
                   </div>
-                } @else {
+                } @else if (auth.isEmployer()) {
                   <div class="info-row">
                     <span class="material-icons-round">business</span>
                     <span>{{ auth.currentUser()?.companyName }}</span>
@@ -202,6 +204,13 @@ import { Job } from '../../models/job.model';
                       <div class="form-group">
                         <label class="form-label">Giới thiệu bản thân</label>
                         <textarea class="form-textarea" rows="3" [(ngModel)]="editForm.bio" name="bio" placeholder="Viết đôi dòng về bản thân..."></textarea>
+                      </div>
+                    } @else if (auth.isAdmin()) {
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label class="form-label">Email nhận thông báo *</label>
+                          <input type="email" class="form-input" [(ngModel)]="editForm.email" name="email" required placeholder="VD: admin@example.com">
+                        </div>
                       </div>
                     } @else {
                       <div class="form-row">
@@ -1243,6 +1252,7 @@ export class ProfileComponent implements OnInit {
     phone: '',
     dateOfBirth: '',
     address: '',
+    email: '',
     university: '',
     major: '',
     year: 3,
@@ -1290,6 +1300,7 @@ export class ProfileComponent implements OnInit {
           phone: user.phone,
           dateOfBirth: user.dateOfBirth || '',
           address: user.address || '',
+          email: user.email || '',
           university: user.university || '',
           major: user.major || '',
           year: user.year || 3,
@@ -1321,6 +1332,8 @@ export class ProfileComponent implements OnInit {
       payload.year = Number(this.editForm.year);
       payload.skills = this.editForm.skillsStr.split(',').map(s => s.trim()).filter(Boolean);
       payload.bio = this.editForm.bio || undefined;
+    } else if (this.auth.isAdmin()) {
+      payload.email = this.editForm.email;
     } else {
       payload.companyName = this.editForm.companyName || undefined;
       payload.position = this.editForm.position || undefined;

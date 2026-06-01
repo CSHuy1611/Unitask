@@ -150,17 +150,22 @@ export class AuthService {
     if (data.phone) formData.append('PhoneNumber', data.phone);
     if (data.dateOfBirth) formData.append('DateOfBirth', data.dateOfBirth);
     if (data.address) formData.append('Address', data.address);
+    if (data.email) formData.append('Email', data.email);
 
-    const isStudent = user.role === 'student';
-    const endpoint = isStudent ? '/profile/student' : '/profile/employer';
+    let endpoint = '/profile/employer';
+    if (user.role === 'student') {
+      endpoint = '/profile/student';
+    } else if (user.role === 'admin') {
+      endpoint = '/profile/admin';
+    }
 
-    if (isStudent) {
+    if (user.role === 'student') {
       if (data.university) formData.append('University', data.university);
       if (data.major) formData.append('Major', data.major);
       if (data.year) formData.append('Year', data.year.toString());
       if (data.skills) formData.append('Skills', data.skills.join(', '));
       if (data.bio) formData.append('Bio', data.bio);
-    } else {
+    } else if (user.role === 'employer') {
       if (data.companyName) formData.append('CompanyName', data.companyName);
       if (data.position) formData.append('Position', data.position);
       if (data.companyIndustry) formData.append('Industry', data.companyIndustry);

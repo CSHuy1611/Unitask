@@ -39,6 +39,14 @@ services:
       - PayOS__ApiKey=${PAYOS_API_KEY}
       - PayOS__ChecksumKey=${PAYOS_CHECKSUM_KEY}
       - Frontend__Url=${FRONTEND_URL}
+      - Email__SmtpServer=${EMAIL_SMTP_SERVER}
+      - Email__Port=${EMAIL_PORT}
+      - Email__Username=${EMAIL_USERNAME}
+      - Email__Password=${EMAIL_PASSWORD}
+      - Email__SenderName=${EMAIL_SENDER_NAME}
+      - Email__SenderEmail=${EMAIL_SENDER_EMAIL}
+      - Email__EnableSsl=${EMAIL_ENABLE_SSL}
+      - Email__UseConsoleFallback=${EMAIL_USE_CONSOLE_FALLBACK}
     depends_on:
       database:
         condition: service_healthy # Đảm bảo backend chỉ khởi động khi database đã hoàn toàn sẵn sàng nhận kết nối

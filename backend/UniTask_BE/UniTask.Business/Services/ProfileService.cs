@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using UniTask.Business.DTOs.Profile;
 using UniTask.Business.Interfaces;
 using UniTask.DataAcesss;
@@ -13,12 +14,21 @@ namespace UniTask.Business.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AppDbContext _context;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
-        public ProfileService(UserManager<ApplicationUser> userManager, AppDbContext context, ICloudinaryService cloudinaryService)
+        public ProfileService(
+            UserManager<ApplicationUser> userManager, 
+            AppDbContext context, 
+            ICloudinaryService cloudinaryService, 
+            IEmailService emailService,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _context = context;
             _cloudinaryService = cloudinaryService;
+            _emailService = emailService;
+            _configuration = configuration;
         }
 
         public async Task<object?> GetProfileAsync(string userId)
@@ -246,6 +256,82 @@ namespace UniTask.Business.Services
             user.EkycDate = DateTime.UtcNow;
 
             var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded)
+            {
+                try
+                {
+                    var admins = await _userManager.Users
+                        .Where(u => u.UserType == UserType.Admin)
+                        .ToListAsync();
+
+                    var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:4200";
+                    var approveLink = $"{frontendUrl.TrimEnd('/')}/admin/users";
+
+                    foreach (var admin in admins)
+                    {
+                        if (string.IsNullOrEmpty(admin.Email)) continue;
+
+                        var subject = $"[UniTask] Yêu cầu xác thực tài khoản mới từ {user.FullName}";
+                        var body = $@"
+<div style=""font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;"">
+    <div style=""text-align: center; margin-bottom: 20px;"">
+        <h2 style=""color: #4f46e5; margin: 0;"">Yêu Cầu Xác Thực Danh Tính Mới (eKYC)</h2>
+        <p style=""color: #6b7280; font-size: 14px;"">UniTask Matching Platform</p>
+    </div>
+    <div style=""background-color: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px;"">
+        <h4 style=""margin: 0 0 10px 0; color: #1f2937;"">Thông tin người dùng:</h4>
+        <table style=""width: 100%; border-collapse: collapse; font-size: 14px;"">
+            <tr>
+                <td style=""padding: 5px 0; color: #4b5563; font-weight: bold; width: 120px;"">Họ tên:</td>
+                <td style=""padding: 5px 0; color: #111827;"">{user.FullName}</td>
+            </tr>
+            <tr>
+                <td style=""padding: 5px 0; color: #4b5563; font-weight: bold;"">Email:</td>
+                <td style=""padding: 5px 0; color: #111827;"">{user.Email}</td>
+            </tr>
+            <tr>
+                <td style=""padding: 5px 0; color: #4b5563; font-weight: bold;"">Số điện thoại:</td>
+                <td style=""padding: 5px 0; color: #111827;"">{user.PhoneNumber}</td>
+            </tr>
+            <tr>
+                <td style=""padding: 5px 0; color: #4b5563; font-weight: bold;"">Vai trò:</td>
+                <td style=""padding: 5px 0; color: #111827;"">{(user.UserType == UserType.Student ? "Sinh viên" : "Nhà tuyển dụng")}</td>
+            </tr>
+            <tr>
+                <td style=""padding: 5px 0; color: #4b5563; font-weight: bold;"">Thời gian gửi:</td>
+                <td style=""padding: 5px 0; color: #111827;"">{DateTime.UtcNow.AddHours(7).ToString("dd/MM/yyyy HH:mm:ss")}</td>
+            </tr>
+        </table>
+    </div>
+    <div style=""margin-bottom: 25px;"">
+        <h4 style=""margin: 0 0 10px 0; color: #1f2937;"">Hình ảnh giấy tờ tải lên:</h4>
+        <div style=""display: flex; gap: 10px; margin-bottom: 10px;"">
+            <div style=""flex: 1; text-align: center;"">
+                <p style=""font-size: 12px; font-weight: bold; margin: 0 0 5px 0; color: #4b5563;"">Mặt trước CCCD:</p>
+                <img src=""{user.EkycFrontImageUrl}"" alt=""Mặt trước"" style=""width: 100%; max-height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #d1d5db;"" />
+            </div>
+            <div style=""flex: 1; text-align: center;"">
+                <p style=""font-size: 12px; font-weight: bold; margin: 0 0 5px 0; color: #4b5563;"">Mặt sau CCCD:</p>
+                <img src=""{user.EkycBackImageUrl}"" alt=""Mặt sau"" style=""width: 100%; max-height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #d1d5db;"" />
+            </div>
+        </div>
+    </div>
+    <div style=""text-align: center; margin-top: 25px;"">
+        <a href=""{approveLink}"" style=""background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block;"">Đến Trang Duyệt eKYC</a>
+    </div>
+    <hr style=""border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0 15px 0;"" />
+    <div style=""text-align: center; font-size: 12px; color: #9ca3af;"">
+        Đây là email tự động từ hệ thống UniTask. Vui lòng không phản hồi email này.
+    </div>
+</div>";
+                        await _emailService.SendEmailAsync(admin.Email, subject, body);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Console.WriteLine($"[Email Notification Error] {ex.Message}");
+                }
+            }
             return result.Succeeded;
         }
 
@@ -337,6 +423,48 @@ namespace UniTask.Business.Services
             }
 
             return false;
+        }
+
+        public async Task<bool> UpdateAdminProfileAsync(string userId, AdminProfileUpdateDto dto)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null || user.UserType != UserType.Admin) return false;
+
+            // Check if email is already taken by another user
+            if (!string.Equals(user.Email, dto.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+                if (existingUser != null && existingUser.Id != userId)
+                {
+                    throw new InvalidOperationException("Email này đã được sử dụng bởi một tài khoản khác.");
+                }
+            }
+
+            user.FullName = dto.FullName;
+            user.PhoneNumber = dto.PhoneNumber;
+
+            // If email changed, update Username and Email
+            if (!string.Equals(user.Email, dto.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                user.Email = dto.Email;
+                user.UserName = dto.Email;
+                user.NormalizedEmail = _userManager.KeyNormalizer.NormalizeEmail(dto.Email);
+                user.NormalizedUserName = _userManager.KeyNormalizer.NormalizeName(dto.Email);
+            }
+
+            // Handle Avatar Upload if file is provided
+            if (dto.AvatarFile != null)
+            {
+                if (!string.IsNullOrEmpty(user.AvatarUrl))
+                {
+                    var publicId = _cloudinaryService.GetPublicIdFromUrl(user.AvatarUrl);
+                    if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
+                }
+                user.AvatarUrl = await _cloudinaryService.UploadImageAsync(dto.AvatarFile, "Avatars");
+            }
+
+            var result = await _userManager.UpdateAsync(user);
+            return result.Succeeded;
         }
     }
 }

@@ -8,6 +8,7 @@ namespace UniTask.Business.Interfaces
         Task<bool> UpdateStudentProfileAsync(string userId, StudentProfileUpdateDto dto);
         Task<bool> UpdateEmployerProfileAsync(string userId, EmployerProfileUpdateDto dto);
         Task<bool> UpdateEkycAsync(string userId, EkycUpdateDto dto);
+        Task<bool> UpdateAdminProfileAsync(string userId, AdminProfileUpdateDto dto);
 
         // Admin eKYC
         Task<IEnumerable<object>> GetPendingEkycAsync();
