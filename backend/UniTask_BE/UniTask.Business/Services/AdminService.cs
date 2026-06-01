@@ -97,15 +97,22 @@ namespace UniTask.Business.Services
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 10;
 
-            var query = _context.Users;
-
-            var sortedQuery = query
-                .OrderByDescending(u => u.EkycStatus == EkycStatus.Pending)
-                .ThenByDescending(u => u.EkycStatus == EkycStatus.None)
-                .ThenByDescending(u => u.CreatedAt);
+            var query = _context.Users
+                .Include(u => u.StudentProfile)
+                .Include(u => u.EmployerProfile)
+                    .ThenInclude(ep => ep != null ? ep.Company : null)
+                .AsQueryable();
 
             var totalCount = await query.CountAsync();
-            var items = await sortedQuery
+
+            // Load raw entities first, then do sorting + projection in memory
+            // EF Core cannot translate nested ternaries, .ToString(format), or complex navigation checks to SQL
+            var rawUsers = await query.ToListAsync();
+
+            var items = rawUsers
+                .OrderByDescending(u => u.EkycStatus == EkycStatus.Pending)
+                .ThenByDescending(u => u.EkycStatus == EkycStatus.None)
+                .ThenByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(u => new
@@ -113,16 +120,17 @@ namespace UniTask.Business.Services
                     id = u.Id,
                     email = u.Email,
                     fullName = u.FullName,
-                    phone = u.PhoneNumber,
+                    phone = u.PhoneNumber ?? "",
+                    avatar = (u.FullName ?? "U").Substring(0, 1).ToUpper(),
                     role = u.UserType == UserType.Student ? "student" : (u.UserType == UserType.Employer ? "employer" : "admin"),
                     ekycStatus = u.EkycStatus == EkycStatus.Pending ? "pending" : (u.EkycStatus == EkycStatus.Verified ? "verified" : (u.EkycStatus == EkycStatus.Rejected ? "rejected" : "none")),
-                    ekycFrontImage = u.EkycFrontImageUrl,
-                    ekycBackImage = u.EkycBackImageUrl,
-                    university = u.StudentProfile != null ? u.StudentProfile.University : "",
-                    companyName = u.EmployerProfile != null && u.EmployerProfile.Company != null ? u.EmployerProfile.Company.Name : "",
+                    ekycFrontImage = u.EkycFrontImageUrl ?? "",
+                    ekycBackImage = u.EkycBackImageUrl ?? "",
+                    university = u.StudentProfile?.University ?? "",
+                    companyName = u.EmployerProfile?.Company?.Name ?? "",
                     createdAt = u.CreatedAt.ToString("yyyy-MM-dd")
                 })
-                .ToListAsync();
+                .ToList();
 
             return new
             {
@@ -188,52 +196,47 @@ namespace UniTask.Business.Services
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 10;
 
-            var query = _context.Transactions
+            var rawWithdrawals = await _context.Transactions
                 .Include(t => t.Wallet)
                 .ThenInclude(w => w.User)
-                .Where(t => t.Type == TransactionType.Withdrawal);
-
-            var sortedQuery = query
+                .Where(t => t.Type == TransactionType.Withdrawal)
                 .OrderBy(t => t.Description != null && t.Description.StartsWith("[Completed]"))
-                .ThenByDescending(t => t.CreatedAt);
-
-            var totalCount = await query.CountAsync();
-
-            // Calculate overall stats for the dashboard cards over all withdrawals
-            var allWithdrawals = await query
-                .Select(t => new { t.Amount, t.Description })
+                .ThenByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
-            var totalPendingAmount = allWithdrawals
+            var totalCount = rawWithdrawals.Count;
+
+            // Calculate overall stats on loaded data
+            var totalPendingAmount = rawWithdrawals
                 .Where(w => !(w.Description != null && w.Description.StartsWith("[Completed]")))
                 .Sum(w => Math.Abs(w.Amount));
 
-            var pendingCount = allWithdrawals
+            var pendingCount = rawWithdrawals
                 .Count(w => !(w.Description != null && w.Description.StartsWith("[Completed]")));
 
-            var totalCompletedAmount = allWithdrawals
+            var totalCompletedAmount = rawWithdrawals
                 .Where(w => w.Description != null && w.Description.StartsWith("[Completed]"))
                 .Sum(w => Math.Abs(w.Amount));
 
-            var completedCount = allWithdrawals
+            var completedCount = rawWithdrawals
                 .Count(w => w.Description != null && w.Description.StartsWith("[Completed]"));
 
-            var totalWithdrawalAmount = allWithdrawals
+            var totalWithdrawalAmount = rawWithdrawals
                 .Sum(w => Math.Abs(w.Amount));
 
-            var items = await sortedQuery
+            var items = rawWithdrawals
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(t => new
                 {
                     id = t.Id,
-                    amount = Math.Abs(t.Amount), // Số tiền yêu cầu rút dương
-                    description = t.Description,
+                    amount = Math.Abs(t.Amount),
+                    description = t.Description ?? "",
                     createdAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
-                    userName = t.Wallet.User.FullName,
-                    userEmail = t.Wallet.User.Email
+                    userName = t.Wallet?.User?.FullName ?? "Sinh viên",
+                    userEmail = t.Wallet?.User?.Email ?? ""
                 })
-                .ToListAsync();
+                .ToList();
 
             return new
             {
@@ -270,37 +273,37 @@ namespace UniTask.Business.Services
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 10;
 
-            var query = _context.Jobs
+            var rawDisputes = await _context.Jobs
                 .Include(j => j.Company)
                 .Include(j => j.Employer)
                 .Include(j => j.SelectedStudent)
-                .Where(j => j.Status == JobStatus.Disputed);
+                .Where(j => j.Status == JobStatus.Disputed)
+                .OrderByDescending(j => j.DisputedDate)
+                .ToListAsync();
 
-            var sortedQuery = query
-                .OrderByDescending(j => j.DisputedDate);
+            var totalCount = rawDisputes.Count;
 
-            var totalCount = await query.CountAsync();
-            var items = await sortedQuery
+            var items = rawDisputes
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(j => new
                 {
                     id = j.Id,
-                    title = j.Title,
+                    title = j.Title ?? "",
                     budget = j.Budget,
                     commission = j.Commission,
-                    employerName = j.Employer.FullName,
-                    employerEmail = j.Employer.Email,
-                    studentName = j.SelectedStudent != null ? j.SelectedStudent.FullName : "",
-                    studentEmail = j.SelectedStudent != null ? j.SelectedStudent.Email : "",
-                    disputeReason = j.DisputeReason,
-                    employerEvidenceText = j.EmployerEvidenceText,
-                    employerEvidenceUrl = j.EmployerEvidenceUrl,
-                    studentEvidenceText = j.StudentEvidenceText,
-                    studentEvidenceUrl = j.StudentEvidenceUrl,
+                    employerName = j.Employer?.FullName ?? "",
+                    employerEmail = j.Employer?.Email ?? "",
+                    studentName = j.SelectedStudent?.FullName ?? "",
+                    studentEmail = j.SelectedStudent?.Email ?? "",
+                    disputeReason = j.DisputeReason ?? "",
+                    employerEvidenceText = j.EmployerEvidenceText ?? "",
+                    employerEvidenceUrl = j.EmployerEvidenceUrl ?? "",
+                    studentEvidenceText = j.StudentEvidenceText ?? "",
+                    studentEvidenceUrl = j.StudentEvidenceUrl ?? "",
                     disputedDate = j.DisputedDate.HasValue ? j.DisputedDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : ""
                 })
-                .ToListAsync();
+                .ToList();
 
             return new
             {
