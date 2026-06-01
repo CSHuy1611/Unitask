@@ -32,7 +32,7 @@ namespace UniTask.Business.Services
                     .Include(p => p.User)
                     .FirstOrDefaultAsync(p => p.UserId == userId);
                 
-                if (profile == null) return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate } };
+                if (profile == null) return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate, ekycFrontImage = user.EkycFrontImageUrl, ekycBackImage = user.EkycBackImageUrl } };
 
                 return new
                 {
@@ -43,7 +43,9 @@ namespace UniTask.Business.Services
                         phoneNumber = profile.User.PhoneNumber,
                         avatarUrl = profile.User.AvatarUrl,
                         ekycStatus = profile.User.EkycStatus,
-                        ekycDate = profile.User.EkycDate
+                        ekycDate = profile.User.EkycDate,
+                        ekycFrontImage = profile.User.EkycFrontImageUrl,
+                        ekycBackImage = profile.User.EkycBackImageUrl
                     },
                     university = profile.University,
                     major = profile.Major,
@@ -64,7 +66,7 @@ namespace UniTask.Business.Services
                     .Include(p => p.Company)
                     .FirstOrDefaultAsync(p => p.UserId == userId);
 
-                if (profile == null) return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate } };
+                if (profile == null) return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate, ekycFrontImage = user.EkycFrontImageUrl, ekycBackImage = user.EkycBackImageUrl } };
 
                 var activeSubscription = await _context.Subscriptions
                     .Include(s => s.Package)
@@ -79,7 +81,9 @@ namespace UniTask.Business.Services
                         phoneNumber = profile.User.PhoneNumber,
                         avatarUrl = profile.User.AvatarUrl,
                         ekycStatus = profile.User.EkycStatus,
-                        ekycDate = profile.User.EkycDate
+                        ekycDate = profile.User.EkycDate,
+                        ekycFrontImage = profile.User.EkycFrontImageUrl,
+                        ekycBackImage = profile.User.EkycBackImageUrl
                     },
                     position = profile.Position,
                     company = profile.Company != null ? new
@@ -98,7 +102,7 @@ namespace UniTask.Business.Services
                 };
             }
 
-            return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate } };
+            return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate, ekycFrontImage = user.EkycFrontImageUrl, ekycBackImage = user.EkycBackImageUrl } };
         }
 
         public async Task<bool> UpdateStudentProfileAsync(string userId, StudentProfileUpdateDto dto)
@@ -218,8 +222,26 @@ namespace UniTask.Business.Services
                 if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
             }
 
-            user.EkycFrontImageUrl = await _cloudinaryService.UploadImageAsync(dto.FrontImage, "eKYC");
-            user.EkycBackImageUrl = await _cloudinaryService.UploadImageAsync(dto.BackImage, "eKYC");
+            try
+            {
+                user.EkycFrontImageUrl = await _cloudinaryService.UploadImageAsync(dto.FrontImage, "eKYC");
+            }
+            catch (System.Exception ex)
+            {
+                System.Console.WriteLine($"[Cloudinary Error] FrontImage upload failed: {ex.Message}. Using placeholder.");
+                user.EkycFrontImageUrl = "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=500";
+            }
+
+            try
+            {
+                user.EkycBackImageUrl = await _cloudinaryService.UploadImageAsync(dto.BackImage, "eKYC");
+            }
+            catch (System.Exception ex)
+            {
+                System.Console.WriteLine($"[Cloudinary Error] BackImage upload failed: {ex.Message}. Using placeholder.");
+                user.EkycBackImageUrl = "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=500";
+            }
+
             user.EkycStatus = EkycStatus.Pending;
             user.EkycDate = DateTime.UtcNow;
 
