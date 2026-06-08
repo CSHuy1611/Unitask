@@ -400,7 +400,7 @@ import { Job } from '../../models/job.model';
                           <div class="laser-beam"></div>
                         </div>
                         <div class="upload-spinner" style="margin-bottom:12px"></div>
-                        <p class="scanning-text">Đang đối chiếu dữ liệu khuôn mặt và kiểm tra tính hợp lệ của CCCD...</p>
+                        <p class="scanning-text">{{ ekycStepMessage() }}</p>
                       </div>
                     }
 
@@ -1566,6 +1566,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.auth.fetchBalance().subscribe();
       this.jobService.fetchJobs();
       this.refreshStudentApplications();
+      
+      // Load eKYC libraries in background to warm up
+      if (this.auth.isStudent() && this.auth.currentUser()?.ekycStatus !== 'verified') {
+        this.loadEkycLibraries();
+      }
     }
   }
 
@@ -2012,7 +2017,70 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.stopCamera();
   }
 
-  onSubmitEkyc() {
+  ekycStepMessage = signal<string>('');
+  librariesLoaded = false;
+  librariesLoading = false;
+  modelsLoaded = false;
+
+  async loadEkycLibraries() {
+    if (this.librariesLoaded || this.librariesLoading) return;
+    this.librariesLoading = true;
+    try {
+      await this.loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.0.5/dist/tesseract.min.js');
+      await this.loadScript('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js');
+      this.librariesLoaded = true;
+      console.log('eKYC libraries loaded successfully.');
+    } catch (err) {
+      console.error('Failed to load eKYC libraries from CDN:', err);
+    } finally {
+      this.librariesLoading = false;
+    }
+  }
+
+  private loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (src.includes('face-api') && (window as any).faceapi) {
+        resolve();
+        return;
+      }
+      if (src.includes('tesseract') && (window as any).Tesseract) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = (err) => reject(err);
+      document.body.appendChild(script);
+    });
+  }
+
+  async loadFaceModels() {
+    if (this.modelsLoaded) return;
+    const faceapi = (window as any).faceapi;
+    if (!faceapi) throw new Error('Thư viện face-api chưa được tải.');
+    
+    const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+    ]);
+    this.modelsLoaded = true;
+  }
+
+  private loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = src;
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(err);
+    });
+  }
+
+  async onSubmitEkyc() {
     if (!this.ekycFrontFile || !this.ekycBackFile) {
       this.toast.warning('Vui lòng cung cấp đủ 2 mặt CCCD.');
       return;
@@ -2021,31 +2089,147 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.toast.warning('Vui lòng chụp ảnh chân dung Selfie để đối chiếu.');
       return;
     }
-    
+
     this.ekycSubmitting.set(true);
     this.ekycErrorMessage.set('');
-    this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile, this.selfieFile).subscribe({
+    
+    try {
+      this.ekycStepMessage.set('Đang khởi tạo các mô hình AI nhận diện (tải từ CDN)...');
+      await this.loadEkycLibraries();
+      
+      const faceapi = (window as any).faceapi;
+      const Tesseract = (window as any).Tesseract;
+      
+      if (!this.librariesLoaded || !faceapi || !Tesseract) {
+        console.warn('Không thể tải thư viện AI từ CDN. Chuyển sang chế độ xác thực dự phòng...');
+        this.runFallbackEkycSubmit();
+        return;
+      }
+      
+      this.ekycStepMessage.set('Đang tải mô hình đối chiếu khuôn mặt...');
+      await this.loadFaceModels();
+
+      this.ekycStepMessage.set('Đang phân tích OCR ảnh mặt trước CCCD để nhận diện thẻ...');
+      const cccdFrontImg = await this.loadImage(this.ekycFrontPreview());
+      
+      let frontOcrText = '';
+      try {
+        const frontOcr = await Tesseract.recognize(cccdFrontImg, 'vie+eng');
+        frontOcrText = (frontOcr.data?.text || '').toLowerCase();
+      } catch (ocrErr) {
+        console.error('OCR Front Card error:', ocrErr);
+      }
+
+      const frontKeywords = ["căn cước", "can cuoc", "công dân", "cong dan", "giấy tờ", "giay to", "chứng minh", "chung minh", "identity", "socialist", "vietnam", "việt nam"];
+      const isFrontKeywordsOk = frontKeywords.some(kw => frontOcrText.includes(kw));
+      if (frontOcrText && !isFrontKeywordsOk) {
+         throw new Error("Ảnh mặt trước không hợp lệ. Vui lòng tải lên ảnh chụp mặt trước thẻ Căn cước công dân (CCCD).");
+      }
+
+      this.ekycStepMessage.set('Đang phân tích OCR ảnh mặt sau CCCD để nhận diện thẻ...');
+      const cccdBackImg = await this.loadImage(this.ekycBackPreview());
+      let backOcrText = '';
+      try {
+        const backOcr = await Tesseract.recognize(cccdBackImg, 'vie+eng');
+        backOcrText = (backOcr.data?.text || '').toLowerCase();
+      } catch (ocrErr) {
+        console.error('OCR Back Card error:', ocrErr);
+      }
+
+      const backKeywords = ["vân tay", "van tay", "ngón trỏ", "ngon tro", "dạng", "dang", "ký tên", "ky ten", "cục trưởng", "cuc truong", "cục cảnh sát", "cuc canh sat"];
+      const isBackKeywordsOk = backKeywords.some(kw => backOcrText.includes(kw));
+      if (backOcrText && !isBackKeywordsOk) {
+         throw new Error("Ảnh mặt sau không hợp lệ. Vui lòng tải lên ảnh chụp mặt sau thẻ Căn cước công dân (CCCD).");
+      }
+
+      this.ekycStepMessage.set('Đang tìm kiếm khuôn mặt trên ảnh CCCD mặt trước...');
+      const cccdFace = await faceapi.detectSingleFace(cccdFrontImg)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+      
+      if (!cccdFace) {
+        throw new Error("Không tìm thấy khuôn mặt trong ảnh mặt trước CCCD. Vui lòng chọn ảnh rõ nét, không bị lóa sáng.");
+      }
+
+      this.ekycStepMessage.set('Đang tìm kiếm khuôn mặt trên ảnh chụp Selfie...');
+      const selfieImg = await this.loadImage(this.selfiePreview());
+      const selfieFace = await faceapi.detectSingleFace(selfieImg)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!selfieFace) {
+        throw new Error("Không tìm thấy khuôn mặt trong ảnh chụp chân dung Selfie. Vui lòng bật đèn sáng và chụp lại rõ mặt.");
+      }
+
+      this.ekycStepMessage.set('Đang so khớp sinh trắc học khuôn mặt...');
+      const distance = faceapi.euclideanDistance(cccdFace.descriptor, selfieFace.descriptor);
+      const similarity = Math.round((1 - distance) * 100);
+      
+      console.log(`[eKYC AI Match] Distance: ${distance.toFixed(4)}, Similarity: ${similarity}%`);
+
+      if (similarity < 70) {
+        throw new Error(`Xác thực thất bại: Khuôn mặt trong ảnh chụp chân dung không khớp với khuôn mặt trên thẻ CCCD (Độ khớp đạt ${similarity}% < 70%). Vui lòng chụp lại rõ nét.`);
+      }
+
+      this.ekycStepMessage.set(`So khớp thành công (${similarity}%). Đang cập nhật trạng thái...`);
+      
+      this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile, this.selfieFile).subscribe({
+        next: (res) => {
+          this.ekycSubmitting.set(false);
+          if (res.success) {
+            this.toast.success(`Xác thực tự động thành công! Độ trùng khớp đạt ${similarity}%.`);
+            this.selfiePreview.set('');
+            this.selfieFile = null;
+            this.ekycFrontPreview.set('');
+            this.ekycBackPreview.set('');
+            this.ekycFrontFile = null;
+            this.ekycBackFile = null;
+            this.stopCamera();
+            this.auth.fetchProfile().subscribe();
+          } else {
+            this.ekycErrorMessage.set(res.message);
+            this.showEkycErrorModal.set(true);
+          }
+        },
+        error: (err) => {
+          this.ekycSubmitting.set(false);
+          const msg = err.error?.message || 'Gửi xác thực thất bại do lỗi máy chủ.';
+          this.ekycErrorMessage.set(msg);
+          this.showEkycErrorModal.set(true);
+        }
+      });
+
+    } catch (err: any) {
+      this.ekycSubmitting.set(false);
+      this.ekycErrorMessage.set(err.message || 'Có lỗi xảy ra trong quá trình xác thực eKYC.');
+      this.showEkycErrorModal.set(true);
+    }
+  }
+
+  private runFallbackEkycSubmit() {
+    this.auth.submitEkyc(this.ekycFrontFile!, this.ekycBackFile!, this.selfieFile!).subscribe({
       next: (res) => {
-         this.ekycSubmitting.set(false);
-         if (res.success) {
-           this.toast.success(res.message);
-           this.selfiePreview.set('');
-           this.selfieFile = null;
-           this.ekycFrontPreview.set('');
-           this.ekycBackPreview.set('');
-           this.ekycFrontFile = null;
-           this.ekycBackFile = null;
-           this.stopCamera();
-         } else {
-           this.ekycErrorMessage.set(res.message);
-           this.showEkycErrorModal.set(true);
-         }
+        this.ekycSubmitting.set(false);
+        if (res.success) {
+          this.toast.success(res.message);
+          this.selfiePreview.set('');
+          this.selfieFile = null;
+          this.ekycFrontPreview.set('');
+          this.ekycBackPreview.set('');
+          this.ekycFrontFile = null;
+          this.ekycBackFile = null;
+          this.stopCamera();
+          this.auth.fetchProfile().subscribe();
+        } else {
+          this.ekycErrorMessage.set(res.message);
+          this.showEkycErrorModal.set(true);
+        }
       },
       error: (err) => {
-         this.ekycSubmitting.set(false);
-         const msg = err.error?.message || 'Gửi xác thực thất bại do lỗi máy chủ.';
-         this.ekycErrorMessage.set(msg);
-         this.showEkycErrorModal.set(true);
+        this.ekycSubmitting.set(false);
+        const msg = err.error?.message || 'Gửi xác thực thất bại do lỗi máy chủ.';
+        this.ekycErrorMessage.set(msg);
+        this.showEkycErrorModal.set(true);
       }
     });
   }
