@@ -37,10 +37,17 @@ namespace UniTask.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            var result = await _profileService.UpdateStudentProfileAsync(userId, dto);
-            if (!result) return BadRequest(new { message = "Failed to update profile" });
+            try
+            {
+                var result = await _profileService.UpdateStudentProfileAsync(userId, dto);
+                if (!result) return BadRequest(new { message = "Failed to update profile" });
 
-            return Ok(new { message = "Profile updated successfully" });
+                return Ok(new { message = "Profile updated successfully" });
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("employer")]
@@ -50,10 +57,17 @@ namespace UniTask.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            var result = await _profileService.UpdateEmployerProfileAsync(userId, dto);
-            if (!result) return BadRequest(new { message = "Failed to update profile" });
+            try
+            {
+                var result = await _profileService.UpdateEmployerProfileAsync(userId, dto);
+                if (!result) return BadRequest(new { message = "Failed to update profile" });
 
-            return Ok(new { message = "Profile updated successfully" });
+                return Ok(new { message = "Profile updated successfully" });
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("admin")]
@@ -88,6 +102,23 @@ namespace UniTask.Api.Controllers
                 if (!result) return BadRequest(new { message = "Failed to submit eKYC" });
 
                 return Ok(new { message = "eKYC documents submitted for review" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("ekyc/decrypt/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DecryptIdentity(string userId)
+        {
+            try
+            {
+                var decryptedData = await _profileService.DecryptUserIdentityAsync(userId);
+                if (decryptedData == null) return NotFound(new { message = "Identity record not found or user is not verified." });
+
+                return Ok(decryptedData);
             }
             catch (Exception ex)
             {

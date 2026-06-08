@@ -65,12 +65,13 @@ namespace UniTask.Business.Services
                     var studentWallet = await context.Wallets.FirstOrDefaultAsync(w => w.UserId == job.SelectedStudentId);
                     if (studentWallet != null)
                     {
-                        studentWallet.Balance += job.Budget;
+                        var roundedBudget = Math.Round(job.Budget, 0);
+                        studentWallet.Balance += roundedBudget;
 
                         context.Transactions.Add(new Transaction
                         {
                             WalletId = studentWallet.Id,
-                            Amount = job.Budget,
+                            Amount = roundedBudget,
                             Type = TransactionType.EscrowRelease,
                             Description = $"[System Auto-Release] Nhận tiền công tự động từ công việc: {job.Title}",
                             RelatedJobId = job.Id,

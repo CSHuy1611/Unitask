@@ -164,19 +164,23 @@ import { Job } from '../../models/job.model';
                         <input type="text" class="form-input" [(ngModel)]="editForm.fullName" name="fullName" required>
                       </div>
                       <div class="form-group">
-                        <label class="form-label">Số điện thoại</label>
-                        <input type="tel" class="form-input" [(ngModel)]="editForm.phone" name="phone">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-input" [(ngModel)]="editForm.email" name="email" required>
                       </div>
                     </div>
                     <div class="form-row">
                       <div class="form-group">
+                        <label class="form-label">Số điện thoại</label>
+                        <input type="tel" class="form-input" [(ngModel)]="editForm.phone" name="phone">
+                      </div>
+                      <div class="form-group">
                         <label class="form-label">Ngày sinh</label>
                         <input type="date" class="form-input" [(ngModel)]="editForm.dateOfBirth" name="dateOfBirth">
                       </div>
-                      <div class="form-group">
-                        <label class="form-label">Địa chỉ</label>
-                        <input type="text" class="form-input" placeholder="VD: Quận 9, TP. HCM" [(ngModel)]="editForm.address" name="address">
-                      </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: var(--space-4);">
+                      <label class="form-label">Địa chỉ</label>
+                      <input type="text" class="form-input" placeholder="VD: Quận 9, TP. HCM" [(ngModel)]="editForm.address" name="address">
                     </div>
                     @if (auth.isStudent()) {
                       <div class="form-row">
@@ -208,13 +212,6 @@ import { Job } from '../../models/job.model';
                       <div class="form-group">
                         <label class="form-label">Giới thiệu bản thân</label>
                         <textarea class="form-textarea" rows="3" [(ngModel)]="editForm.bio" name="bio" placeholder="Viết đôi dòng về bản thân..."></textarea>
-                      </div>
-                    } @else if (auth.isAdmin()) {
-                      <div class="form-row">
-                        <div class="form-group">
-                          <label class="form-label">Email nhận thông báo *</label>
-                          <input type="email" class="form-input" [(ngModel)]="editForm.email" name="email" required placeholder="VD: admin@example.com">
-                        </div>
                       </div>
                     } @else {
                       <div class="form-row">
@@ -1615,6 +1612,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   onSaveProfile() {
     const payload: any = {
       fullName: this.editForm.fullName,
+      email: this.editForm.email,
       phone: this.editForm.phone,
       dateOfBirth: this.editForm.dateOfBirth || undefined,
       address: this.editForm.address || undefined,
@@ -1627,7 +1625,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       payload.skills = this.editForm.skillsStr.split(',').map(s => s.trim()).filter(Boolean);
       payload.bio = this.editForm.bio || undefined;
     } else if (this.auth.isAdmin()) {
-      payload.email = this.editForm.email;
+      // Handled in common block
     } else {
       payload.companyName = this.editForm.companyName || undefined;
       payload.position = this.editForm.position || undefined;
@@ -2092,6 +2090,19 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     this.ekycSubmitting.set(true);
     this.ekycErrorMessage.set('');
+
+    const normalizeText = (str: string): string => {
+      if (!str) return '';
+      return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "d")
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    };
     
     try {
       this.ekycStepMessage.set('Đang khởi tạo các mô hình AI nhận diện (tải từ CDN)...');
@@ -2120,10 +2131,32 @@ export class ProfileComponent implements OnInit, OnDestroy {
         console.error('OCR Front Card error:', ocrErr);
       }
 
-      const frontKeywords = ["căn cước", "can cuoc", "công dân", "cong dan", "giấy tờ", "giay to", "chứng minh", "chung minh", "identity", "socialist", "vietnam", "việt nam"];
-      const isFrontKeywordsOk = frontKeywords.some(kw => frontOcrText.includes(kw));
+      const normFrontText = normalizeText(frontOcrText);
+      const frontKeywords = [
+        "can cuoc", "cong dan", "giay to", "chung minh", "identity", 
+        "socialist", "vietnam", "cong hoa", "xa hoi", "chu nghia", 
+        "doc lap", "tu do", "hanh phuc", "quoc tich", "que quan", "thuong tru"
+      ];
+      const isFrontKeywordsOk = frontKeywords.some(kw => normFrontText.includes(kw));
       if (frontOcrText && !isFrontKeywordsOk) {
          throw new Error("Ảnh mặt trước không hợp lệ. Vui lòng tải lên ảnh chụp mặt trước thẻ Căn cước công dân (CCCD).");
+      }
+
+      // Trích xuất số thẻ CCCD (làm sạch các ký tự nhận dạng sai thông dụng)
+      const cleanOcrNumbers = frontOcrText.toLowerCase()
+        .replace(/o/g, '0')
+        .replace(/i/g, '1')
+        .replace(/l/g, '1')
+        .replace(/[^0-9]/g, '');
+      
+      let cccdNumber = '';
+      const digitMatch = cleanOcrNumbers.match(/\d{12}/) || cleanOcrNumbers.match(/\d{9}/);
+      if (digitMatch) {
+        cccdNumber = digitMatch[0];
+      }
+      
+      if (!cccdNumber) {
+        throw new Error("Không thể nhận diện số thẻ CCCD (9 hoặc 12 số) trên mặt trước. Vui lòng chọn ảnh chụp rõ nét hơn.");
       }
 
       this.ekycStepMessage.set('Đang phân tích OCR ảnh mặt sau CCCD để nhận diện thẻ...');
@@ -2136,8 +2169,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
         console.error('OCR Back Card error:', ocrErr);
       }
 
-      const backKeywords = ["vân tay", "van tay", "ngón trỏ", "ngon tro", "dạng", "dang", "ký tên", "ky ten", "cục trưởng", "cuc truong", "cục cảnh sát", "cuc canh sat"];
-      const isBackKeywordsOk = backKeywords.some(kw => backOcrText.includes(kw));
+      const normBackText = normalizeText(backOcrText);
+      const backKeywords = [
+        "van tay", "ngon tro", "ky ten", "cuc truong", "cuc canh sat", 
+        "dac diem", "nhan dang", "cuc", "canh", "sat", "quan ly", 
+        "trat tu", "xa hoi", "trai", "phai", "ngon", "tro", "van", "tay", 
+        "dang", "ky", "ten", "dan", "chu"
+      ];
+      const isBackKeywordsOk = backKeywords.some(kw => normBackText.includes(kw));
       if (backOcrText && !isBackKeywordsOk) {
          throw new Error("Ảnh mặt sau không hợp lệ. Vui lòng tải lên ảnh chụp mặt sau thẻ Căn cước công dân (CCCD).");
       }
@@ -2171,9 +2210,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
         throw new Error(`Xác thực thất bại: Khuôn mặt trong ảnh chụp chân dung không khớp với khuôn mặt trên thẻ CCCD (Độ khớp đạt ${similarity}% < 70%). Vui lòng chụp lại rõ nét.`);
       }
 
+      // Nén mảng đặc trưng khuôn mặt (128 số thực) thành chuỗi Base64 để tiết kiệm không gian database
+      const bytes = new Uint8Array(128);
+      for (let i = 0; i < 128; i++) {
+        const val = Math.max(-1.0, Math.min(1.0, selfieFace.descriptor[i]));
+        bytes[i] = Math.round((val + 1.0) * 127.5);
+      }
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const faceDescriptorBase64 = btoa(binary);
+
       this.ekycStepMessage.set(`So khớp thành công (${similarity}%). Đang cập nhật trạng thái...`);
       
-      this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile, this.selfieFile).subscribe({
+      this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile, this.selfieFile, cccdNumber, faceDescriptorBase64).subscribe({
         next: (res) => {
           this.ekycSubmitting.set(false);
           if (res.success) {

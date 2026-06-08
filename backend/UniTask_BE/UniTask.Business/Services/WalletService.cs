@@ -68,12 +68,13 @@ namespace UniTask.Business.Services
             var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId);
             if (wallet == null) return false;
 
-            wallet.Balance += amount;
+            var roundedAmount = Math.Round(amount, 0);
+            wallet.Balance += roundedAmount;
 
             var transaction = new Transaction
             {
                 WalletId = wallet.Id,
-                Amount = amount,
+                Amount = roundedAmount,
                 Type = TransactionType.Deposit,
                 Description = "Nạp tiền vào tài khoản",
                 CreatedAt = DateTime.UtcNow
@@ -90,15 +91,16 @@ namespace UniTask.Business.Services
 
         public async Task<bool> WithdrawAsync(string userId, WithdrawRequestDto dto)
         {
+            var roundedAmount = Math.Round(dto.Amount, 0);
             var wallet = await _context.Wallets.Include(w => w.User).FirstOrDefaultAsync(w => w.UserId == userId);
-            if (wallet == null || wallet.Balance < dto.Amount) return false;
+            if (wallet == null || wallet.Balance < roundedAmount) return false;
 
-            wallet.Balance -= dto.Amount;
+            wallet.Balance -= roundedAmount;
 
             var transaction = new Transaction
             {
                 WalletId = wallet.Id,
-                Amount = -dto.Amount, // Negative for withdrawal
+                Amount = -roundedAmount, // Negative for withdrawal
                 Type = TransactionType.Withdrawal,
                 Description = $"[Pending] Rút tiền về NH {dto.Bank} - STK: {dto.AccountNumber} ({dto.AccountName})",
                 CreatedAt = DateTime.UtcNow

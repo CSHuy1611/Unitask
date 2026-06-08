@@ -397,12 +397,13 @@ namespace UniTask.Business.Services
                     var studentWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == job.SelectedStudentId);
                     if (studentWallet != null)
                     {
-                        studentWallet.Balance += job.Budget;
+                        var roundedBudget = Math.Round(job.Budget, 0);
+                        studentWallet.Balance += roundedBudget;
 
                         _context.Transactions.Add(new Transaction
                         {
                             WalletId = studentWallet.Id,
-                            Amount = job.Budget,
+                            Amount = roundedBudget,
                             Type = TransactionType.EscrowRelease,
                             Description = $"Nhận tiền công giải quyết tranh chấp công việc: {job.Title}",
                             RelatedJobId = job.Id,
@@ -422,12 +423,13 @@ namespace UniTask.Business.Services
                 var employerWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == job.EmployerId);
                 if (employerWallet != null)
                 {
-                    employerWallet.Balance += job.Budget;
+                    var roundedBudget = Math.Round(job.Budget, 0);
+                    employerWallet.Balance += roundedBudget;
 
                     _context.Transactions.Add(new Transaction
                     {
                         WalletId = employerWallet.Id,
-                        Amount = job.Budget,
+                        Amount = roundedBudget,
                         Type = TransactionType.Refund,
                         Description = $"Hoàn tiền công giải quyết tranh chấp công việc: {job.Title}",
                         RelatedJobId = job.Id,

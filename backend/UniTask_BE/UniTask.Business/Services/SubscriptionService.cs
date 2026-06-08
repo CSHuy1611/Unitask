@@ -44,19 +44,20 @@ namespace UniTask.Business.Services
                 if (employerProfile == null) return false;
 
                 var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
-                if (wallet == null || wallet.Balance < package.Price)
+                var roundedPrice = Math.Round(package.Price, 0);
+                if (wallet == null || wallet.Balance < roundedPrice)
                 {
                     throw new Exception("Số dư không đủ để mua gói dịch vụ này.");
                 }
 
                 // Deduct balance
-                wallet.Balance -= package.Price;
+                wallet.Balance -= roundedPrice;
 
                 // Log transaction
                 _context.Transactions.Add(new Transaction
                 {
                     WalletId = wallet.Id,
-                    Amount = -package.Price,
+                    Amount = -roundedPrice,
                     Type = TransactionType.SubscriptionFee,
                     Description = $"Thanh toán gói dịch vụ: {package.Name}",
                     CreatedAt = DateTime.UtcNow

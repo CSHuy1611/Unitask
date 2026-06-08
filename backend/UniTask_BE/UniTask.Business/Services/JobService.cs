@@ -113,7 +113,12 @@ namespace UniTask.Business.Services
             var hasActivePackage = await _context.Subscriptions
                 .AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow);
             decimal postingFee = hasActivePackage ? 0 : 2000;
-            var totalCost = dto.Budget + dto.Commission + postingFee;
+            
+            // Round all currency values to whole numbers (VND integers) to prevent float discrepancies
+            var roundedBudget = Math.Round(dto.Budget, 0);
+            var roundedCommission = Math.Round(dto.Commission, 0);
+            var roundedPostingFee = Math.Round(postingFee, 0);
+            var totalCost = roundedBudget + roundedCommission + roundedPostingFee;
             
             if (wallet == null || wallet.Balance < totalCost)
             {
@@ -132,8 +137,8 @@ namespace UniTask.Business.Services
                 Location = dto.Location,
                 Type = dto.Type,
                 SalaryText = dto.SalaryRange.Any() ? string.Join("-", dto.SalaryRange) : dto.SalaryText,
-                Budget = dto.Budget,
-                Commission = dto.Commission,
+                Budget = roundedBudget,
+                Commission = roundedCommission,
                 PostedDate = DateTime.UtcNow,
                 Deadline = dto.Deadline,
                 IsUrgent = dto.IsUrgent,
@@ -152,7 +157,7 @@ namespace UniTask.Business.Services
             _context.Transactions.Add(new Transaction
             {
                 WalletId = wallet.Id,
-                Amount = -dto.Budget,
+                Amount = -roundedBudget,
                 Type = DataAcesss.Entities.Enums.TransactionType.EscrowHold,
                 Description = $"Tạm giữ tiền lương cho công việc: {job.Title}",
                 RelatedJobId = job.Id,
@@ -162,19 +167,19 @@ namespace UniTask.Business.Services
             _context.Transactions.Add(new Transaction
             {
                 WalletId = wallet.Id,
-                Amount = -dto.Commission,
+                Amount = -roundedCommission,
                 Type = DataAcesss.Entities.Enums.TransactionType.CommissionFee,
                 Description = $"Phí nền tảng (10%) cho công việc: {job.Title}",
                 RelatedJobId = job.Id,
                 CreatedAt = DateTime.UtcNow
             });
 
-            if (postingFee > 0)
+            if (roundedPostingFee > 0)
             {
                 _context.Transactions.Add(new Transaction
                 {
                     WalletId = wallet.Id,
-                    Amount = -postingFee,
+                    Amount = -roundedPostingFee,
                     Type = DataAcesss.Entities.Enums.TransactionType.PostingFee,
                     Description = $"Phí đăng tin (không mua gói) cho công việc: {job.Title}",
                     RelatedJobId = job.Id,
@@ -237,14 +242,14 @@ namespace UniTask.Business.Services
             var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
             if (wallet != null)
             {
-                var totalRefund = job.Budget + job.Commission;
-                wallet.Balance += totalRefund;
+                var roundedRefund = Math.Round(job.Budget, 0) + Math.Round(job.Commission, 0);
+                wallet.Balance += roundedRefund;
 
                 // Log Refund transaction
                 _context.Transactions.Add(new Transaction
                 {
                     WalletId = wallet.Id,
-                    Amount = totalRefund,
+                    Amount = roundedRefund,
                     Type = DataAcesss.Entities.Enums.TransactionType.Refund,
                     Description = $"Hoàn trả chi phí (Budget + Commission) do hủy tin tuyển dụng: {job.Title}",
                     RelatedJobId = job.Id,
@@ -283,13 +288,14 @@ namespace UniTask.Business.Services
             var studentWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == job.SelectedStudentId);
             if (studentWallet != null)
             {
+                var roundedBudget = Math.Round(job.Budget, 0);
                 // Transfer money to student
-                studentWallet.Balance += job.Budget;
+                studentWallet.Balance += roundedBudget;
 
                 _context.Transactions.Add(new Transaction
                 {
                     WalletId = studentWallet.Id,
-                    Amount = job.Budget,
+                    Amount = roundedBudget,
                     Type = DataAcesss.Entities.Enums.TransactionType.EscrowRelease,
                     Description = $"Nhận tiền công từ công việc: {job.Title}",
                     RelatedJobId = job.Id,

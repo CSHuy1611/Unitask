@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
+using System.IO;
 using UniTask.Business.DTOs.Profile;
 using UniTask.Business.Interfaces;
 using UniTask.DataAcesss;
@@ -131,6 +134,21 @@ namespace UniTask.Business.Services
             if (!string.IsNullOrEmpty(dto.FullName)) user.FullName = dto.FullName;
             if (!string.IsNullOrEmpty(dto.PhoneNumber)) user.PhoneNumber = dto.PhoneNumber;
 
+            // Check and update Email
+            if (!string.IsNullOrEmpty(dto.Email) && !string.Equals(user.Email, dto.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+                if (existingUser != null && existingUser.Id != userId)
+                {
+                    throw new InvalidOperationException("Email này đã được sử dụng bởi một tài khoản khác.");
+                }
+
+                user.Email = dto.Email;
+                user.UserName = dto.Email;
+                user.NormalizedEmail = _userManager.KeyNormalizer.NormalizeEmail(dto.Email);
+                user.NormalizedUserName = _userManager.KeyNormalizer.NormalizeName(dto.Email);
+            }
+
             // Handle Avatar Upload
             if (dto.AvatarFile != null)
             {
@@ -169,6 +187,21 @@ namespace UniTask.Business.Services
             // Update Identity User fields
             if (!string.IsNullOrEmpty(dto.FullName)) user.FullName = dto.FullName;
             if (!string.IsNullOrEmpty(dto.PhoneNumber)) user.PhoneNumber = dto.PhoneNumber;
+
+            // Check and update Email
+            if (!string.IsNullOrEmpty(dto.Email) && !string.Equals(user.Email, dto.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+                if (existingUser != null && existingUser.Id != userId)
+                {
+                    throw new InvalidOperationException("Email này đã được sử dụng bởi một tài khoản khác.");
+                }
+
+                user.Email = dto.Email;
+                user.UserName = dto.Email;
+                user.NormalizedEmail = _userManager.KeyNormalizer.NormalizeEmail(dto.Email);
+                user.NormalizedUserName = _userManager.KeyNormalizer.NormalizeName(dto.Email);
+            }
 
             // Handle Avatar Upload
             if (dto.AvatarFile != null)
@@ -225,7 +258,7 @@ namespace UniTask.Business.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return false;
 
-            // 1. Simulating document check and face match error rules based on filenames
+            // 1. Simulating document check and face match error rules based on filenames (fallback mechanism)
             string frontName = dto.FrontImage?.FileName?.ToLower() ?? "";
             string backName = dto.BackImage?.FileName?.ToLower() ?? "";
             string selfieName = dto.SelfieImage?.FileName?.ToLower() ?? "";
@@ -240,18 +273,80 @@ namespace UniTask.Business.Services
                 throw new System.Exception("Giấy tờ CCCD không hợp lệ hoặc bị mờ/mất góc. Vui lòng sử dụng ảnh chụp rõ nét dưới ánh sáng tốt.");
             }
 
-            // 2. Delete old images if exist
-            if (!string.IsNullOrEmpty(user.EkycFrontImageUrl))
+            var key = _configuration["EkycEncryptionKey"] ?? "UniTaskDefaultSecureSecretKey2026";
+
+            // 2. Perform duplicate checks if CccdNumber is provided
+            string cccdHash = "";
+            string encryptedCccd = "";
+            if (!string.IsNullOrEmpty(dto.CccdNumber))
+            {
+                using (var sha256 = SHA256.Create())
+                {
+                    var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(dto.CccdNumber.Trim()));
+                    cccdHash = Convert.ToHexString(bytes).ToLower();
+                }
+
+                // Check in database for duplicate CCCD hash
+                var duplicateCccd = await _userManager.Users
+                    .AnyAsync(u => u.Id != userId && u.EkycFrontImageUrl != null && u.EkycFrontImageUrl.StartsWith(cccdHash + "|"));
+                if (duplicateCccd)
+                {
+                    throw new System.Exception("Thẻ Căn cước công dân này đã được sử dụng để xác thực tài khoản khác trong hệ thống!");
+                }
+
+                encryptedCccd = EncryptAes(dto.CccdNumber.Trim(), key);
+            }
+
+            // 3. Perform duplicate checks if FaceDescriptor is provided
+            byte[]? newDescriptor = null;
+            if (!string.IsNullOrEmpty(dto.FaceDescriptor))
+            {
+                try
+                {
+                    newDescriptor = Convert.FromBase64String(dto.FaceDescriptor);
+                }
+                catch {}
+            }
+
+            if (newDescriptor != null && newDescriptor.Length == 128)
+            {
+                var otherUsers = await _userManager.Users
+                    .Where(u => u.Id != userId && u.EkycStatus == EkycStatus.Verified && u.EkycBackImageUrl != null && u.EkycBackImageUrl.Contains("|"))
+                    .Select(u => new { u.Id, u.FullName, u.EkycBackImageUrl })
+                    .ToListAsync();
+
+                foreach (var other in otherUsers)
+                {
+                    try
+                    {
+                        var parts = other.EkycBackImageUrl!.Split('|');
+                        var otherDesc = Convert.FromBase64String(parts[0]);
+                        if (otherDesc.Length == 128)
+                        {
+                            double dist = ComputeFaceDistance(newDescriptor, otherDesc);
+                            if (dist < 0.35)
+                            {
+                                throw new System.Exception("Khuôn mặt này đã được sử dụng để xác thực cho một tài khoản khác trong hệ thống!");
+                            }
+                        }
+                    }
+                    catch {}
+                }
+            }
+
+            // 4. Delete old legacy images if they exist
+            if (!string.IsNullOrEmpty(user.EkycFrontImageUrl) && !user.EkycFrontImageUrl.Contains("|"))
             {
                 var publicId = _cloudinaryService.GetPublicIdFromUrl(user.EkycFrontImageUrl);
                 if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
             }
-            if (!string.IsNullOrEmpty(user.EkycBackImageUrl))
+            if (!string.IsNullOrEmpty(user.EkycBackImageUrl) && !user.EkycBackImageUrl.Contains("|"))
             {
                 var publicId = _cloudinaryService.GetPublicIdFromUrl(user.EkycBackImageUrl);
                 if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
             }
 
+            // 5. Upload new images to Cloudinary (under private/eKYC folder)
             string frontUrl = "";
             string backUrl = "";
             string selfieUrl = "";
@@ -286,13 +381,15 @@ namespace UniTask.Business.Services
                 throw new System.Exception($"Upload ảnh chân dung Selfie thất bại: {ex.Message}");
             }
 
-            System.Console.WriteLine($"[eKYC Simulation Success] User: {user.FullName} ({userId}). Front: {frontUrl}, Back: {backUrl}, Selfie: {selfieUrl}");
+            // 6. Encrypt URLs and pack them
+            string packedUrls = $"{frontUrl};{backUrl};{selfieUrl}";
+            string encryptedUrls = EncryptAes(packedUrls, key);
 
-            // 3. Set status directly to Verified, EkycDate to current, and store NULL for image URLs to protect user privacy
+            // 7. Save to DB
             user.EkycStatus = EkycStatus.Verified;
             user.EkycDate = DateTime.UtcNow;
-            user.EkycFrontImageUrl = null;
-            user.EkycBackImageUrl = null;
+            user.EkycFrontImageUrl = $"{cccdHash}|{encryptedCccd}";
+            user.EkycBackImageUrl = $"{dto.FaceDescriptor}|{encryptedUrls}";
 
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
@@ -486,8 +583,133 @@ namespace UniTask.Business.Services
                 user.AvatarUrl = await _cloudinaryService.UploadImageAsync(dto.AvatarFile, "Avatars");
             }
 
-            var result = await _userManager.UpdateAsync(user);
+             var result = await _userManager.UpdateAsync(user);
             return result.Succeeded;
+        }
+
+        // ===== AES-256 Encryption / Decryption Utilities =====
+        private string EncryptAes(string plainText, string key)
+        {
+            if (string.IsNullOrEmpty(plainText)) return "";
+            byte[] iv = new byte[16];
+            byte[] array;
+
+            using (Aes aes = Aes.Create())
+            {
+                byte[] keyBytes = Encoding.UTF8.GetBytes(key.PadRight(32).Substring(0, 32));
+                aes.Key = keyBytes;
+                aes.IV = iv;
+
+                ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+
+                using (MemoryStream memoryStream = new MemoryStream())
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter streamWriter = new StreamWriter(cryptoStream))
+                        {
+                            streamWriter.Write(plainText);
+                        }
+                        array = memoryStream.ToArray();
+                    }
+                }
+            }
+
+            return Convert.ToBase64String(array);
+        }
+
+        private string DecryptAes(string cipherText, string key)
+        {
+            if (string.IsNullOrEmpty(cipherText)) return "";
+            byte[] iv = new byte[16];
+            byte[] buffer = Convert.FromBase64String(cipherText);
+
+            using (Aes aes = Aes.Create())
+            {
+                byte[] keyBytes = Encoding.UTF8.GetBytes(key.PadRight(32).Substring(0, 32));
+                aes.Key = keyBytes;
+                aes.IV = iv;
+
+                ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+
+                using (MemoryStream memoryStream = new MemoryStream(buffer))
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader streamReader = new StreamReader(cryptoStream))
+                        {
+                            return streamReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+
+        private double ComputeFaceDistance(byte[] desc1, byte[] desc2)
+        {
+            if (desc1 == null || desc2 == null || desc1.Length != 128 || desc2.Length != 128)
+                return 1.0;
+
+            double sum = 0;
+            for (int i = 0; i < 128; i++)
+            {
+                double diff = (desc1[i] - desc2[i]) / 127.5;
+                sum += diff * diff;
+            }
+            return Math.Sqrt(sum);
+        }
+
+        public async Task<object?> DecryptUserIdentityAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null || user.EkycStatus != EkycStatus.Verified) return null;
+
+            var key = _configuration["EkycEncryptionKey"] ?? "UniTaskDefaultSecureSecretKey2026";
+
+            string rawCccd = "";
+            string frontUrl = "";
+            string backUrl = "";
+            string selfieUrl = "";
+
+            if (!string.IsNullOrEmpty(user.EkycFrontImageUrl) && user.EkycFrontImageUrl.Contains("|"))
+            {
+                try
+                {
+                    var parts = user.EkycFrontImageUrl.Split('|');
+                    var encryptedCccd = parts[1];
+                    rawCccd = DecryptAes(encryptedCccd, key);
+                }
+                catch {}
+            }
+
+            if (!string.IsNullOrEmpty(user.EkycBackImageUrl) && user.EkycBackImageUrl.Contains("|"))
+            {
+                try
+                {
+                    var parts = user.EkycBackImageUrl.Split('|');
+                    if (parts.Length > 1)
+                    {
+                        var encryptedUrls = parts[1];
+                        var decryptedUrls = DecryptAes(encryptedUrls, key);
+                        if (decryptedUrls.Contains(";"))
+                        {
+                            var urlParts = decryptedUrls.Split(';');
+                            if (urlParts.Length > 0) frontUrl = urlParts[0];
+                            if (urlParts.Length > 1) backUrl = urlParts[1];
+                            if (urlParts.Length > 2) selfieUrl = urlParts[2];
+                        }
+                    }
+                }
+                catch {}
+            }
+
+            return new
+            {
+                cccdNumber = rawCccd,
+                frontImageUrl = frontUrl,
+                backImageUrl = backUrl,
+                selfieImageUrl = selfieUrl
+            };
         }
     }
 }

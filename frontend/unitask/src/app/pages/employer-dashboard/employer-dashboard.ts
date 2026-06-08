@@ -1136,7 +1136,7 @@ export class EmployerDashboardComponent implements OnInit {
       }
 
       // Payment check
-      const commission = budget * 0.1;
+      const commission = Math.round(budget * 0.1);
       const escrowTotal = budget + commission;
       const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
       const postingFee = hasActivePackage ? 0 : 2000;

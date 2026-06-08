@@ -116,15 +116,16 @@ namespace UniTask.Business.Services
 
                     if (pendingTx != null)
                     {
+                        var roundedAmount = Math.Round((decimal)amount, 0);
                         // Update wallet
-                        pendingTx.Wallet.Balance += amount;
+                        pendingTx.Wallet.Balance += roundedAmount;
 
                         // Mark transaction as success
                         pendingTx.Description = $"Nạp tiền qua PayOS thành công (demo dự án học tập). Mã ĐH: {orderCode}";
                         pendingTx.CreatedAt = DateTime.UtcNow; // update time
 
                         await _context.SaveChangesAsync();
-                        System.Console.WriteLine($"[PAYOS_WEBHOOK] Successfully completed transaction for OrderCode {orderCode}, added {amount} to wallet.");
+                        System.Console.WriteLine($"[PAYOS_WEBHOOK] Successfully completed transaction for OrderCode {orderCode}, added {roundedAmount} to wallet.");
 
                         // Notify admin
                         await _hubContext.Clients.All.SendAsync("TransactionOccurred");

@@ -220,11 +220,13 @@ export class AuthService {
     );
   }
 
-  submitEkyc(frontFile: File, backFile: File, selfieFile: File): Observable<{ success: boolean; message: string }> {
+  submitEkyc(frontFile: File, backFile: File, selfieFile: File, cccdNumber?: string, faceDescriptor?: string): Observable<{ success: boolean; message: string }> {
     const formData = new FormData();
     formData.append('FrontImage', frontFile);
     formData.append('BackImage', backFile);
     formData.append('SelfieImage', selfieFile);
+    if (cccdNumber) formData.append('CccdNumber', cccdNumber);
+    if (faceDescriptor) formData.append('FaceDescriptor', faceDescriptor);
     
     return this.http.post<any>(`${API_BASE_URL}/profile/ekyc`, formData).pipe(
       tap(() => {
