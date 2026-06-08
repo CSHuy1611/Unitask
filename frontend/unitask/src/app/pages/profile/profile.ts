@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -10,7 +10,7 @@ import { Job } from '../../models/job.model';
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, CommonModule],
   template: `
     <section class="profile-page">
       <div class="container">
@@ -81,6 +81,10 @@ import { Job } from '../../models/job.model';
                   <div class="info-row">
                     <span class="material-icons-round">menu_book</span>
                     <span>{{ auth.currentUser()?.major }} - Năm {{ auth.currentUser()?.year }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="material-icons-round" style="color: var(--warning)">verified_user</span>
+                    <span>Điểm tín nhiệm: <strong style="color: var(--warning); font-size: 15px">{{ auth.currentUser()?.reliabilityScore ?? 100 }}</strong> / 100</span>
                   </div>
                 } @else if (auth.isEmployer()) {
                   <div class="info-row">
@@ -362,10 +366,7 @@ import { Job } from '../../models/job.model';
                         <span class="material-icons-round">hourglass_top</span>
                         <strong>Đang chờ duyệt</strong>
                       </div>
-                      <p>Hồ sơ eKYC của bạn đang được Admin xem xét. Quá trình thường mất 1-2 ngày làm việc.</p>
-                      <div class="processing-bar">
-                        <div class="processing-fill"></div>
-                      </div>
+                      <p>Hồ sơ eKYC của bạn đang được hệ thống tự động kiểm tra.</p>
                     }
                     @case ('rejected') {
                       <div class="status-badge rejected">
@@ -384,57 +385,101 @@ import { Job } from '../../models/job.model';
                   }
                 </div>
 
-                @if (auth.currentUser()?.ekycStatus !== 'verified' && auth.currentUser()?.ekycStatus !== 'pending') {
-                  <div class="ekyc-form">
-                    <h4>Tải lên giấy tờ tùy thân (CCCD/CMND)</h4>
-
-                    <div class="upload-previews">
-                      <div class="upload-preview" (click)="!uploadingFront() && ekycFrontInput.click()">
-                        @if (uploadingFront()) {
-                          <div class="preview-placeholder">
-                            <span class="upload-spinner"></span>
-                            <span>Đang tải lên...</span>
-                          </div>
-                        } @else if (ekycFrontPreview()) {
-                          <img [src]="ekycFrontPreview()" alt="CCCD Mặt trước" class="preview-image" />
-                          <span class="preview-label">Mặt trước ✓</span>
-                        } @else {
-                          <div class="preview-placeholder">
-                            <span class="material-icons-round">add_a_photo</span>
-                            <span>Mặt trước</span>
-                          </div>
-                        }
+                @if (auth.currentUser()?.ekycStatus !== 'verified') {
+                  <div class="ekyc-form" style="position: relative;">
+                    
+                    <!-- Scanning Loading Overlay -->
+                    @if (ekycSubmitting()) {
+                      <div class="ekyc-scanning-overlay">
+                        <div class="scanner-box">
+                          @if (selfiePreview()) {
+                            <img [src]="selfiePreview()" alt="Scanning" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid var(--primary-light)" />
+                          } @else {
+                            <span class="material-icons-round scanner-logo">face</span>
+                          }
+                          <div class="laser-beam"></div>
+                        </div>
+                        <div class="upload-spinner" style="margin-bottom:12px"></div>
+                        <p class="scanning-text">Đang đối chiếu dữ liệu khuôn mặt và kiểm tra tính hợp lệ của CCCD...</p>
                       </div>
-                      <div class="upload-preview" (click)="!uploadingBack() && ekycBackInput.click()">
-                        @if (uploadingBack()) {
-                          <div class="preview-placeholder">
-                            <span class="upload-spinner"></span>
-                            <span>Đang tải lên...</span>
+                    }
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); flex-wrap: wrap;">
+                      <!-- Cột 1: Giấy tờ CCCD -->
+                      <div>
+                        <h4 style="margin-bottom:12px; color: var(--text-primary);">1. Tải lên ảnh CCCD (2 mặt)</h4>
+                        <div class="upload-previews" style="grid-template-columns: 1fr; gap:12px;">
+                          <div class="upload-preview" (click)="ekycFrontInput.click()" style="min-height: 120px; height:120px">
+                            @if (ekycFrontPreview()) {
+                              <img [src]="ekycFrontPreview()" alt="CCCD Mặt trước" class="preview-image" style="height:100px" />
+                              <span class="preview-label">Mặt trước ✓</span>
+                            } @else {
+                              <div class="preview-placeholder">
+                                <span class="material-icons-round">add_a_photo</span>
+                                <span>Mặt trước CCCD</span>
+                              </div>
+                            }
                           </div>
-                        } @else if (ekycBackPreview()) {
-                          <img [src]="ekycBackPreview()" alt="CCCD Mặt sau" class="preview-image" />
-                          <span class="preview-label">Mặt sau ✓</span>
-                        } @else {
-                          <div class="preview-placeholder">
-                            <span class="material-icons-round">add_a_photo</span>
-                            <span>Mặt sau</span>
+                          <div class="upload-preview" (click)="ekycBackInput.click()" style="min-height: 120px; height:120px">
+                            @if (ekycBackPreview()) {
+                              <img [src]="ekycBackPreview()" alt="CCCD Mặt sau" class="preview-image" style="height:100px" />
+                              <span class="preview-label">Mặt sau ✓</span>
+                            } @else {
+                              <div class="preview-placeholder">
+                                <span class="material-icons-round">add_a_photo</span>
+                                <span>Mặt sau CCCD</span>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                        <input #ekycFrontInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onEkycFileSelected($event, 'front')">
+                        <input #ekycBackInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onEkycFileSelected($event, 'back')">
+                      </div>
+
+                      <!-- Cột 2: Webcam Selfie -->
+                      <div>
+                        <h4 style="margin-bottom:12px; color: var(--text-primary);">2. Chụp ảnh Selfie đối chiếu</h4>
+                        
+                        <div class="selfie-camera-box" style="border: 2px dashed var(--border-color); border-radius: var(--radius-xl); height: 252px; background: rgba(255,255,255,0.02); display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; position:relative;">
+                          @if (cameraErrorMessage()) {
+                            <div class="p-4 text-center" style="color:var(--warning); font-size:12px; display:flex; flex-direction:column; align-items:center; gap:8px">
+                              <span class="material-icons-round" style="font-size:32px">videocam_off</span>
+                              <span>{{ cameraErrorMessage() }}</span>
+                            </div>
+                          } @else if (selfiePreview()) {
+                            <img [src]="selfiePreview()" alt="Selfie Preview" style="width:100%; height:100%; object-fit:cover" />
+                            <span class="preview-label" style="position:absolute; bottom:0; left:0; right:0;">Ảnh chụp chân dung ✓</span>
+                          } @else if (isCameraActive()) {
+                            <video id="webcamVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover"></video>
+                            <button type="button" class="btn btn-primary btn-sm" (click)="captureSelfie()" style="position:absolute; bottom:12px; background:rgba(79,70,229,0.95); border:none; box-shadow:0 4px 10px rgba(0,0,0,0.3)">
+                              <span class="material-icons-round">photo_camera</span> Chụp ảnh
+                            </button>
+                          } @else {
+                            <div class="text-center" style="display:flex; flex-direction:column; align-items:center; gap:12px">
+                              <span class="material-icons-round" style="font-size:48px; color:var(--text-muted)">face</span>
+                              <button type="button" class="btn btn-secondary btn-sm" (click)="startCamera()">
+                                <span class="material-icons-round" style="font-size:16px; vertical-align:middle">videocam</span> Bật Camera
+                              </button>
+                            </div>
+                          }
+                        </div>
+                        
+                        @if (selfiePreview()) {
+                          <div style="text-align:center; margin-top:8px">
+                            <button type="button" class="btn btn-secondary btn-sm" (click)="retakeSelfie()" style="padding: 4px 12px; font-size:12px">
+                              <span class="material-icons-round" style="font-size:14px; vertical-align:middle">sync</span> Chụp lại
+                            </button>
                           </div>
                         }
                       </div>
                     </div>
-                    <input #ekycFrontInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onEkycFileSelected($event, 'front')">
-                    <input #ekycBackInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onEkycFileSelected($event, 'back')">
 
-                    <p class="upload-hint">Ảnh sẽ được tải lên Cloudinary. Click vào ô bên trên để chọn ảnh CCCD (PNG, JPG, max 5MB)</p>
+                    <p class="upload-hint" style="margin-top:16px;">Hệ thống sử dụng camera của bạn để đối chiếu sinh trắc học với ảnh thẻ CCCD.</p>
 
                     <button class="btn btn-primary btn-lg full-width"
-                            [disabled]="!ekycFrontPreview() || !ekycBackPreview() || ekycSubmitting()"
+                            [disabled]="!ekycFrontPreview() || !ekycBackPreview() || !selfiePreview() || ekycSubmitting() || !!cameraErrorMessage()"
                             (click)="onSubmitEkyc()">
-                      @if (ekycSubmitting()) {
-                        <span class="mini-spinner"></span> Đang gửi...
-                      } @else {
-                        <span class="material-icons-round">verified</span> Gửi xác thực
-                      }
+                      <span class="material-icons-round">verified</span> Gửi xác thực tự động
                     </button>
                   </div>
                 }
@@ -466,8 +511,22 @@ import { Job } from '../../models/job.model';
                             }
                           </div>
                           @if (job.status === 'in_progress') {
-                            <div style="text-align:right">
-                              <button class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
+                            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; flex-wrap: wrap;">
+                              @if (!job.checkInTime) {
+                                <button type="button" class="btn btn-primary btn-sm" (click)="openCheckInModal(job)" style="background: var(--primary-light)">
+                                  <span class="material-icons-round" style="font-size:16px">login</span> Check-in OTP
+                                </button>
+                              } @else if (!job.checkOutTime) {
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                  <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
+                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in
+                                  </span>
+                                  <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(job)">
+                                    <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
+                                  </button>
+                                </div>
+                              }
+                              <button type="button" class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
                                 <span class="material-icons-round" style="font-size:16px">task_alt</span> Báo cáo hoàn thành
                               </button>
                             </div>
@@ -558,6 +617,13 @@ import { Job } from '../../models/job.model';
                               <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Chưa hoàn thành</span>
                             }
                           </div>
+                          @if (job.status === 'completed') {
+                            <div style="text-align: right; margin-top: 8px;">
+                              <button type="button" class="btn btn-primary btn-sm" (click)="openReviewModal(job)">
+                                <span class="material-icons-round" style="font-size:16px">star</span> Đánh giá nhà tuyển dụng
+                              </button>
+                            </div>
+                          }
                         </div>
                       }
                     </div>
@@ -619,12 +685,22 @@ import { Job } from '../../models/job.model';
                 <label class="form-label">Ngân hàng thụ hưởng *</label>
                 <select class="form-select" [(ngModel)]="withdrawForm.bank" name="bank" required>
                   <option value="" disabled selected>Chọn ngân hàng</option>
-                  <option value="Vietcombank">Vietcombank</option>
-                  <option value="Techcombank">Techcombank</option>
-                  <option value="MBBank">MBBank</option>
-                  <option value="VietinBank">VietinBank</option>
+                  <option value="VCB">Vietcombank (VCB)</option>
+                  <option value="TCB">Techcombank (TCB)</option>
+                  <option value="MB">MBBank (MB)</option>
+                  <option value="ICB">VietinBank (ICB)</option>
+                  <option value="BIDV">BIDV</option>
+                  <option value="VBA">Agribank (VBA)</option>
                   <option value="ACB">ACB</option>
-                  <option value="TPBank">TPBank</option>
+                  <option value="TPB">TPBank (TPB)</option>
+                  <option value="VPB">VPBank (VPB)</option>
+                  <option value="STB">Sacombank (STB)</option>
+                  <option value="HDB">HDBank (HDB)</option>
+                  <option value="SHB">SHB</option>
+                  <option value="VIB">VIB</option>
+                  <option value="MSB">MSB</option>
+                  <option value="OCB">OCB</option>
+                  <option value="LPB">LPBank (LPB)</option>
                 </select>
               </div>
               <div class="form-group mb-4">
@@ -656,6 +732,140 @@ import { Job } from '../../models/job.model';
             <div class="form-actions d-flex justify-center gap-3">
               <button class="btn btn-secondary" (click)="selectedJobToComplete.set(null)">Hủy</button>
               <button class="btn btn-primary" (click)="studentCompleteJob(selectedJobToComplete()!)">Xác nhận</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Check-in OTP Modal -->
+      @if (showCheckInModal()) {
+        <div class="modal-overlay animate-fade-in" (click)="showCheckInModal.set(false)">
+          <div class="modal-content glass-card p-6" (click)="$event.stopPropagation()" style="width: 100%; max-width: 400px;">
+            <div class="d-flex justify-between items-center mb-4">
+              <h3 style="font-size:1.2rem; font-weight:700; color:var(--text-primary);">Xác thực Check-in</h3>
+              <button class="icon-btn" (click)="showCheckInModal.set(false)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <p class="mb-4" style="font-size: 14px; color: var(--text-secondary)">Nhập mã OTP gồm 6 chữ số do Nhà tuyển dụng cung cấp để tiến hành check-in công việc <strong>{{ selectedJobForOtp()?.title }}</strong>.</p>
+            <form (ngSubmit)="submitCheckIn()">
+              <div class="form-group mb-6">
+                <label class="form-label" style="color:var(--text-primary)">Mã OTP Check-in *</label>
+                <input type="text" class="form-input" [(ngModel)]="otpInput" name="otpInput" maxlength="6" placeholder="Nhập 6 chữ số OTP" required style="text-align: center; font-size: 20px; letter-spacing: 4px; font-weight: bold; color:var(--text-primary); background:rgba(255,255,255,0.05); border:1px solid var(--border-color);">
+              </div>
+              <div class="form-actions d-flex justify-between gap-3">
+                <button type="button" class="btn btn-secondary flex-1" (click)="showCheckInModal.set(false)">Hủy</button>
+                <button type="submit" class="btn btn-primary flex-1" [disabled]="otpInput.length < 6" style="background: var(--success)">
+                  Xác nhận
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- Check-out OTP Modal -->
+      @if (showCheckOutModal()) {
+        <div class="modal-overlay animate-fade-in" (click)="showCheckOutModal.set(false)">
+          <div class="modal-content glass-card p-6" (click)="$event.stopPropagation()" style="width: 100%; max-width: 400px;">
+            <div class="d-flex justify-between items-center mb-4">
+              <h3 style="font-size:1.2rem; font-weight:700; color:var(--text-primary);">Xác thực Check-out</h3>
+              <button class="icon-btn" (click)="showCheckOutModal.set(false)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <p class="mb-4" style="font-size: 14px; color: var(--text-secondary)">Nhập mã OTP gồm 6 chữ số do Nhà tuyển dụng cung cấp để tiến hành check-out và hoàn thành công việc <strong>{{ selectedJobForOtp()?.title }}</strong>.</p>
+            <form (ngSubmit)="submitCheckOut()">
+              <div class="form-group mb-6">
+                <label class="form-label" style="color:var(--text-primary)">Mã OTP Check-out *</label>
+                <input type="text" class="form-input" [(ngModel)]="otpInput" name="otpInput" maxlength="6" placeholder="Nhập 6 chữ số OTP" required style="text-align: center; font-size: 20px; letter-spacing: 4px; font-weight: bold; color:var(--text-primary); background:rgba(255,255,255,0.05); border:1px solid var(--border-color);">
+              </div>
+              <div class="form-actions d-flex justify-between gap-3">
+                <button type="button" class="btn btn-secondary flex-1" (click)="showCheckOutModal.set(false)">Hủy</button>
+                <button type="submit" class="btn btn-primary flex-1" [disabled]="otpInput.length < 6" style="background: var(--warning)">
+                  Xác nhận
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- Rating/Review Employer Modal -->
+      @if (showReviewModal()) {
+        <div class="modal-overlay animate-fade-in" (click)="showReviewModal.set(false)">
+          <div class="modal-content glass-card p-6" (click)="$event.stopPropagation()" style="width: 100%; max-width: 500px;">
+            <div class="d-flex justify-between items-center mb-4">
+              <h3 style="font-size:1.2rem; font-weight:700; color:var(--text-primary);">Đánh giá nhà tuyển dụng</h3>
+              <button class="icon-btn" (click)="showReviewModal.set(false)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <p class="mb-4" style="font-size: 14px; color: var(--text-secondary)">
+              Đánh giá trải nghiệm làm việc của bạn cho công việc <strong>{{ selectedJobForReview()?.title }}</strong>. Đánh giá của bạn sẽ giúp tăng độ minh bạch của hệ thống.
+            </p>
+            <form (ngSubmit)="submitReview()">
+              <!-- Rating stars selection -->
+              <div class="form-group mb-4 text-center">
+                <label class="form-label" style="display:block; text-align:center; color:var(--text-primary)">Số sao (1 - 5) *</label>
+                <div style="display: flex; gap: 8px; justify-content: center; margin-top: 8px;">
+                  @for (star of [1, 2, 3, 4, 5]; track star) {
+                    <button type="button" (click)="reviewRating = star" style="background: none; border: none; cursor: pointer; padding: 4px;">
+                      <span class="material-icons-round" [style.color]="star <= reviewRating ? 'var(--warning)' : 'var(--text-muted)'" style="font-size: 36px;">
+                        {{ star <= reviewRating ? 'star' : 'star_border' }}
+                      </span>
+                    </button>
+                  }
+                </div>
+              </div>
+              
+              <!-- Tags Selection checklist -->
+              <div class="form-group mb-4">
+                <label class="form-label" style="color:var(--text-primary)">Chọn thẻ nhận xét tiêu biểu *</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                  @for (tag of reviewTagsList; track tag) {
+                    <button type="button" class="btn btn-sm"
+                            [style.background]="reviewTagsSelected.includes(tag) ? 'rgba(79, 70, 229, 0.2)' : 'rgba(255,255,255,0.05)'"
+                            [style.border]="reviewTagsSelected.includes(tag) ? '1px solid var(--primary-light)' : '1px solid var(--border-color)'"
+                            [style.color]="reviewTagsSelected.includes(tag) ? 'var(--primary-light)' : 'var(--text-secondary)'"
+                            (click)="toggleReviewTag(tag)"
+                            style="border-radius: var(--radius-full); padding: 6px 12px; font-weight: 500; font-size: 12.5px;">
+                      {{ tag }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Comment input -->
+              <div class="form-group mb-6">
+                <label class="form-label" style="color:var(--text-primary)">Nhận xét chi tiết</label>
+                <textarea class="form-textarea" rows="3" [(ngModel)]="reviewComment" name="reviewComment" placeholder="Nhập thêm nhận xét chi tiết của bạn về nhà tuyển dụng này (không bắt buộc)..." style="color:var(--text-primary); background:rgba(255,255,255,0.05); border:1px solid var(--border-color);"></textarea>
+              </div>
+
+              <div class="form-actions d-flex justify-between gap-3">
+                <button type="button" class="btn btn-secondary flex-1" (click)="showReviewModal.set(false)">Hủy</button>
+                <button type="submit" class="btn btn-primary flex-1">
+                  Gửi đánh giá
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- Custom eKYC Error Modal -->
+      @if (showEkycErrorModal()) {
+        <div class="modal-overlay animate-fade-in" style="z-index: 1100;">
+          <div class="modal-content glass-card p-6" style="width: 100%; max-width: 450px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2); background: rgba(18, 18, 24, 0.9);">
+            <span class="material-icons-round" style="font-size:64px; color:#EF4444; margin-bottom:16px">error_outline</span>
+            <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px; color:#EF4444">Xác thực thất bại</h3>
+            <p style="color:var(--text-secondary); margin-bottom:24px; font-size:14px; line-height: 1.6;">
+              {{ ekycErrorMessage() }}
+            </p>
+            <div class="d-flex justify-center">
+              <button class="btn btn-primary" style="background:#EF4444; border-color:#EF4444; color:white; width:100%" (click)="showEkycErrorModal.set(false)">
+                <span class="material-icons-round" style="font-size:16px; vertical-align:middle">sync</span> Thử lại
+              </button>
             </div>
           </div>
         </div>
@@ -1174,9 +1384,69 @@ import { Job } from '../../models/job.model';
     .flex-1 { flex: 1; }
     .icon-btn { padding: 4px; display: flex; align-items: center; justify-content: center; background:transparent; border:none; color:var(--text-muted); cursor:pointer; }
     .icon-btn:hover { color:var(--text-primary); }
+
+    /* eKYC Scanning Overlay */
+    .ekyc-scanning-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+    }
+    
+    .scanner-box {
+      position: relative;
+      margin-bottom: var(--space-6);
+      width: 140px;
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.02);
+    }
+    
+    .scanner-logo {
+      font-size: 64px;
+      color: var(--primary-light);
+    }
+    
+    .laser-beam {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #10B981;
+      box-shadow: 0 0 15px #10B981, 0 0 30px #10B981;
+      border-radius: var(--radius-full);
+      animation: scanEffect 2s linear infinite;
+    }
+    
+    @keyframes scanEffect {
+      0% { top: 0%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    
+    .scanning-text {
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+      text-align: center;
+      font-weight: 500;
+      max-width: 280px;
+      line-height: 1.5;
+    }
   `]
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private jobService = inject(JobService);
   private toast = inject(ToastService);
@@ -1187,6 +1457,25 @@ export class ProfileComponent implements OnInit {
   
   showWithdrawModal = signal(false);
   selectedJobToComplete = signal<Job | null>(null);
+
+  showCheckInModal = signal(false);
+  showCheckOutModal = signal(false);
+  showReviewModal = signal(false);
+  selectedJobForOtp = signal<Job | null>(null);
+  selectedJobForReview = signal<Job | null>(null);
+  otpInput = '';
+  reviewRating = 5;
+  reviewComment = '';
+  reviewTagsSelected: string[] = [];
+  reviewTagsList = [
+    'Thanh toán nhanh',
+    'Thân thiện',
+    'Hỗ trợ tốt',
+    'Mô tả đúng việc',
+    'Đúng giờ',
+    'Chuyên nghiệp',
+    'Địa điểm dễ tìm'
+  ];
   
   withdrawForm = {
     amount: '' as any,
@@ -1417,6 +1706,90 @@ export class ProfileComponent implements OnInit {
     });
   }
 
+  openCheckInModal(job: Job) {
+    this.selectedJobForOtp.set(job);
+    this.otpInput = '';
+    this.showCheckInModal.set(true);
+  }
+
+  openCheckOutModal(job: Job) {
+    this.selectedJobForOtp.set(job);
+    this.otpInput = '';
+    this.showCheckOutModal.set(true);
+  }
+
+  submitCheckIn() {
+    const job = this.selectedJobForOtp();
+    if (!job || !this.otpInput) return;
+    this.jobService.studentCheckIn(job.id, this.otpInput).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.showCheckInModal.set(false);
+          this.jobService.fetchJobs();
+          this.refreshStudentApplications();
+          this.auth.fetchProfile().subscribe();
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối máy chủ.')
+    });
+  }
+
+  submitCheckOut() {
+    const job = this.selectedJobForOtp();
+    if (!job || !this.otpInput) return;
+    this.jobService.studentCheckOut(job.id, this.otpInput).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.showCheckOutModal.set(false);
+          this.jobService.fetchJobs();
+          this.refreshStudentApplications();
+          this.auth.fetchProfile().subscribe();
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối máy chủ.')
+    });
+  }
+
+  openReviewModal(job: Job) {
+    this.selectedJobForReview.set(job);
+    this.reviewRating = 5;
+    this.reviewComment = '';
+    this.reviewTagsSelected = [];
+    this.showReviewModal.set(true);
+  }
+
+  toggleReviewTag(tag: string) {
+    if (this.reviewTagsSelected.includes(tag)) {
+      this.reviewTagsSelected = this.reviewTagsSelected.filter(t => t !== tag);
+    } else {
+      this.reviewTagsSelected = [...this.reviewTagsSelected, tag];
+    }
+  }
+
+  submitReview() {
+    const job = this.selectedJobForReview();
+    if (!job) return;
+    this.jobService.submitReview(job.id, 'student', this.reviewRating, this.reviewTagsSelected, this.reviewComment).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.showReviewModal.set(false);
+          this.jobService.fetchJobs();
+          this.refreshStudentApplications();
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi gửi đánh giá.')
+    });
+  }
+
   submitEvidence(jobId: number) {
     const text = this.studentEvidenceTexts[jobId] || '';
     const url = this.studentEvidenceUrls[jobId] || '';
@@ -1553,24 +1926,126 @@ export class ProfileComponent implements OnInit {
     reader.readAsDataURL(file);
   }
 
+  // Webcam eKYC properties
+  selfiePreview = signal<string>('');
+  selfieFile: File | null = null;
+  isCameraActive = signal(false);
+  cameraErrorMessage = signal<string>('');
+  private webMediaStream: MediaStream | null = null;
+  ekycErrorMessage = signal<string>('');
+  showEkycErrorModal = signal(false);
+
+  async startCamera() {
+    this.cameraErrorMessage.set('');
+    this.isCameraActive.set(true);
+    try {
+      const constraints = {
+        video: { width: 640, height: 480, facingMode: 'user' }
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      this.webMediaStream = stream;
+      
+      setTimeout(() => {
+        const video = document.getElementById('webcamVideo') as HTMLVideoElement;
+        if (video) {
+          video.srcObject = stream;
+          video.play().catch(err => console.error("Error playing video stream:", err));
+        }
+      }, 100);
+    } catch (err: any) {
+      console.error('Error accessing camera:', err);
+      this.isCameraActive.set(false);
+      this.cameraErrorMessage.set(
+        'Không tìm thấy camera hoặc quyền truy cập camera bị chặn. Vui lòng cấp quyền bật camera để chụp ảnh chân dung.'
+      );
+    }
+  }
+
+  stopCamera() {
+    if (this.webMediaStream) {
+      this.webMediaStream.getTracks().forEach(track => track.stop());
+      this.webMediaStream = null;
+    }
+    this.isCameraActive.set(false);
+  }
+
+  captureSelfie() {
+    const video = document.getElementById('webcamVideo') as HTMLVideoElement;
+    if (!video) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      this.selfiePreview.set(dataUrl);
+
+      const blob = this.dataURLtoBlob(dataUrl);
+      this.selfieFile = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+      
+      this.stopCamera();
+    }
+  }
+
+  retakeSelfie() {
+    this.selfiePreview.set('');
+    this.selfieFile = null;
+    this.startCamera();
+  }
+
+  private dataURLtoBlob(dataurl: string): Blob {
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  }
+
+  ngOnDestroy() {
+    this.stopCamera();
+  }
+
   onSubmitEkyc() {
     if (!this.ekycFrontFile || !this.ekycBackFile) {
       this.toast.warning('Vui lòng cung cấp đủ 2 mặt CCCD.');
       return;
     }
+    if (!this.selfieFile) {
+      this.toast.warning('Vui lòng chụp ảnh chân dung Selfie để đối chiếu.');
+      return;
+    }
+    
     this.ekycSubmitting.set(true);
-    this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile).subscribe({
+    this.ekycErrorMessage.set('');
+    this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile, this.selfieFile).subscribe({
       next: (res) => {
          this.ekycSubmitting.set(false);
          if (res.success) {
            this.toast.success(res.message);
+           this.selfiePreview.set('');
+           this.selfieFile = null;
+           this.ekycFrontPreview.set('');
+           this.ekycBackPreview.set('');
+           this.ekycFrontFile = null;
+           this.ekycBackFile = null;
+           this.stopCamera();
          } else {
-           this.toast.error(res.message);
+           this.ekycErrorMessage.set(res.message);
+           this.showEkycErrorModal.set(true);
          }
       },
-      error: () => {
+      error: (err) => {
          this.ekycSubmitting.set(false);
-         this.toast.error('Gửi xác thực thất bại do lỗi máy chủ.');
+         const msg = err.error?.message || 'Gửi xác thực thất bại do lỗi máy chủ.';
+         this.ekycErrorMessage.set(msg);
+         this.showEkycErrorModal.set(true);
       }
     });
   }

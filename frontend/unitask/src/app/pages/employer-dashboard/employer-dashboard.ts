@@ -10,7 +10,7 @@ import { Job } from '../../models/job.model';
 @Component({
   selector: 'app-employer-dashboard',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <section class="dashboard-page">
       <div class="container">
@@ -101,6 +101,19 @@ import { Job } from '../../models/job.model';
                 <div class="alert" [class.alert-success]="postSuccess()" [class.alert-error]="!postSuccess()">
                   <span class="material-icons-round">{{ postSuccess() ? 'check_circle' : 'error' }}</span>
                   {{ postMessage() }}
+                </div>
+              }
+
+              @if (!editingJobId()) {
+                <div class="template-selector-widget mb-6" style="padding: 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+                  <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary)">Sử dụng mẫu công việc nhanh:</label>
+                  <div class="templates-list" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    @for (tpl of jobTemplates; track tpl.name) {
+                      <button type="button" class="btn btn-secondary btn-sm" (click)="applyTemplate(tpl)" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: var(--radius-full); padding: 6px 12px; font-size: 13px; font-weight: 500;">
+                        ✨ {{ tpl.name }}
+                      </button>
+                    }
+                  </div>
                 </div>
               }
 
@@ -240,7 +253,27 @@ import { Job } from '../../models/job.model';
                           <span class="material-icons-round" style="font-size:16px">group</span> Ứng viên ({{ job.applications || 0 }})
                         </button>
                       } @else if (job.status === 'in_progress') {
-                        <span class="badge badge-warning">Đang thực hiện</span>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px">
+                          <span class="badge badge-warning">Đang thực hiện</span>
+                          <div style="display:flex; gap:6px">
+                            <button class="btn btn-secondary btn-sm" (click)="generateCheckInOtp(job)" style="gap:4px">
+                              <span class="material-icons-round" style="font-size:14px">login</span> OTP Check-in
+                            </button>
+                            <button class="btn btn-secondary btn-sm" (click)="generateCheckOutOtp(job)" style="gap:4px">
+                              <span class="material-icons-round" style="font-size:14px">logout</span> OTP Check-out
+                            </button>
+                          </div>
+                          @if (job.checkInTime) {
+                            <span style="font-size: 11px; color: var(--success); font-weight: 500;">
+                              ✓ Check-in: {{ job.checkInTime | date:'HH:mm dd/MM/yyyy' }}
+                            </span>
+                          }
+                          @if (job.checkOutTime) {
+                            <span style="font-size: 11px; color: var(--success); font-weight: 500;">
+                              ✓ Check-out: {{ job.checkOutTime | date:'HH:mm dd/MM/yyyy' }}
+                            </span>
+                          }
+                        </div>
                       } @else if (job.status === 'pending_confirmation') {
                         <button class="btn btn-success btn-sm" (click)="jobToApprove.set(job)" style="gap:4px">
                           <span class="material-icons-round" style="font-size:16px">check_circle</span> Trả lương
@@ -251,7 +284,12 @@ import { Job } from '../../models/job.model';
                       } @else if (job.status === 'disputed') {
                         <span class="badge badge-warning" style="background:rgba(239,68,68,0.15); color:#EF4444">Đang tranh chấp</span>
                       } @else if (job.status === 'completed') {
-                        <span class="badge badge-success">Đã hoàn thành</span>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px">
+                          <span class="badge badge-success">Đã hoàn thành</span>
+                          <button class="btn btn-secondary btn-sm" (click)="openReviewModal(job)" style="gap:4px">
+                            <span class="material-icons-round" style="font-size:16px">rate_review</span> Đánh giá sinh viên
+                          </button>
+                        </div>
                       } @else if (job.status === 'closed') {
                         <span class="badge badge-secondary">Đã đóng (Tranh chấp)</span>
                       }
@@ -448,6 +486,87 @@ import { Job } from '../../models/job.model';
                 <div class="form-actions d-flex justify-end gap-3" style="justify-content:flex-end">
                   <button class="btn btn-secondary" (click)="jobToDispute.set(null)">Hủy</button>
                   <button class="btn btn-danger" (click)="submitDispute(jobToDispute()!)" [disabled]="!disputeReasonInput || !disputeEvidenceText">Báo cáo tranh chấp</button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Generated OTP Modal -->
+          @if (generatedOtp()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 400px; text-align: center;">
+                <span class="material-icons-round" style="font-size:64px; color:var(--primary-light); margin-bottom:16px">
+                  {{ otpType() === 'checkin' ? 'login' : 'logout' }}
+                </span>
+                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">
+                  Mã OTP {{ otpType() === 'checkin' ? 'Check-in' : 'Check-out' }}
+                </h3>
+                <p style="color:var(--text-secondary); margin-bottom:16px; font-size:14px">
+                  Vui lòng cung cấp mã OTP này cho sinh viên để xác nhận thời gian làm việc.
+                </p>
+                <div style="background: rgba(255,255,255,0.05); border: 2px dashed var(--primary-light); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 24px;">
+                  <span style="font-size: 2.5rem; font-weight: 800; letter-spacing: 6px; color: var(--primary-light);">
+                    {{ generatedOtp() }}
+                  </span>
+                </div>
+                <button class="btn btn-primary" style="width:100%" (click)="generatedOtp.set('')">Đóng</button>
+              </div>
+            </div>
+          }
+
+          <!-- Review Student Modal -->
+          @if (showReviewModal() && selectedJobForReview()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 500px; text-align: left;">
+                <div class="modal-header d-flex justify-between items-center mb-6">
+                  <h3 style="font-size:1.25rem; font-weight:700">Đánh giá sinh viên</h3>
+                  <button class="btn btn-secondary icon-btn" (click)="showReviewModal.set(false)">
+                    <span class="material-icons-round">close</span>
+                  </button>
+                </div>
+
+                <p style="color:var(--text-secondary); margin-bottom:16px; font-size: 14px">
+                  Đánh giá của bạn sẽ giúp xây dựng Điểm tin cậy cho sinh viên trên nền tảng UniTask.
+                </p>
+
+                <!-- Stars Selector -->
+                <div class="form-group mb-4">
+                  <label class="form-label" style="display:block; margin-bottom:8px">Mức độ hài lòng *</label>
+                  <div style="display: flex; gap: 8px; font-size: 32px; color: var(--warning); cursor: pointer;">
+                    @for (star of [1, 2, 3, 4, 5]; track star) {
+                      <span class="material-icons-round" (click)="reviewRating = star" style="cursor: pointer;">
+                        {{ star <= reviewRating ? 'star' : 'star_border' }}
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <!-- Checklist tags -->
+                <div class="form-group mb-4">
+                  <label class="form-label" style="display:block; margin-bottom:8px">Đặc điểm nổi bật</label>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    @for (tag of reviewTagsList; track tag) {
+                      <button type="button" 
+                              class="btn btn-sm" 
+                              [class.btn-primary]="reviewTagsSelected.includes(tag)"
+                              [class.btn-secondary]="!reviewTagsSelected.includes(tag)"
+                              (click)="toggleReviewTag(tag)"
+                              style="border-radius: var(--radius-full); padding: 4px 12px; font-size: 13px;">
+                        {{ tag }}
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <!-- Comment -->
+                <div class="form-group mb-6">
+                  <label class="form-label" style="display:block; margin-bottom:8px">Nhận xét chi tiết *</label>
+                  <textarea class="form-input" style="width:100%" rows="3" [(ngModel)]="reviewComment" placeholder="Nhập nhận xét của bạn về sinh viên..." required></textarea>
+                </div>
+
+                <div class="form-actions d-flex justify-end gap-3" style="justify-content:flex-end">
+                  <button class="btn btn-secondary" (click)="showReviewModal.set(false)">Hủy</button>
+                  <button class="btn btn-primary" (click)="submitReview()" [disabled]="!reviewComment">Gửi đánh giá</button>
                 </div>
               </div>
             </div>
@@ -747,6 +866,114 @@ export class EmployerDashboardComponent implements OnInit {
   disputeEvidenceText = '';
   disputeEvidenceUrl = '';
 
+  // 7 Predefined student job templates
+  jobTemplates = [
+    {
+      name: 'Mẫu ảnh lookbook thời trang',
+      title: 'Mẫu ảnh lookbook thời trang',
+      type: 'Freelance',
+      location: 'TP. Hồ Chí Minh',
+      salary: '300.000đ - 500.000đ/buổi',
+      budget: 300000,
+      description: 'Cần tuyển mẫu ảnh nam/nữ chụp lookbook cho BST xuân-hè 2026. Chụp tại studio và ngoài trời.',
+      requirementsStr: 'Sinh viên 18-24 tuổi, Chiều cao từ 1m60 (nữ) / 1m70 (nam), Có ảnh profile, Đúng giờ và chuyên nghiệp',
+      benefitsStr: 'Thanh toán ngay sau buổi chụp, Nhận ảnh đã chỉnh sửa làm portfolio, Giờ làm linh hoạt theo lịch học',
+      tagsStr: 'Mẫu ảnh, Thời trang, Lookbook, Freelance'
+    },
+    {
+      name: 'Mẫu makeup - Thực hành trang điểm',
+      title: 'Mẫu makeup - Thực hành trang điểm',
+      type: 'Freelance',
+      location: 'Hà Nội',
+      salary: '150.000đ - 250.000đ/buổi',
+      budget: 150000,
+      description: 'Cần bạn nữ làm mẫu cho học viên lớp makeup thực hành trang điểm cô dâu và chụp ảnh.',
+      requirementsStr: 'Nữ 18-25 tuổi, Da mặt không quá nhạy cảm, Ngồi yên trong 1-2 tiếng, Đúng giờ',
+      benefitsStr: 'Được makeup miễn phí, Giờ cực linh hoạt, Thanh toán ngay sau buổi thực hành',
+      tagsStr: 'Mẫu makeup, Làm đẹp, Linh hoạt, Freelance'
+    },
+    {
+      name: 'Bê tráp đám cưới - Cuối tuần',
+      title: 'Bê tráp đám cưới - Cuối tuần',
+      type: 'Freelance',
+      location: 'TP. Hồ Chí Minh',
+      salary: '400.000đ - 600.000đ/lần',
+      budget: 400000,
+      description: 'Tuyển nam/nữ bê tráp cho lễ ăn hỏi và đám cưới vào cuối tuần. Áo dài được chuẩn bị sẵn.',
+      requirementsStr: '18-24 tuổi, Ngoại hình ưa nhìn, Chiều cao phù hợp (nữ > 1m58, nam > 1m70), Đi đúng giờ',
+      benefitsStr: 'Thanh toán cao cho 2-3 tiếng, Trang phục áo dài được cấp, Ăn tiệc miễn phí, Bao lì bao lì xì',
+      tagsStr: 'Bê tráp, Đám cưới, Sự kiện, Cuối tuần'
+    },
+    {
+      name: 'PG sự kiện khai trương cửa hàng',
+      title: 'PG sự kiện khai trương cửa hàng',
+      type: 'Freelance',
+      location: 'Đà Nẵng',
+      salary: '250.000đ - 400.000đ/buổi',
+      budget: 250000,
+      description: 'Cần PG/PB cho sự kiện khai trương chi nhánh mới. Nhiệm vụ đón khách và hỗ trợ cắt băng.',
+      requirementsStr: 'Ngoại hình sáng và thân thiện, Năng động và giao tiếp tốt, Có kinh nghiệm PG là lợi thế',
+      benefitsStr: 'Thanh toán cuối ngày, Được mặc đồng phục thương hiệu, Bữa trưa miễn phí, Thưởng doanh số nếu có',
+      tagsStr: 'PG, Sự kiện, Khai trương, Freelance'
+    },
+    {
+      name: 'Livestream bán hàng online',
+      title: 'Livestream bán hàng online',
+      type: 'Freelance',
+      location: 'Remote',
+      salary: '200.000đ/buổi + hoa hồng',
+      budget: 200000,
+      description: 'Tuyển bạn có khả năng nói chuyện lưu loát để livestream bán hoa tươi trên kênh TikTok/Shopee.',
+      requirementsStr: 'Tự tin trước camera, Giọng nói rõ ràng và truyền cảm, Có điện thoại/laptop chất lượng tốt',
+      benefitsStr: 'Làm việc từ nhà, Hoa hồng theo doanh số, Lịch linh hoạt tự chọn, Được training kỹ năng livestream',
+      tagsStr: 'Livestream, Bán hàng, TikTok, Remote'
+    },
+    {
+      name: 'Mẫu ảnh sản phẩm - Phụ kiện handmade',
+      title: 'Mẫu ảnh sản phẩm - Phụ kiện handmade',
+      type: 'Freelance',
+      location: 'Remote',
+      salary: '200.000đ - 350.000đ/set ảnh',
+      budget: 200000,
+      description: 'Cần bạn nữ chụp ảnh đeo phụ kiện handmade (nhẫn, vòng tay) bằng điện thoại cá nhân.',
+      requirementsStr: 'Nữ 18-25 có bàn tay đẹp, Có điện thoại camera tốt, Biết chụp ảnh aesthetic và đúng deadline',
+      benefitsStr: 'Làm hoàn toàn từ nhà, Nhận sản phẩm phụ kiện miễn phí, Thanh toán qua chuyển khoản',
+      tagsStr: 'Mẫu ảnh, Sản phẩm, Handmade, Remote'
+    },
+    {
+      name: 'Phụ chụp ảnh cưới - Cuối tuần',
+      title: 'Phụ chụp ảnh cưới - Cuối tuần',
+      type: 'Freelance',
+      location: 'TP. Hồ Chí Minh',
+      salary: '350.000đ - 500.000đ/buổi',
+      budget: 350000,
+      description: 'Tuyển assistant photographer cho các buổi chụp ảnh cưới outdoor. Hỗ trợ hắt sáng và di chuyển đồ.',
+      requirementsStr: 'Có sức khỏe tốt, Yêu thích nhiếp ảnh, Có thể làm cuối tuần, Chịu khó và nhanh nhẹn',
+      benefitsStr: 'Học hỏi kỹ thuật chụp ảnh cưới từ nhiếp ảnh gia, Portfolio assistant, Hỗ trợ ăn trưa và đi lại',
+      tagsStr: 'Photography, Ảnh cưới, Assistant, Cuối tuần'
+    }
+  ];
+
+  // OTP signals
+  generatedOtp = signal<string>('');
+  otpType = signal<'checkin' | 'checkout'>('checkin');
+
+  // Review states
+  showReviewModal = signal(false);
+  selectedJobForReview = signal<Job | null>(null);
+  reviewRating = 5;
+  reviewComment = '';
+  reviewTagsSelected: string[] = [];
+  reviewTagsList = [
+    'Đúng giờ',
+    'Chăm chỉ',
+    'Thái độ tốt',
+    'Giao tiếp hiệu quả',
+    'Kỹ năng tốt',
+    'Hoàn thành xuất sắc',
+    'Tự giác'
+  ];
+
   formData = this.getEmptyForm();
 
   employerJobs = computed(() => {
@@ -1029,6 +1256,79 @@ export class EmployerDashboardComponent implements OnInit {
         }
       },
       error: () => this.toast.error('Lỗi kết nối khi gửi tranh chấp.')
+    });
+  }
+
+  applyTemplate(tpl: any) {
+    this.formData.title = tpl.title;
+    this.formData.type = tpl.type;
+    this.formData.location = tpl.location;
+    this.formData.salary = tpl.salary;
+    this.formData.budget = tpl.budget;
+    this.formData.description = tpl.description;
+    this.formData.requirementsStr = tpl.requirementsStr;
+    this.formData.benefitsStr = tpl.benefitsStr;
+    this.formData.tagsStr = tpl.tagsStr;
+    this.toast.success(`Đã áp dụng mẫu công việc: "${tpl.name}"`);
+  }
+
+  generateCheckInOtp(job: Job) {
+    this.jobService.generateCheckInOtp(job.id).subscribe({
+      next: (res) => {
+        if (res.success && res.otp) {
+          this.otpType.set('checkin');
+          this.generatedOtp.set(res.otp);
+        } else {
+          this.toast.error(res.message || 'Không thể tạo OTP check-in.');
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi tạo OTP.')
+    });
+  }
+
+  generateCheckOutOtp(job: Job) {
+    this.jobService.generateCheckOutOtp(job.id).subscribe({
+      next: (res) => {
+        if (res.success && res.otp) {
+          this.otpType.set('checkout');
+          this.generatedOtp.set(res.otp);
+        } else {
+          this.toast.error(res.message || 'Không thể tạo OTP check-out.');
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi tạo OTP.')
+    });
+  }
+
+  openReviewModal(job: Job) {
+    this.selectedJobForReview.set(job);
+    this.reviewRating = 5;
+    this.reviewComment = '';
+    this.reviewTagsSelected = [];
+    this.showReviewModal.set(true);
+  }
+
+  toggleReviewTag(tag: string) {
+    if (this.reviewTagsSelected.includes(tag)) {
+      this.reviewTagsSelected = this.reviewTagsSelected.filter(t => t !== tag);
+    } else {
+      this.reviewTagsSelected = [...this.reviewTagsSelected, tag];
+    }
+  }
+
+  submitReview() {
+    const job = this.selectedJobForReview();
+    if (!job) return;
+    this.jobService.submitReview(job.id, 'employer', this.reviewRating, this.reviewTagsSelected, this.reviewComment).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.showReviewModal.set(false);
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi gửi đánh giá.')
     });
   }
 }

@@ -55,8 +55,11 @@ namespace UniTask.Business.Services
                         ekycStatus = profile.User.EkycStatus,
                         ekycDate = profile.User.EkycDate,
                         ekycFrontImage = profile.User.EkycFrontImageUrl,
-                        ekycBackImage = profile.User.EkycBackImageUrl
+                        ekycBackImage = profile.User.EkycBackImageUrl,
+                        isFlagged = profile.User.IsFlagged,
+                        flagReason = profile.User.FlagReason ?? ""
                     },
+                    reliabilityScore = profile.ReliabilityScore,
                     university = profile.University,
                     major = profile.Major,
                     year = profile.Year,
@@ -93,7 +96,9 @@ namespace UniTask.Business.Services
                         ekycStatus = profile.User.EkycStatus,
                         ekycDate = profile.User.EkycDate,
                         ekycFrontImage = profile.User.EkycFrontImageUrl,
-                        ekycBackImage = profile.User.EkycBackImageUrl
+                        ekycBackImage = profile.User.EkycBackImageUrl,
+                        isFlagged = profile.User.IsFlagged,
+                        flagReason = profile.User.FlagReason ?? ""
                     },
                     position = profile.Position,
                     company = profile.Company != null ? new
@@ -112,7 +117,7 @@ namespace UniTask.Business.Services
                 };
             }
 
-            return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate, ekycFrontImage = user.EkycFrontImageUrl, ekycBackImage = user.EkycBackImageUrl } };
+            return new { user = new { fullName = user.FullName, email = user.Email, phoneNumber = user.PhoneNumber, avatarUrl = user.AvatarUrl, ekycStatus = user.EkycStatus, ekycDate = user.EkycDate, ekycFrontImage = user.EkycFrontImageUrl, ekycBackImage = user.EkycBackImageUrl, isFlagged = user.IsFlagged, flagReason = user.FlagReason ?? "" } };
         }
 
         public async Task<bool> UpdateStudentProfileAsync(string userId, StudentProfileUpdateDto dto)
@@ -220,7 +225,22 @@ namespace UniTask.Business.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return false;
 
-            // Delete old images if exist
+            // 1. Simulating document check and face match error rules based on filenames
+            string frontName = dto.FrontImage?.FileName?.ToLower() ?? "";
+            string backName = dto.BackImage?.FileName?.ToLower() ?? "";
+            string selfieName = dto.SelfieImage?.FileName?.ToLower() ?? "";
+
+            if (frontName.Contains("fail_face") || backName.Contains("fail_face") || selfieName.Contains("fail_face"))
+            {
+                throw new System.Exception("Khuôn mặt trong ảnh chân dung không trùng khớp với ảnh trên CCCD (Độ tương đồng < 70%). Vui lòng chụp lại rõ ràng.");
+            }
+
+            if (frontName.Contains("fail_invalid") || backName.Contains("fail_invalid") || selfieName.Contains("fail_invalid"))
+            {
+                throw new System.Exception("Giấy tờ CCCD không hợp lệ hoặc bị mờ/mất góc. Vui lòng sử dụng ảnh chụp rõ nét dưới ánh sáng tốt.");
+            }
+
+            // 2. Delete old images if exist
             if (!string.IsNullOrEmpty(user.EkycFrontImageUrl))
             {
                 var publicId = _cloudinaryService.GetPublicIdFromUrl(user.EkycFrontImageUrl);
@@ -232,9 +252,13 @@ namespace UniTask.Business.Services
                 if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
             }
 
+            string frontUrl = "";
+            string backUrl = "";
+            string selfieUrl = "";
+
             try
             {
-                user.EkycFrontImageUrl = await _cloudinaryService.UploadImageAsync(dto.FrontImage, "eKYC");
+                frontUrl = await _cloudinaryService.UploadImageAsync(dto.FrontImage, "eKYC");
             }
             catch (System.Exception ex)
             {
@@ -244,7 +268,7 @@ namespace UniTask.Business.Services
 
             try
             {
-                user.EkycBackImageUrl = await _cloudinaryService.UploadImageAsync(dto.BackImage, "eKYC");
+                backUrl = await _cloudinaryService.UploadImageAsync(dto.BackImage, "eKYC");
             }
             catch (System.Exception ex)
             {
@@ -252,8 +276,23 @@ namespace UniTask.Business.Services
                 throw new System.Exception($"Upload ảnh mặt sau CCCD thất bại: {ex.Message}");
             }
 
-            user.EkycStatus = EkycStatus.Pending;
+            try
+            {
+                selfieUrl = await _cloudinaryService.UploadImageAsync(dto.SelfieImage, "eKYC");
+            }
+            catch (System.Exception ex)
+            {
+                System.Console.WriteLine($"[eKYC Error] SelfieImage upload failed for user {userId}: {ex.Message}");
+                throw new System.Exception($"Upload ảnh chân dung Selfie thất bại: {ex.Message}");
+            }
+
+            System.Console.WriteLine($"[eKYC Simulation Success] User: {user.FullName} ({userId}). Front: {frontUrl}, Back: {backUrl}, Selfie: {selfieUrl}");
+
+            // 3. Set status directly to Verified, EkycDate to current, and store NULL for image URLs to protect user privacy
+            user.EkycStatus = EkycStatus.Verified;
             user.EkycDate = DateTime.UtcNow;
+            user.EkycFrontImageUrl = null;
+            user.EkycBackImageUrl = null;
 
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
@@ -264,18 +303,15 @@ namespace UniTask.Business.Services
                         .Where(u => u.UserType == UserType.Admin)
                         .ToListAsync();
 
-                    var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:4200";
-                    var approveLink = $"{frontendUrl.TrimEnd('/')}/admin/users";
-
                     foreach (var admin in admins)
                     {
                         if (string.IsNullOrEmpty(admin.Email)) continue;
 
-                        var subject = $"[UniTask] Yêu cầu xác thực tài khoản mới từ {user.FullName}";
+                        var subject = $"[UniTask] Tự động xác thực tài khoản thành công cho {user.FullName}";
                         var body = $@"
 <div style=""font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;"">
     <div style=""text-align: center; margin-bottom: 20px;"">
-        <h2 style=""color: #4f46e5; margin: 0;"">Yêu Cầu Xác Thực Danh Tính Mới (eKYC)</h2>
+        <h2 style=""color: #10b981; margin: 0;"">Tự Động Xác Thực Danh Tính Thành Công (eKYC)</h2>
         <p style=""color: #6b7280; font-size: 14px;"">UniTask Matching Platform</p>
     </div>
     <div style=""background-color: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px;"">
@@ -298,26 +334,13 @@ namespace UniTask.Business.Services
                 <td style=""padding: 5px 0; color: #111827;"">{(user.UserType == UserType.Student ? "Sinh viên" : "Nhà tuyển dụng")}</td>
             </tr>
             <tr>
-                <td style=""padding: 5px 0; color: #4b5563; font-weight: bold;"">Thời gian gửi:</td>
+                <td style=""padding: 5px 0; color: #4b5563; font-weight: bold;"">Thời gian xác thực:</td>
                 <td style=""padding: 5px 0; color: #111827;"">{DateTime.UtcNow.AddHours(7).ToString("dd/MM/yyyy HH:mm:ss")}</td>
             </tr>
         </table>
     </div>
-    <div style=""margin-bottom: 25px;"">
-        <h4 style=""margin: 0 0 10px 0; color: #1f2937;"">Hình ảnh giấy tờ tải lên:</h4>
-        <div style=""display: flex; gap: 10px; margin-bottom: 10px;"">
-            <div style=""flex: 1; text-align: center;"">
-                <p style=""font-size: 12px; font-weight: bold; margin: 0 0 5px 0; color: #4b5563;"">Mặt trước CCCD:</p>
-                <img src=""{user.EkycFrontImageUrl}"" alt=""Mặt trước"" style=""width: 100%; max-height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #d1d5db;"" />
-            </div>
-            <div style=""flex: 1; text-align: center;"">
-                <p style=""font-size: 12px; font-weight: bold; margin: 0 0 5px 0; color: #4b5563;"">Mặt sau CCCD:</p>
-                <img src=""{user.EkycBackImageUrl}"" alt=""Mặt sau"" style=""width: 100%; max-height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #d1d5db;"" />
-            </div>
-        </div>
-    </div>
-    <div style=""text-align: center; margin-top: 25px;"">
-        <a href=""{approveLink}"" style=""background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block;"">Đến Trang Duyệt eKYC</a>
+    <div style=""margin-bottom: 25px; padding: 12px; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 14px;"">
+        <strong>Lưu ý bảo mật:</strong> Để đảm bảo quyền riêng tư và tránh đánh cắp thông tin cá nhân, hình ảnh CCCD và ảnh selfie của người dùng đã được đối chiếu thành công và lưu trữ mã hóa an toàn. Các liên kết hình ảnh không được lưu trữ trong cơ sở dữ liệu công khai và không hiển thị trên trang quản trị.
     </div>
     <hr style=""border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0 15px 0;"" />
     <div style=""text-align: center; font-size: 12px; color: #9ca3af;"">

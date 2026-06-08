@@ -13,5 +13,18 @@ namespace UniTask.Business.Interfaces
         Task<bool> ApproveJobAsync(int id, string employerId);
         Task<bool> RejectCompletionAsync(int id, string employerId, JobDisputeCreateDto dto);
         Task<bool> SubmitStudentEvidenceAsync(int id, string studentId, StudentEvidenceSubmitDto dto);
+
+        // Check-in / Check-out OTP
+        Task<string?> GenerateCheckInOtpAsync(int jobId, string employerId);
+        Task<string?> GenerateCheckOutOtpAsync(int jobId, string employerId);
+        Task<bool> StudentCheckInAsync(int jobId, string studentId, string otp);
+        Task<bool> StudentCheckOutAsync(int jobId, string studentId, string otp);
+
+        // Cancellation
+        Task<bool> CancelJobBookingAsync(int jobId, string userId);
+
+        // Two-way rating
+        Task<bool> SubmitEmployerReviewAsync(int jobId, string employerId, int rating, string tagsJson, string? comment);
+        Task<bool> SubmitStudentReviewAsync(int jobId, string studentId, int rating, string tagsJson, string? comment);
     }
 }

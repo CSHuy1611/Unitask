@@ -100,7 +100,7 @@ namespace UniTask.Business.Services
                 WalletId = wallet.Id,
                 Amount = -dto.Amount, // Negative for withdrawal
                 Type = TransactionType.Withdrawal,
-                Description = $"Rút tiền về NH {dto.Bank} - STK: {dto.AccountNumber} ({dto.AccountName})",
+                Description = $"[Pending] Rút tiền về NH {dto.Bank} - STK: {dto.AccountNumber} ({dto.AccountName})",
                 CreatedAt = DateTime.UtcNow
             };
 

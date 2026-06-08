@@ -100,6 +100,14 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "Withdrawal marked as completed successfully." });
         }
 
+        [HttpPost("withdrawals/batch-process")]
+        public async Task<IActionResult> BatchProcessWithdrawals()
+        {
+            var result = await _adminService.BatchProcessWithdrawalsAsync();
+            if (!result) return BadRequest(new { message = "Failed to batch process withdrawals." });
+            return Ok(new { message = "Withdrawals batch processed successfully." });
+        }
+
         // ===== DISPUTE MANAGEMENT =====
         [HttpGet("disputes")]
         public async Task<IActionResult> GetDisputes([FromQuery] int page = 1, [FromQuery] int pageSize = 10)

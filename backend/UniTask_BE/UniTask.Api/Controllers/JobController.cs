@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 using UniTask.Business.DTOs.Job;
 using UniTask.Business.Interfaces;
 
@@ -137,5 +138,117 @@ namespace UniTask.Api.Controllers
 
             return Ok(new { message = "Evidence submitted successfully." });
         }
+
+        [HttpPost("{id}/checkin-otp")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> GenerateCheckInOtp(int id)
+        {
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            var otp = await _jobService.GenerateCheckInOtpAsync(id, employerId);
+            if (otp == null) return BadRequest(new { message = "Không thể tạo OTP. Công việc phải đang thực hiện." });
+
+            return Ok(new { otp });
+        }
+
+        [HttpPost("{id}/checkout-otp")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> GenerateCheckOutOtp(int id)
+        {
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            var otp = await _jobService.GenerateCheckOutOtpAsync(id, employerId);
+            if (otp == null) return BadRequest(new { message = "Không thể tạo OTP. Công việc phải đang thực hiện." });
+
+            return Ok(new { otp });
+        }
+
+        [HttpPost("{id}/checkin")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> StudentCheckIn(int id, [FromBody] OtpDto dto)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (studentId == null) return Unauthorized();
+
+            var result = await _jobService.StudentCheckInAsync(id, studentId, dto.Otp);
+            if (!result) return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+
+            return Ok(new { message = "Check-in thành công." });
+        }
+
+        [HttpPost("{id}/checkout")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> StudentCheckOut(int id, [FromBody] OtpDto dto)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (studentId == null) return Unauthorized();
+
+            var result = await _jobService.StudentCheckOutAsync(id, studentId, dto.Otp);
+            if (!result) return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+
+            return Ok(new { message = "Check-out thành công. Tiền công đã chuyển vào trạng thái giữ (Escrow)." });
+        }
+
+        [HttpPost("{id}/cancel-booking")]
+        [Authorize]
+        public async Task<IActionResult> CancelBooking(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var result = await _jobService.CancelJobBookingAsync(id, userId);
+            if (!result) return BadRequest(new { message = "Không thể hủy lịch nhận việc." });
+
+            return Ok(new { message = "Hủy lịch hẹn thành công." });
+        }
+
+        [HttpPost("{id}/review/employer")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> SubmitEmployerReview(int id, [FromBody] ReviewDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            var tagsJson = System.Text.Json.JsonSerializer.Serialize(dto.Tags);
+            var result = await _jobService.SubmitEmployerReviewAsync(id, employerId, dto.Rating, tagsJson, dto.Comment);
+            if (!result) return BadRequest(new { message = "Không thể lưu đánh giá." });
+
+            return Ok(new { message = "Gửi đánh giá thành công." });
+        }
+
+        [HttpPost("{id}/review/student")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> SubmitStudentReview(int id, [FromBody] ReviewDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (studentId == null) return Unauthorized();
+
+            var tagsJson = System.Text.Json.JsonSerializer.Serialize(dto.Tags);
+            var result = await _jobService.SubmitStudentReviewAsync(id, studentId, dto.Rating, tagsJson, dto.Comment);
+            if (!result) return BadRequest(new { message = "Không thể lưu đánh giá." });
+
+            return Ok(new { message = "Gửi đánh giá thành công." });
+        }
+    }
+
+    public class OtpDto
+    {
+        [Required]
+        public string Otp { get; set; } = string.Empty;
+    }
+
+    public class ReviewDto
+    {
+        [Required]
+        [Range(1, 5)]
+        public int Rating { get; set; }
+        public List<string> Tags { get; set; } = new();
+        public string? Comment { get; set; }
     }
 }

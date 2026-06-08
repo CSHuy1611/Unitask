@@ -36,6 +36,9 @@ namespace UniTask.DataAcesss.Entities
 
         public int BlacklistCount { get; set; } = 0;
 
+        public bool IsFlagged { get; set; } = false;
+        public string? FlagReason { get; set; }
+
         // ===== Navigation Properties =====
         public StudentProfile? StudentProfile { get; set; }
         public EmployerProfile? EmployerProfile { get; set; }

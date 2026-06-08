@@ -88,6 +88,24 @@ namespace UniTask.DataAcesss.Entities
         public string? StudentEvidenceUrl { get; set; }
         public DateTime? DisputedDate { get; set; }
 
+        // ===== Check-in / Check-out & Escrow Fields =====
+        public DateTime? CheckInTime { get; set; }
+        public DateTime? CheckOutTime { get; set; }
+        public string? CheckInOtp { get; set; }
+        public DateTime? CheckInOtpExpiredAt { get; set; }
+        public string? CheckOutOtp { get; set; }
+        public DateTime? CheckOutOtpExpiredAt { get; set; }
+        public DateTime? EscrowReleaseDate { get; set; }
+        public int RequiredReliabilityScore { get; set; } = 0;
+
+        // ===== Two-way Rating Fields =====
+        public int? EmployerToStudentRating { get; set; }
+        public string? EmployerToStudentTags { get; set; }
+        public string? EmployerToStudentComment { get; set; }
+        public int? StudentToEmployerRating { get; set; }
+        public string? StudentToEmployerTags { get; set; }
+        public string? StudentToEmployerComment { get; set; }
+
         // ===== Navigation Properties =====
         public ICollection<JobRequirement> Requirements { get; set; } = new List<JobRequirement>();
         public ICollection<JobBenefit> Benefits { get; set; } = new List<JobBenefit>();

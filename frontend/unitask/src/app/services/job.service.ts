@@ -106,7 +106,9 @@ export class JobService {
       employerEvidenceUrl: dto.employerEvidenceUrl,
       studentEvidenceText: dto.studentEvidenceText,
       studentEvidenceUrl: dto.studentEvidenceUrl,
-      disputedDate: dto.disputedDate ? dto.disputedDate.split('T')[0] : undefined
+      disputedDate: dto.disputedDate ? dto.disputedDate.split('T')[0] : undefined,
+      checkInTime: dto.checkInTime,
+      checkOutTime: dto.checkOutTime
     };
   }
 
@@ -264,6 +266,45 @@ export class JobService {
       tap(() => this.fetchJobs()),
       map(() => ({ success: true, message: 'Đã giải quyết tranh chấp thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Lỗi giải quyết tranh chấp.' }))
+    );
+  }
+
+  studentCheckIn(jobId: number, otp: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${jobId}/checkin`, { otp }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Check-in thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Check-in thất bại.' }))
+    );
+  }
+
+  studentCheckOut(jobId: number, otp: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${jobId}/checkout`, { otp }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Check-out thành công. Tiền công đã chuyển vào trạng thái giữ (Escrow).' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Check-out thất bại.' }))
+    );
+  }
+
+  generateCheckInOtp(jobId: number): Observable<{ success: boolean; otp?: string; message?: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${jobId}/checkin-otp`, {}).pipe(
+      map(res => ({ success: true, otp: res.otp })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể tạo OTP check-in.' }))
+    );
+  }
+
+  generateCheckOutOtp(jobId: number): Observable<{ success: boolean; otp?: string; message?: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${jobId}/checkout-otp`, {}).pipe(
+      map(res => ({ success: true, otp: res.otp })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể tạo OTP check-out.' }))
+    );
+  }
+
+  submitReview(jobId: number, userRole: 'student' | 'employer', rating: number, tags: string[], comment: string): Observable<{ success: boolean; message: string }> {
+    const endpoint = userRole === 'student' ? 'student' : 'employer';
+    return this.http.post<any>(`${API_BASE_URL}/job/${jobId}/review/${endpoint}`, { rating, tags, comment }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đăng đánh giá thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể đăng đánh giá.' }))
     );
   }
 }

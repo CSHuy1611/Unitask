@@ -95,6 +95,10 @@ builder.Services.AddScoped<UniTask.Business.Interfaces.IAdminService, UniTask.Bu
 builder.Services.AddScoped<UniTask.Business.Interfaces.IPaymentService, UniTask.Business.Services.PaymentService>();
 builder.Services.AddScoped<UniTask.Business.Interfaces.IEmailService, UniTask.Business.Services.EmailService>();
 
+// ===== Hosted Services (Background Workers) =====
+builder.Services.AddHostedService<UniTask.Business.Services.WithdrawalBatchWorker>();
+builder.Services.AddHostedService<UniTask.Business.Services.EscrowAutoReleaseWorker>();
+
 // ===== JWT Authentication =====
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]!);

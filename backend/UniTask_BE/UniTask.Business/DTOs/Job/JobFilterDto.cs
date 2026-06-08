@@ -8,6 +8,7 @@ namespace UniTask.Business.DTOs.Job
         public bool? IsRemote { get; set; }
         public bool? IsUrgent { get; set; }
         public List<string>? Tags { get; set; }
+        public string? StudentId { get; set; }
         
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;

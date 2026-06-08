@@ -74,7 +74,6 @@ import { API_BASE_URL } from '../../config/api.config';
                     <th>Liên hệ</th>
                     <th>Trạng thái eKYC</th>
                     <th>Ngày tham gia</th>
-                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -84,7 +83,12 @@ import { API_BASE_URL } from '../../config/api.config';
                         <div class="user-info">
                           <div class="avatar-sm">{{ user.avatar }}</div>
                           <div>
-                            <strong>{{ user.fullName }}</strong>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                              <strong style="color: var(--text-primary);">{{ user.fullName }}</strong>
+                              @if (user.isFlagged) {
+                                <span class="material-icons-round" style="color: #EF4444; font-size: 18px; cursor: help;" [title]="'Tài khoản bị cảnh cáo: ' + user.flagReason">flag</span>
+                              }
+                            </div>
                             <span class="text-caption">{{ user.role === 'student' ? user.university : user.companyName }}</span>
                           </div>
                         </div>
@@ -93,6 +97,12 @@ import { API_BASE_URL } from '../../config/api.config';
                         <span class="role-badge" [class]="user.role">
                           {{ user.role === 'student' ? 'Sinh viên' : 'Nhà tuyển dụng' }}
                         </span>
+                        @if (user.role === 'student') {
+                          <div class="text-caption" style="margin-top: 4px; display: flex; align-items: center; gap: 2px;">
+                            <span class="material-icons-round" style="font-size: 14px; color: var(--warning)">verified_user</span>
+                            Điểm: <strong>{{ user.reliabilityScore ?? 100 }}</strong>
+                          </div>
+                        }
                       </td>
                       <td>
                         <div class="contact-info">
@@ -114,17 +124,6 @@ import { API_BASE_URL } from '../../config/api.config';
                         </span>
                       </td>
                       <td><span class="text-muted">{{ user.createdAt }}</span></td>
-                      <td>
-                        @if (user.ekycStatus === 'pending') {
-                          <div class="action-buttons">
-                            <button class="btn btn-primary btn-sm" (click)="openReviewModal(user)">
-                              <span class="material-icons-round" style="font-size:16px">badge</span> Xem CCCD
-                            </button>
-                          </div>
-                        } @else {
-                          <span class="text-muted">-</span>
-                        }
-                      </td>
                     </tr>
                   } @empty {
                     <tr>
@@ -149,95 +148,6 @@ import { API_BASE_URL } from '../../config/api.config';
               </div>
             }
           </div>
-
-          <!-- eKYC Review Modal -->
-          @if (reviewingUser()) {
-            <div class="modal-overlay animate-fade-in">
-              <div class="modal-content glass-card">
-                <div class="modal-header">
-                  <h3>Xét duyệt eKYC: {{ reviewingUser()?.fullName }}</h3>
-                  <button class="close-btn" (click)="reviewingUser.set(null)">
-                    <span class="material-icons-round">close</span>
-                  </button>
-                </div>
-
-                <div class="review-user-info">
-                  <div class="review-info-row">
-                    <span class="material-icons-round">email</span>
-                    <span>{{ reviewingUser()?.email }}</span>
-                  </div>
-                  <div class="review-info-row">
-                    <span class="material-icons-round">phone</span>
-                    <span>{{ reviewingUser()?.phone }}</span>
-                  </div>
-                  <div class="review-info-row">
-                    <span class="material-icons-round">person</span>
-                    <span>{{ reviewingUser()?.role === 'student' ? 'Sinh viên - ' + reviewingUser()?.university : 'Nhà tuyển dụng - ' + reviewingUser()?.companyName }}</span>
-                  </div>
-                </div>
-
-                <div class="cccd-images">
-                  <div class="cccd-card">
-                    <h4>Mặt trước CCCD</h4>
-                    @if (reviewingUser()?.ekycFrontImage && !isPlaceholderImage(reviewingUser()?.ekycFrontImage)) {
-                      <img [src]="reviewingUser()?.ekycFrontImage" alt="CCCD Mặt trước" class="cccd-img" 
-                           (click)="zoomImage(reviewingUser()!.ekycFrontImage!)" 
-                           (error)="onImageError($event)" />
-                    } @else if (reviewingUser()?.ekycFrontImage && isPlaceholderImage(reviewingUser()?.ekycFrontImage)) {
-                      <div class="no-image placeholder-warning">
-                        <span class="material-icons-round">warning</span>
-                        <span>Ảnh CCCD bị lỗi upload</span>
-                        <span class="text-caption">Sinh viên cần gửi lại</span>
-                      </div>
-                    } @else {
-                      <div class="no-image">
-                        <span class="material-icons-round">image_not_supported</span>
-                        <span>Chưa có ảnh</span>
-                      </div>
-                    }
-                  </div>
-                  <div class="cccd-card">
-                    <h4>Mặt sau CCCD</h4>
-                    @if (reviewingUser()?.ekycBackImage && !isPlaceholderImage(reviewingUser()?.ekycBackImage)) {
-                      <img [src]="reviewingUser()?.ekycBackImage" alt="CCCD Mặt sau" class="cccd-img" 
-                           (click)="zoomImage(reviewingUser()!.ekycBackImage!)" 
-                           (error)="onImageError($event)" />
-                    } @else if (reviewingUser()?.ekycBackImage && isPlaceholderImage(reviewingUser()?.ekycBackImage)) {
-                      <div class="no-image placeholder-warning">
-                        <span class="material-icons-round">warning</span>
-                        <span>Ảnh CCCD bị lỗi upload</span>
-                        <span class="text-caption">Sinh viên cần gửi lại</span>
-                      </div>
-                    } @else {
-                      <div class="no-image">
-                        <span class="material-icons-round">image_not_supported</span>
-                        <span>Chưa có ảnh</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-
-                <div class="review-actions">
-                  <button class="btn btn-danger btn-lg" (click)="onRejectEkyc()">
-                    <span class="material-icons-round">close</span> Từ chối
-                  </button>
-                  <button class="btn btn-success btn-lg" (click)="onApproveEkyc()">
-                    <span class="material-icons-round">check</span> Chấp nhận xác thực
-                  </button>
-                </div>
-              </div>
-            </div>
-          }
-
-          <!-- Image Zoom Modal -->
-          @if (zoomedImage()) {
-            <div class="zoom-overlay animate-fade-in" (click)="zoomedImage.set('')">
-              <img [src]="zoomedImage()" alt="Phóng to ảnh" class="zoom-img" />
-              <button class="zoom-close-btn">
-                <span class="material-icons-round">close</span> Đóng
-              </button>
-            </div>
-          }
         }
       </div>
     </section>
@@ -485,27 +395,6 @@ import { API_BASE_URL } from '../../config/api.config';
       color: var(--text-muted);
     }
 
-    .action-buttons {
-      display: flex;
-      gap: var(--space-2);
-    }
-
-    .icon-btn {
-      padding: 6px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .icon-btn .material-icons-round { font-size: 18px; }
-
-    .btn-success { background: var(--success); color: white; border: none; }
-    .btn-success:hover { background: #059669; }
-
-    .btn-danger { background: #EF4444; color: white; border: none; }
-    .btn-danger:hover { background: #DC2626; }
-
     .empty-state {
       text-align: center;
       padding: var(--space-10);
@@ -525,123 +414,6 @@ import { API_BASE_URL } from '../../config/api.config';
       .filter-bar { flex-direction: column; }
       .filter-bar select, .filter-bar .btn { width: 100%; }
     }
-
-    /* Review Modal */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1000; padding: var(--space-4);
-    }
-
-    .modal-content {
-      width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto;
-      padding: var(--space-8);
-    }
-
-    .modal-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: var(--space-6);
-    }
-
-    .modal-header h3 { font-size: var(--font-size-xl); font-weight: 700; }
-
-    .close-btn {
-      background: none; border: none; color: var(--text-muted); cursor: pointer;
-      padding: var(--space-1);
-    }
-    .close-btn:hover { color: var(--text-primary); }
-
-    .review-user-info {
-      display: flex; flex-direction: column; gap: var(--space-2);
-      margin-bottom: var(--space-6);
-      padding: var(--space-4); background: var(--bg-secondary);
-      border-radius: var(--radius-lg); border: 1px solid var(--border-color);
-    }
-
-    .review-info-row {
-      display: flex; align-items: center; gap: var(--space-2);
-      font-size: var(--font-size-sm); color: var(--text-secondary);
-    }
-
-    .review-info-row .material-icons-round { font-size: 18px; color: var(--text-muted); }
-
-    .cccd-images {
-      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);
-      margin-bottom: var(--space-6);
-    }
-
-    .cccd-card {
-      text-align: center;
-    }
-
-    .cccd-card h4 {
-      font-size: var(--font-size-sm); font-weight: 600;
-      margin-bottom: var(--space-3); color: var(--text-secondary);
-    }
-
-    .cccd-img {
-      width: 100%; border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color); cursor: zoom-in;
-      transition: transform 0.2s;
-    }
-
-    .cccd-img:hover { transform: scale(1.02); }
-
-    .no-image {
-      padding: var(--space-8); background: var(--bg-secondary);
-      border: 1px dashed var(--border-color); border-radius: var(--radius-lg);
-      display: flex; flex-direction: column; align-items: center;
-      gap: var(--space-2); color: var(--text-muted); font-size: var(--font-size-xs);
-    }
-
-    .no-image .material-icons-round { font-size: 32px; }
-
-    .placeholder-warning {
-      background: rgba(245, 158, 11, 0.1) !important;
-      border-color: rgba(245, 158, 11, 0.4) !important;
-      border-style: solid !important;
-    }
-    .placeholder-warning .material-icons-round { color: #F59E0B !important; }
-    .placeholder-warning span { color: #F59E0B; }
-    .placeholder-warning .text-caption { color: var(--text-muted); font-size: var(--font-size-xs); }
-
-    .review-actions {
-      display: flex; gap: var(--space-4); justify-content: center;
-    }
-
-    .review-actions .btn { flex: 1; }
-
-    .btn-success { background: var(--success); color: white; border: none; }
-    .btn-success:hover { background: #059669; }
-    .btn-danger { background: #EF4444; color: white; border: none; }
-    .btn-danger:hover { background: #DC2626; }
-
-    /* Zoom Modal */
-    .zoom-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.9); display: flex; align-items: center;
-      justify-content: center; z-index: 1100; cursor: pointer;
-      flex-direction: column; gap: var(--space-4);
-    }
-
-    .zoom-img {
-      max-width: 90vw; max-height: 80vh; border-radius: var(--radius-lg);
-      object-fit: contain;
-    }
-
-    .zoom-close-btn {
-      background: rgba(255,255,255,0.15); color: white; border: none;
-      padding: var(--space-2) var(--space-4); border-radius: var(--radius-lg);
-      font-size: var(--font-size-sm); cursor: pointer; display: flex;
-      align-items: center; gap: var(--space-1);
-    }
-
-    @media (max-width: 600px) {
-      .cccd-images { grid-template-columns: 1fr; }
-      .review-actions { flex-direction: column; }
-      .modal-content { padding: var(--space-5); }
-    }
   `]
 })
 export class AdminUsersComponent {
@@ -652,8 +424,6 @@ export class AdminUsersComponent {
   users = signal<any[]>([]);
   statusFilter = signal<string>('all');
   roleFilter = signal<string>('all');
-  reviewingUser = signal<any | null>(null);
-  zoomedImage = signal<string>('');
 
   currentPage = signal<number>(1);
   pageSize = 10;
@@ -705,57 +475,5 @@ export class AdminUsersComponent {
 
   loadMore() {
     this.loadUsers(this.currentPage() + 1);
-  }
-
-  openReviewModal(user: any) {
-    this.reviewingUser.set(user);
-  }
-
-  isPlaceholderImage(url: string | null | undefined): boolean {
-    if (!url) return false;
-    // Detect known placeholder URLs (Unsplash gradient, etc.)
-    return url.includes('unsplash.com') || url.includes('placeholder') || url.includes('via.placeholder');
-  }
-
-  onImageError(event: Event) {
-    const img = event.target as HTMLImageElement;
-    img.style.display = 'none';
-    // Insert a fallback message after the broken image
-    const fallback = document.createElement('div');
-    fallback.innerHTML = '<span style="color: var(--text-muted); font-size: 14px;">⚠️ Ảnh không thể tải</span>';
-    fallback.style.cssText = 'padding: 32px; text-align: center; background: var(--bg-secondary); border-radius: 12px; border: 1px dashed var(--border-color);';
-    img.parentElement?.appendChild(fallback);
-  }
-
-  zoomImage(src: string) {
-    this.zoomedImage.set(src);
-  }
-
-  onApproveEkyc() {
-    const user = this.reviewingUser();
-    if (user) {
-      this.http.put<any>(`${API_BASE_URL}/admin/ekyc/${user.id}/approve`, {}).subscribe({
-        next: () => {
-          this.toast.success('Đã phê duyệt eKYC thành công!');
-          this.reviewingUser.set(null);
-          this.loadUsers(1);
-        },
-        error: () => this.toast.error('Lỗi khi phê duyệt eKYC.')
-      });
-    }
-  }
-
-  onRejectEkyc() {
-    const user = this.reviewingUser();
-    if (user) {
-      this.http.put<any>(`${API_BASE_URL}/admin/ekyc/${user.id}/reject`, {}).subscribe({
-        next: () => {
-          this.toast.success('Đã từ chối eKYC.');
-          this.reviewingUser.set(null);
-          this.loadUsers(1);
-        },
-        error: () => this.toast.error('Lỗi khi từ chối eKYC.')
-      });
-    }
   }
 }

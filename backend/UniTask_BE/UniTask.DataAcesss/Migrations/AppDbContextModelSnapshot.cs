@@ -228,10 +228,16 @@ namespace UniTask.DataAcesss.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("FlagReason")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsFlagged")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -376,6 +382,24 @@ namespace UniTask.DataAcesss.Migrations
                     b.Property<decimal>("Budget")
                         .HasColumnType("decimal(18,0)");
 
+                    b.Property<string>("CheckInOtp")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CheckInOtpExpiredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CheckInTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CheckOutOtp")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CheckOutOtpExpiredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CheckOutTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("Commission")
                         .HasColumnType("decimal(18,0)");
 
@@ -405,6 +429,18 @@ namespace UniTask.DataAcesss.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("EmployerToStudentComment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("EmployerToStudentRating")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EmployerToStudentTags")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EscrowReleaseDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsRemote")
                         .HasColumnType("bit");
 
@@ -417,6 +453,9 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.Property<DateTime>("PostedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("RequiredReliabilityScore")
+                        .HasColumnType("int");
 
                     b.Property<string>("SalaryText")
                         .HasMaxLength(200)
@@ -432,6 +471,15 @@ namespace UniTask.DataAcesss.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("StudentEvidenceUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StudentToEmployerComment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("StudentToEmployerRating")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StudentToEmployerTags")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
@@ -623,6 +671,9 @@ namespace UniTask.DataAcesss.Migrations
                     b.Property<string>("Major")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ReliabilityScore")
+                        .HasColumnType("int");
 
                     b.Property<string>("Skills")
                         .HasColumnType("nvarchar(max)");

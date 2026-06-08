@@ -46,4 +46,7 @@ export interface User {
   packageExpiry?: string;
   postedJobs?: number[];
   blacklistCount?: number;
+  reliabilityScore?: number;
+  isFlagged?: boolean;
+  flagReason?: string;
 }

@@ -11,11 +11,12 @@ interface Withdrawal {
   createdAt: string;
   userName: string;
   userEmail: string;
-  isCompleted: boolean;
+  isCompleted?: boolean;
   bank: string;
   accountNo: string;
   accountName: string;
   fullDescription: string;
+  status?: 'pending' | 'processing' | 'completed';
 }
 
 @Component({
@@ -87,21 +88,29 @@ interface Withdrawal {
 
           <!-- Main Content -->
           <div class="main-content-section glass-card animate-fade-in-up" style="animation-delay:0.15s">
-            <div class="filter-bar d-flex justify-between items-center mb-6">
-              <div class="tab-filters">
+            <div class="filter-bar d-flex justify-between items-center mb-6" style="flex-wrap: wrap; gap: 12px;">
+              <div class="tab-filters" style="display: flex; flex-wrap: wrap; gap: 4px;">
                 <button class="filter-btn" [class.active]="activeFilter() === 'all'" (click)="activeFilter.set('all')">
                   Tất cả ({{ totalWithdrawalsCount() }})
                 </button>
                 <button class="filter-btn" [class.active]="activeFilter() === 'pending'" (click)="activeFilter.set('pending')">
-                  Chờ chuyển tiền ({{ pendingCount() }})
+                  Chờ gom ({{ pendingCount() }})
+                </button>
+                <button class="filter-btn" [class.active]="activeFilter() === 'processing'" (click)="activeFilter.set('processing')">
+                  Đang xử lý ({{ processingCount() }})
                 </button>
                 <button class="filter-btn" [class.active]="activeFilter() === 'completed'" (click)="activeFilter.set('completed')">
                   Đã giải ngân ({{ completedCount() }})
                 </button>
               </div>
-              <button class="refresh-btn btn btn-secondary btn-sm" (click)="loadWithdrawals(1)">
-                <span class="material-icons-round spinner-icon">sync</span> Làm mới
-              </button>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-primary btn-sm" (click)="batchProcessWithdrawals()" style="background: linear-gradient(135deg, var(--primary-light), var(--primary)); display: flex; align-items: center; gap: 4px;">
+                  <span class="material-icons-round" style="font-size:16px;">rule</span> Gom lệnh rút tiền
+                </button>
+                <button type="button" class="refresh-btn btn btn-secondary btn-sm" (click)="loadWithdrawals(1)">
+                  <span class="material-icons-round spinner-icon">sync</span> Làm mới
+                </button>
+              </div>
             </div>
 
             @if (filteredWithdrawals().length === 0) {
@@ -177,22 +186,28 @@ interface Withdrawal {
 
                         <!-- Trạng thái -->
                         <td>
-                          @if (w.isCompleted) {
+                          @if (w.status === 'completed') {
                             <span class="badge badge-success">Đã giải ngân</span>
+                          } @else if (w.status === 'processing') {
+                            <span class="badge badge-warning" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3)">Gom lệnh (Quét mã)</span>
                           } @else {
-                            <span class="badge badge-warning">Chờ chuyển tiền</span>
+                            <span class="badge badge-secondary" style="background: rgba(107, 114, 128, 0.15); color: #9CA3AF; border: 1px solid rgba(107, 114, 128, 0.3)">Chờ gom lệnh</span>
                           }
                         </td>
 
                         <!-- Thao tác -->
                         <td>
-                          @if (w.isCompleted) {
-                            <button class="btn btn-secondary btn-sm" disabled style="opacity: 0.6; cursor: not-allowed;">
+                          @if (w.status === 'completed') {
+                            <button type="button" class="btn btn-secondary btn-sm" disabled style="opacity: 0.6; cursor: not-allowed;">
                               <span class="material-icons-round">done_all</span> Đã chuyển
                             </button>
+                          } @else if (w.status === 'processing') {
+                            <button type="button" class="btn btn-success btn-sm btn-action" (click)="confirmPayout(w)" style="background: var(--warning)">
+                              <span class="material-icons-round">qr_code_2</span> Quét & Chuyển
+                            </button>
                           } @else {
-                            <button class="btn btn-success btn-sm btn-action" (click)="confirmPayout(w)">
-                              <span class="material-icons-round">send</span> Xác nhận đã chuyển
+                            <button type="button" class="btn btn-secondary btn-sm" disabled style="opacity: 0.6; cursor: not-allowed;">
+                              <span class="material-icons-round">rule</span> Chờ gom lệnh
                             </button>
                           }
                         </td>
@@ -220,8 +235,8 @@ interface Withdrawal {
 
     <!-- Confirm Modal -->
     @if (selectedWithdrawal()) {
-      <div class="modal-overlay animate-fade-in">
-        <div class="modal-content glass-card p-6" style="width: 100%; max-width: 480px; text-align: center;">
+      <div class="modal-overlay animate-fade-in" (click)="selectedWithdrawal.set(null)">
+        <div class="modal-content glass-card p-6" (click)="$event.stopPropagation()" style="width: 100%; max-width: 480px; text-align: center;">
           <span class="material-icons-round text-green" style="font-size:64px; margin-bottom:16px">account_balance</span>
           <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận chuyển tiền thành công</h3>
           
@@ -232,6 +247,14 @@ interface Withdrawal {
             <p><strong>Số tài khoản:</strong> <code>{{ selectedWithdrawal()?.accountNo }}</code></p>
             <p><strong>Chủ tài khoản:</strong> {{ selectedWithdrawal()?.accountName }}</p>
           </div>
+
+          @if (selectedWithdrawal()?.status === 'processing') {
+            <div class="vietqr-box mb-6 p-4 rounded-lg" style="background: white; border: 1px solid var(--border-light); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+              <span style="color: #1f2937; font-size: 13px; font-weight: 600;">Quét mã VietQR chuyển khoản nhanh</span>
+              <img [src]="getVietQrUrl(selectedWithdrawal()!)" alt="VietQR code" style="max-width: 240px; width: 100%; height: auto; border-radius: 8px;" />
+              <span style="color: #6b7280; font-size: 11px;">Nội dung chuyển khoản (Memo): <strong>STPAY{{ selectedWithdrawal()?.id }}</strong></span>
+            </div>
+          }
 
           <p style="color:var(--text-secondary); margin-bottom:24px; font-size: 0.9rem;">
             Vui lòng chắc chắn rằng bạn đã thực hiện chuyển tiền thật qua ứng dụng Ngân hàng của bạn đến tài khoản trên trước khi bấm xác nhận.
@@ -598,7 +621,7 @@ export class AdminWithdrawalsComponent implements OnInit {
   private toast = inject(ToastService);
 
   withdrawals = signal<Withdrawal[]>([]);
-  activeFilter = signal<'all' | 'pending' | 'completed'>('all');
+  activeFilter = signal<'all' | 'pending' | 'processing' | 'completed'>('all');
   selectedWithdrawal = signal<Withdrawal | null>(null);
 
   currentPage = signal<number>(1);
@@ -607,17 +630,20 @@ export class AdminWithdrawalsComponent implements OnInit {
   isLoading = signal<boolean>(false);
 
   totalPendingAmount = signal<number>(0);
+  totalProcessingAmount = signal<number>(0);
   totalCompletedAmount = signal<number>(0);
   totalWithdrawalAmount = signal<number>(0);
   pendingCount = signal<number>(0);
+  processingCount = signal<number>(0);
   completedCount = signal<number>(0);
   totalWithdrawalsCount = signal<number>(0);
 
   filteredWithdrawals = computed(() => {
     const list = this.withdrawals();
     const filter = this.activeFilter();
-    if (filter === 'pending') return list.filter(w => !w.isCompleted);
-    if (filter === 'completed') return list.filter(w => w.isCompleted);
+    if (filter === 'pending') return list.filter(w => w.status === 'pending');
+    if (filter === 'processing') return list.filter(w => w.status === 'processing');
+    if (filter === 'completed') return list.filter(w => w.status === 'completed');
     return list;
   });
 
@@ -646,11 +672,15 @@ export class AdminWithdrawalsComponent implements OnInit {
 
         if (Array.isArray(res)) {
           // Compute client-side totals
-          const pending = parsed.filter((w: Withdrawal) => !w.isCompleted);
-          const completed = parsed.filter((w: Withdrawal) => w.isCompleted);
+          const pending = parsed.filter((w: Withdrawal) => w.status === 'pending');
+          const processing = parsed.filter((w: Withdrawal) => w.status === 'processing');
+          const completed = parsed.filter((w: Withdrawal) => w.status === 'completed');
           
           this.totalPendingAmount.set(pending.reduce((acc: number, w: Withdrawal) => acc + Math.abs(w.amount), 0));
           this.pendingCount.set(pending.length);
+
+          this.totalProcessingAmount.set(processing.reduce((acc: number, w: Withdrawal) => acc + Math.abs(w.amount), 0));
+          this.processingCount.set(processing.length);
           
           this.totalCompletedAmount.set(completed.reduce((acc: number, w: Withdrawal) => acc + Math.abs(w.amount), 0));
           this.completedCount.set(completed.length);
@@ -660,9 +690,11 @@ export class AdminWithdrawalsComponent implements OnInit {
         } else {
           // Update counts and totals from backend response
           this.totalPendingAmount.set(res.totalPendingAmount || 0);
+          this.totalProcessingAmount.set(res.totalProcessingAmount || 0);
           this.totalCompletedAmount.set(res.totalCompletedAmount || 0);
           this.totalWithdrawalAmount.set(res.totalWithdrawalAmount || 0);
           this.pendingCount.set(res.pendingCount || 0);
+          this.processingCount.set(res.processingCount || 0);
           this.completedCount.set(res.completedCount || 0);
           this.totalWithdrawalsCount.set(res.totalCount || 0);
         }
@@ -679,10 +711,8 @@ export class AdminWithdrawalsComponent implements OnInit {
   }
 
   parseWithdrawal(tx: any): Withdrawal {
-    const desc = tx.description || '';
-    const isCompleted = desc.startsWith('[Completed]');
-    
-    const cleanDesc = isCompleted ? desc.substring('[Completed]'.length).trim() : desc;
+    const cleanDesc = tx.description || '';
+    const status = tx.status || 'pending';
     
     let bank = 'N/A';
     let accountNo = 'N/A';
@@ -709,7 +739,7 @@ export class AdminWithdrawalsComponent implements OnInit {
       createdAt: tx.createdAt,
       userName: tx.userName || 'Sinh viên',
       userEmail: tx.userEmail || '',
-      isCompleted,
+      status,
       bank,
       accountNo,
       accountName,
@@ -735,6 +765,60 @@ export class AdminWithdrawalsComponent implements OnInit {
         this.toast.error(err.error?.message || 'Có lỗi xảy ra khi xác nhận chuyển tiền.');
       }
     });
+  }
+
+  batchProcessWithdrawals() {
+    this.toast.success('Đang thực hiện gom lệnh rút tiền...');
+    this.http.post<any>(`${API_BASE_URL}/admin/withdrawals/batch-process`, {}).subscribe({
+      next: (res) => {
+        this.toast.success('Đã gom các lệnh rút tiền thành công!');
+        this.loadWithdrawals(1);
+      },
+      error: (err) => {
+        this.toast.error(err.error?.message || 'Có lỗi xảy ra khi gom lệnh rút tiền.');
+      }
+    });
+  }
+
+  getVietQrUrl(w: Withdrawal): string {
+    const bankShort = this.getBankShortName(w.bank);
+    const amountVal = w.amount;
+    const memo = `STPAY${w.id}`;
+    const nameEncoded = encodeURIComponent(w.accountName);
+    return `https://img.vietqr.io/image/${bankShort}-${w.accountNo}-compact.png?amount=${amountVal}&addInfo=${memo}&accountName=${nameEncoded}`;
+  }
+
+  getBankShortName(bank: string): string {
+    const mapping: Record<string, string> = {
+      'vietcombank': 'VCB',
+      'vcb': 'VCB',
+      'techcombank': 'TCB',
+      'tcb': 'TCB',
+      'mb': 'MB',
+      'mbbank': 'MB',
+      'vietinbank': 'ICB',
+      'ctg': 'ICB',
+      'icb': 'ICB',
+      'bidv': 'BIDV',
+      'agribank': 'VBA',
+      'vba': 'VBA',
+      'acb': 'ACB',
+      'tpbank': 'TPB',
+      'tpb': 'TPB',
+      'vpbank': 'VPB',
+      'vpb': 'VPB',
+      'sacombank': 'STB',
+      'stb': 'STB',
+      'hdbank': 'HDB',
+      'hdb': 'HDB',
+      'shb': 'SHB',
+      'vib': 'VIB',
+      'msb': 'MSB',
+      'ocb': 'OCB',
+      'lpbank': 'LPB',
+      'lpb': 'LPB'
+    };
+    return mapping[bank.toLowerCase().trim()] || bank;
   }
 
   copyText(text: string, label: string) {

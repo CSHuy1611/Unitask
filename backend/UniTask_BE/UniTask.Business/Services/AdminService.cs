@@ -124,11 +124,14 @@ namespace UniTask.Business.Services
                     avatar = (u.FullName ?? "U").Substring(0, 1).ToUpper(),
                     role = u.UserType == UserType.Student ? "student" : (u.UserType == UserType.Employer ? "employer" : "admin"),
                     ekycStatus = u.EkycStatus == EkycStatus.Pending ? "pending" : (u.EkycStatus == EkycStatus.Verified ? "verified" : (u.EkycStatus == EkycStatus.Rejected ? "rejected" : "none")),
-                    ekycFrontImage = u.EkycFrontImageUrl ?? "",
-                    ekycBackImage = u.EkycBackImageUrl ?? "",
+                    ekycFrontImage = "",
+                    ekycBackImage = "",
                     university = u.StudentProfile?.University ?? "",
                     companyName = u.EmployerProfile?.Company?.Name ?? "",
-                    createdAt = u.CreatedAt.ToString("yyyy-MM-dd")
+                    createdAt = u.CreatedAt.ToString("yyyy-MM-dd"),
+                    reliabilityScore = u.StudentProfile?.ReliabilityScore ?? 100,
+                    isFlagged = u.IsFlagged,
+                    flagReason = u.FlagReason ?? ""
                 })
                 .ToList();
 
@@ -201,6 +204,7 @@ namespace UniTask.Business.Services
                 .ThenInclude(w => w.User)
                 .Where(t => t.Type == TransactionType.Withdrawal)
                 .OrderBy(t => t.Description != null && t.Description.StartsWith("[Completed]"))
+                .ThenBy(t => t.Description != null && t.Description.StartsWith("[Processing]"))
                 .ThenByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
@@ -208,11 +212,18 @@ namespace UniTask.Business.Services
 
             // Calculate overall stats on loaded data
             var totalPendingAmount = rawWithdrawals
-                .Where(w => !(w.Description != null && w.Description.StartsWith("[Completed]")))
+                .Where(w => w.Description == null || (!w.Description.StartsWith("[Completed]") && !w.Description.StartsWith("[Processing]")))
                 .Sum(w => Math.Abs(w.Amount));
 
             var pendingCount = rawWithdrawals
-                .Count(w => !(w.Description != null && w.Description.StartsWith("[Completed]")));
+                .Count(w => w.Description == null || (!w.Description.StartsWith("[Completed]") && !w.Description.StartsWith("[Processing]")));
+
+            var totalProcessingAmount = rawWithdrawals
+                .Where(w => w.Description != null && w.Description.StartsWith("[Processing]"))
+                .Sum(w => Math.Abs(w.Amount));
+
+            var processingCount = rawWithdrawals
+                .Count(w => w.Description != null && w.Description.StartsWith("[Processing]"));
 
             var totalCompletedAmount = rawWithdrawals
                 .Where(w => w.Description != null && w.Description.StartsWith("[Completed]"))
@@ -227,14 +238,32 @@ namespace UniTask.Business.Services
             var items = rawWithdrawals
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(t => new
-                {
-                    id = t.Id,
-                    amount = Math.Abs(t.Amount),
-                    description = t.Description ?? "",
-                    createdAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
-                    userName = t.Wallet?.User?.FullName ?? "Sinh viên",
-                    userEmail = t.Wallet?.User?.Email ?? ""
+                .Select(t => {
+                    var desc = t.Description ?? "";
+                    string status = "pending";
+                    string cleanDesc = desc;
+
+                    if (desc.StartsWith("[Completed]")) {
+                        status = "completed";
+                        cleanDesc = desc.Substring("[Completed]".Length).Trim();
+                    } else if (desc.StartsWith("[Processing]")) {
+                        status = "processing";
+                        cleanDesc = desc.Substring("[Processing]".Length).Trim();
+                    } else if (desc.StartsWith("[Pending]")) {
+                        status = "pending";
+                        cleanDesc = desc.Substring("[Pending]".Length).Trim();
+                    }
+
+                    return new
+                    {
+                        id = t.Id,
+                        amount = Math.Abs(t.Amount),
+                        description = cleanDesc,
+                        status = status,
+                        createdAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                        userName = t.Wallet?.User?.FullName ?? "Sinh viên",
+                        userEmail = t.Wallet?.User?.Email ?? ""
+                    };
                 })
                 .ToList();
 
@@ -245,6 +274,8 @@ namespace UniTask.Business.Services
                 hasMore = page * pageSize < totalCount,
                 totalPendingAmount = totalPendingAmount,
                 pendingCount = pendingCount,
+                totalProcessingAmount = totalProcessingAmount,
+                processingCount = processingCount,
                 totalCompletedAmount = totalCompletedAmount,
                 completedCount = completedCount,
                 totalWithdrawalAmount = totalWithdrawalAmount
@@ -256,15 +287,49 @@ namespace UniTask.Business.Services
             var transaction = await _context.Transactions.FindAsync(transactionId);
             if (transaction == null || transaction.Type != TransactionType.Withdrawal) return false;
 
-            if (transaction.Description != null && transaction.Description.StartsWith("[Completed]"))
+            string desc = transaction.Description ?? "";
+            if (desc.StartsWith("[Completed]"))
             {
-                return true; // Đã xử lý rồi
+                return true; // Already processed
             }
 
-            string cleanDesc = transaction.Description ?? "";
+            string cleanDesc = desc;
+            if (desc.StartsWith("[Processing]"))
+            {
+                cleanDesc = desc.Substring("[Processing]".Length).Trim();
+            }
+            else if (desc.StartsWith("[Pending]"))
+            {
+                cleanDesc = desc.Substring("[Pending]".Length).Trim();
+            }
+
             transaction.Description = "[Completed] " + cleanDesc;
 
             await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> BatchProcessWithdrawalsAsync()
+        {
+            var pendingWithdrawals = await _context.Transactions
+                .Where(t => t.Type == TransactionType.Withdrawal && t.Description != null && (t.Description.StartsWith("[Pending]") || (!t.Description.StartsWith("[Processing]") && !t.Description.StartsWith("[Completed]"))))
+                .ToListAsync();
+
+            if (pendingWithdrawals.Any())
+            {
+                foreach (var tx in pendingWithdrawals)
+                {
+                    string desc = tx.Description ?? "";
+                    string cleanDesc = desc;
+                    if (desc.StartsWith("[Pending]"))
+                    {
+                        cleanDesc = desc.Substring("[Pending]".Length).Trim();
+                    }
+                    tx.Description = "[Processing] " + cleanDesc;
+                }
+
+                await _context.SaveChangesAsync();
+            }
             return true;
         }
 

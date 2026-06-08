@@ -25,6 +25,25 @@ namespace UniTask.Business.Services
             var profile = await _context.StudentProfiles.FirstOrDefaultAsync(p => p.UserId == studentId);
             if (profile == null) return null;
 
+            // VIP Job check
+            if (profile.ReliabilityScore < job.RequiredReliabilityScore)
+            {
+                throw new System.InvalidOperationException($"Công việc này yêu cầu điểm tín nhiệm tối thiểu là {job.RequiredReliabilityScore}. Điểm hiện tại của bạn là {profile.ReliabilityScore}.");
+            }
+
+            // Low Reliability Score restriction
+            if (profile.ReliabilityScore < 60)
+            {
+                var oneWeekAgo = DateTime.UtcNow.AddDays(-7);
+                var appsThisWeek = await _context.Applications
+                    .CountAsync(a => a.StudentProfileId == profile.Id && a.AppliedDate >= oneWeekAgo);
+
+                if (appsThisWeek >= 3)
+                {
+                    throw new System.InvalidOperationException("Hệ thống giới hạn tối đa 3 lượt ứng tuyển mỗi tuần đối với tài khoản dưới 60 điểm tín nhiệm.");
+                }
+            }
+
             var user = await _context.Users.FindAsync(studentId);
             if (user != null && user.BlacklistCount >= 3)
             {
@@ -69,7 +88,8 @@ namespace UniTask.Business.Services
                 .Include(a => a.Job)
                 .Include(a => a.StudentProfile).ThenInclude(p => p.User)
                 .Where(a => a.JobId == jobId)
-                .OrderByDescending(a => a.AppliedDate)
+                .OrderBy(a => a.StudentProfile.ReliabilityScore < 60 ? 1 : 0)
+                .ThenByDescending(a => a.AppliedDate)
                 .ToListAsync();
 
             return applications.Select(MapToDto);
@@ -166,6 +186,7 @@ namespace UniTask.Business.Services
                 StudentSkills = skillsList,
                 StudentCVUrl = a.StudentProfile?.CVUrl,
                 StudentGpa = a.StudentProfile?.GPA,
+                StudentReliabilityScore = a.StudentProfile?.ReliabilityScore ?? 100,
                 Status = a.Status,
                 AppliedDate = a.AppliedDate
             };

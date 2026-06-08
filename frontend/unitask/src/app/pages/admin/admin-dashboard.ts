@@ -82,15 +82,7 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
                 <span class="stat-label">Doanh thu thực tế</span>
               </div>
             </div>
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#EF4444,#DC2626)">
-                <span class="material-icons-round">pending_actions</span>
-              </div>
-              <div>
-                <span class="stat-number">{{ data().summary.ekycPending }}</span>
-                <span class="stat-label">eKYC chờ duyệt</span>
-              </div>
-            </div>
+
           </div>
 
           <!-- Revenue Details Row -->

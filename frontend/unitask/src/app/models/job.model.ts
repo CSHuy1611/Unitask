@@ -36,4 +36,6 @@ export interface Job {
   studentEvidenceText?: string;
   studentEvidenceUrl?: string;
   disputedDate?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
 }

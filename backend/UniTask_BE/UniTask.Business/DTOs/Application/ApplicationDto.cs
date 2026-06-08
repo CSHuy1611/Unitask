@@ -21,6 +21,7 @@ namespace UniTask.Business.DTOs.Application
         public List<string> StudentSkills { get; set; } = new();
         public string? StudentCVUrl { get; set; }
         public decimal? StudentGpa { get; set; }
+        public int StudentReliabilityScore { get; set; }
 
         public ApplicationStatus Status { get; set; }
         public DateTime AppliedDate { get; set; }

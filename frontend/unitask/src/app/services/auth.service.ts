@@ -220,10 +220,11 @@ export class AuthService {
     );
   }
 
-  submitEkyc(frontFile: File, backFile: File): Observable<{ success: boolean; message: string }> {
+  submitEkyc(frontFile: File, backFile: File, selfieFile: File): Observable<{ success: boolean; message: string }> {
     const formData = new FormData();
     formData.append('FrontImage', frontFile);
     formData.append('BackImage', backFile);
+    formData.append('SelfieImage', selfieFile);
     
     return this.http.post<any>(`${API_BASE_URL}/profile/ekyc`, formData).pipe(
       tap(() => {
@@ -231,14 +232,14 @@ export class AuthService {
         if (user) {
           const updated = {
             ...user,
-            ekycStatus: 'pending' as const,
+            ekycStatus: 'verified' as const,
             ekycDate: new Date().toISOString().split('T')[0]
           };
           this.currentUser.set(updated);
           this.saveToStorage(updated);
         }
       }),
-      map(() => ({ success: true, message: 'Đã gửi yêu cầu xác thực.' })),
+      map(() => ({ success: true, message: 'Xác thực eKYC tự động thành công!' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Gửi xác thực thất bại.' }))
     );
   }
@@ -326,7 +327,10 @@ export class AuthService {
                 dateOfBirth: dob ? dob.split('T')[0] : user.dateOfBirth,
                 cvFileName: cvUrl ? cvUrl.substring(cvUrl.lastIndexOf('/') + 1) : user.cvFileName,
                 cvUploadDate: cvUpload ? cvUpload.split('T')[0] : user.cvUploadDate,
-                cvUrl: cvUrl || user.cvUrl
+                cvUrl: cvUrl || user.cvUrl,
+                reliabilityScore: res.reliabilityScore !== undefined ? res.reliabilityScore : (res.ReliabilityScore !== undefined ? res.ReliabilityScore : user.reliabilityScore || 100),
+                isFlagged: userObj.isFlagged !== undefined ? userObj.isFlagged : (userObj.IsFlagged !== undefined ? userObj.IsFlagged : user.isFlagged),
+                flagReason: userObj.flagReason || userObj.FlagReason || user.flagReason
               };
             } else {
               const userObj = res.user || res.User || {};
@@ -352,7 +356,9 @@ export class AuthService {
                 companyLogoUrl: companyObj.logoUrl || companyObj.LogoUrl || user.companyLogoUrl,
                 position: res.position || res.Position || user.position,
                 activePackage: res.activePackage || undefined,
-                packageExpiry: res.packageExpiry || undefined
+                packageExpiry: res.packageExpiry || undefined,
+                isFlagged: userObj.isFlagged !== undefined ? userObj.isFlagged : (userObj.IsFlagged !== undefined ? userObj.IsFlagged : user.isFlagged),
+                flagReason: userObj.flagReason || userObj.FlagReason || user.flagReason
               };
             }
           this.currentUser.set(updated);

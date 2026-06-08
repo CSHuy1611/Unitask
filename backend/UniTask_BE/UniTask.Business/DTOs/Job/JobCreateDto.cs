@@ -18,6 +18,7 @@ namespace UniTask.Business.DTOs.Job
         public DateTime? Deadline { get; set; }
         public bool IsUrgent { get; set; }
         public bool IsRemote { get; set; }
+        public int RequiredReliabilityScore { get; set; } = 0;
 
         public List<string> Tags { get; set; } = new();
         public List<string> Requirements { get; set; } = new();
