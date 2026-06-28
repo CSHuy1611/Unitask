@@ -115,6 +115,8 @@ namespace UniTask.Business.Services
                         website = profile.Company.Website,
                         logoUrl = profile.Company.LogoUrl
                     } : null,
+                    businessLicenseUrl = profile.BusinessLicenseUrl,
+                    isBusinessLicenseVerified = profile.IsBusinessLicenseVerified,
                     activePackage = activeSubscription?.Package?.Name,
                     packageExpiry = activeSubscription?.EndDate.ToString("yyyy-MM-dd")
                 };

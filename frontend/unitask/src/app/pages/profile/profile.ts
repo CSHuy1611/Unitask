@@ -339,7 +339,7 @@ import Tesseract from 'tesseract.js';
                           <span class="upload-note">Hỗ trợ JPG, PNG (AI tự động kiểm tra MST)</span>
                         }
                       </div>
-                      <input #licenseInput type="file" accept="image/png,image/jpeg,image/jpg" capture="environment" style="display:none" (change)="onLicenseSelected($event)">
+                      <input #licenseInput type="file" accept="image/*" style="display:none" (change)="onLicenseSelected($event)">
                     </div>
                   </div>
                 </div>
@@ -468,8 +468,8 @@ import Tesseract from 'tesseract.js';
                             }
                           </div>
                         </div>
-                        <input #ekycFrontInput type="file" accept="image/png,image/jpeg,image/jpg" capture="environment" style="display:none" (change)="onEkycFileSelected($event, 'front')">
-                        <input #ekycBackInput type="file" accept="image/png,image/jpeg,image/jpg" capture="environment" style="display:none" (change)="onEkycFileSelected($event, 'back')">
+                        <input #ekycFrontInput type="file" accept="image/*" style="display:none" (change)="onEkycFileSelected($event, 'front')">
+                        <input #ekycBackInput type="file" accept="image/*" style="display:none" (change)="onEkycFileSelected($event, 'back')">
                       </div>
 
                       <!-- Cột 2: Webcam Selfie -->

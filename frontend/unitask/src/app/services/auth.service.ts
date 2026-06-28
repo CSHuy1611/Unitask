@@ -369,6 +369,8 @@ export class AuthService {
                 position: res.position || res.Position || user.position,
                 activePackage: res.activePackage || undefined,
                 packageExpiry: res.packageExpiry || undefined,
+                businessLicenseUrl: res.businessLicenseUrl || res.BusinessLicenseUrl || user.businessLicenseUrl,
+                isBusinessLicenseVerified: res.isBusinessLicenseVerified !== undefined ? res.isBusinessLicenseVerified : (res.IsBusinessLicenseVerified !== undefined ? res.IsBusinessLicenseVerified : user.isBusinessLicenseVerified),
                 isFlagged: userObj.isFlagged !== undefined ? userObj.isFlagged : (userObj.IsFlagged !== undefined ? userObj.IsFlagged : user.isFlagged),
                 flagReason: userObj.flagReason || userObj.FlagReason || user.flagReason
               };
