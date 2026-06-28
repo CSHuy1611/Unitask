@@ -161,18 +161,18 @@ import { Job } from '../../models/job.model';
                 <div class="form-group" style="grid-column: 1 / -1">
                   <label class="form-label">Ngân sách tính lương (VND) <span class="required">*</span></label>
                   <input type="number" class="form-input" [(ngModel)]="formData.budget" name="budget" placeholder="VD: 300000" min="50000" required>
-                  <p class="text-caption" style="margin-top:4px">Hệ thống sẽ giữ khoản tiền trung gian này và thêm 10% phí nền tảng để đảm bảo quyền lợi 2 bên.</p>
+                  <p class="text-caption" style="margin-top:4px; font-size: 13px; color: var(--text-secondary)">Hệ thống sẽ giữ khoản tiền trung gian này và thêm 10% phí nền tảng để đảm bảo quyền lợi 2 bên.</p>
                   
                   @if (formData.budget && formData.budget > 0) {
-                    <div class="escrow-calc" style="margin-top:12px; padding:16px; background:rgba(79,70,229,0.05); border-radius:var(--radius-lg); border:1px solid var(--primary-light); font-size:var(--font-size-sm); color:var(--text-secondary)">
-                      <div style="display:flex; justify-content:space-between; margin-bottom:8px">
-                        <span>Lương trả cho ứng viên:</span> <strong>{{ formData.budget.toLocaleString('vi-VN') }}đ</strong>
+                    <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px; font-size:var(--font-size-sm); background:rgba(255,255,255,0.03); padding:12px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.05)">
+                      <div class="d-flex justify-between">
+                        <span>Lương trả cho ứng viên:</span> <strong>{{ getRounded(formData.budget).toLocaleString('vi-VN') }}đ</strong>
                       </div>
-                      <div style="display:flex; justify-content:space-between; margin-bottom:8px">
-                        <span>Phí nền tảng (10%):</span> <strong style="color:var(--warning)">{{ (formData.budget * 0.1).toLocaleString('vi-VN') }}đ</strong>
+                      <div class="d-flex justify-between">
+                        <span>Phí nền tảng (10%):</span> <strong style="color:var(--warning)">{{ getRounded(formData.budget * 0.1).toLocaleString('vi-VN') }}đ</strong>
                       </div>
-                      <div style="display:flex; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px dashed var(--border-color)">
-                        <span>Tổng tạm giữ (Escrow):</span> <strong style="color:var(--primary-light); font-size:var(--font-size-lg)">{{ (formData.budget * 1.1).toLocaleString('vi-VN') }}đ</strong>
+                      <div class="d-flex justify-between" style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.1)">
+                        <span>Tổng tạm giữ (Escrow):</span> <strong style="color:var(--primary-light); font-size:var(--font-size-lg)">{{ (getRounded(formData.budget) + getRounded(formData.budget * 0.1)).toLocaleString('vi-VN') }}đ</strong>
                       </div>
                     </div>
                   }
@@ -1031,6 +1031,10 @@ export class EmployerDashboardComponent implements OnInit {
     this.showPostForm.set(false);
     this.editingJobId.set(null);
     this.postMessage.set('');
+  }
+
+  getRounded(value: number): number {
+    return Math.round(value);
   }
 
   onEditJob(job: Job) {

@@ -115,9 +115,9 @@ namespace UniTask.Business.Services
             decimal postingFee = hasActivePackage ? 0 : 2000;
             
             // Round all currency values to whole numbers (VND integers) to prevent float discrepancies
-            var roundedBudget = Math.Round(dto.Budget, 0);
-            var roundedCommission = Math.Round(dto.Commission, 0);
-            var roundedPostingFee = Math.Round(postingFee, 0);
+            var roundedBudget = Math.Round(dto.Budget, 0, MidpointRounding.AwayFromZero);
+            var roundedCommission = Math.Round(dto.Commission, 0, MidpointRounding.AwayFromZero);
+            var roundedPostingFee = Math.Round(postingFee, 0, MidpointRounding.AwayFromZero);
             var totalCost = roundedBudget + roundedCommission + roundedPostingFee;
             
             if (wallet == null || wallet.Balance < totalCost)
