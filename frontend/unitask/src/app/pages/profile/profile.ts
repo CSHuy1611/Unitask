@@ -266,7 +266,7 @@ import Tesseract from 'tesseract.js';
                   <h3><span class="material-icons-round">business</span> Thông tin công ty / doanh nghiệp</h3>
                   
                   <div style="display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-4);">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                    <div class="grid-2-cols">
                       <div>
                         <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Tên công ty</span>
                         <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companyName || 'Chưa cập nhật' }}</strong>
@@ -277,7 +277,7 @@ import Tesseract from 'tesseract.js';
                       </div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                    <div class="grid-2-cols">
                       <div>
                         <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Quy mô</span>
                         <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companySize || 'Chưa cập nhật' }}</strong>
@@ -338,7 +338,7 @@ import Tesseract from 'tesseract.js';
                           <span class="upload-note">Hỗ trợ JPG, PNG (AI tự động kiểm tra MST)</span>
                         }
                       </div>
-                      <input #licenseInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onLicenseSelected($event)">
+                      <input #licenseInput type="file" accept="image/png,image/jpeg,image/jpg" capture="environment" style="display:none" (change)="onLicenseSelected($event)">
                     </div>
                   </div>
                 </div>
@@ -439,7 +439,7 @@ import Tesseract from 'tesseract.js';
                       </div>
                     }
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); flex-wrap: wrap;">
+                    <div class="grid-2-cols-large">
                       <!-- Cột 1: Giấy tờ CCCD -->
                       <div>
                         <h4 style="margin-bottom:12px; color: var(--text-primary);">1. Tải lên ảnh CCCD (2 mặt)</h4>
@@ -467,8 +467,8 @@ import Tesseract from 'tesseract.js';
                             }
                           </div>
                         </div>
-                        <input #ekycFrontInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onEkycFileSelected($event, 'front')">
-                        <input #ekycBackInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onEkycFileSelected($event, 'back')">
+                        <input #ekycFrontInput type="file" accept="image/png,image/jpeg,image/jpg" capture="environment" style="display:none" (change)="onEkycFileSelected($event, 'front')">
+                        <input #ekycBackInput type="file" accept="image/png,image/jpeg,image/jpg" capture="environment" style="display:none" (change)="onEkycFileSelected($event, 'back')">
                       </div>
 
                       <!-- Cột 2: Webcam Selfie -->
@@ -1397,8 +1397,21 @@ import Tesseract from 'tesseract.js';
 
     .empty-applied p { color: var(--text-secondary); }
 
+    .grid-2-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+    
+    .grid-2-cols-large {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+    }
+
     @media (max-width: 900px) {
-      .profile-grid {
+      .profile-grid, .grid-2-cols, .grid-2-cols-large {
         grid-template-columns: 1fr;
       }
 
