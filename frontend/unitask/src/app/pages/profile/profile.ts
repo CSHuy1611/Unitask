@@ -481,11 +481,17 @@ import Tesseract from 'tesseract.js';
                             <div class="p-4 text-center" style="color:var(--warning); font-size:12px; display:flex; flex-direction:column; align-items:center; gap:8px">
                               <span class="material-icons-round" style="font-size:32px">videocam_off</span>
                               <span style="line-height: 1.4">{{ cameraErrorMessage() }}</span>
-                              <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2)" (click)="selfieInputError.click()">
-                                <span class="material-icons-round" style="font-size:14px; vertical-align:middle">photo_camera</span> Thử dùng Camera thiết bị
-                              </button>
+                              <div style="display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 8px;">
+                                <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 11px;" (click)="selfieInputError.click()">
+                                  <span class="material-icons-round" style="font-size:14px; vertical-align:middle">photo_camera</span> Bật Camera
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 11px;" (click)="selfieGalleryInputError.click()">
+                                  <span class="material-icons-round" style="font-size:14px; vertical-align:middle">collections</span> Chọn Thư viện
+                                </button>
+                              </div>
                             </div>
                             <input #selfieInputError type="file" accept="image/*" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
+                            <input #selfieGalleryInputError type="file" accept="image/*" style="display:none" (change)="onSelfieFileSelected($event)">
                           } @else if (selfiePreview()) {
                             <img [src]="selfiePreview()" alt="Selfie Preview" style="width:100%; height:100%; object-fit:cover" />
                             <span class="preview-label" style="position:absolute; bottom:0; left:0; right:0;">Ảnh chụp chân dung ✓</span>
@@ -497,15 +503,21 @@ import Tesseract from 'tesseract.js';
                           } @else {
                             <div class="text-center" style="display:flex; flex-direction:column; align-items:center; gap:12px; width: 100%; padding: 0 12px;">
                               <span class="material-icons-round" style="font-size:40px; color:var(--text-muted); margin-bottom: -4px">face</span>
-                              <div style="display:flex; gap: 8px; width: 100%; justify-content: center">
-                                <button type="button" class="btn btn-secondary btn-sm" (click)="startCamera()" style="flex: 1; padding: 6px; font-size: 11px">
+                              <div style="display:flex; flex-direction:column; gap: 8px; width: 100%; justify-content: center">
+                                <button type="button" class="btn btn-secondary btn-sm" (click)="startCamera()" style="width: 100%; padding: 6px; font-size: 11px">
                                   <span class="material-icons-round" style="font-size:16px; vertical-align:middle">videocam</span> Chụp bằng máy tính
                                 </button>
-                                <button type="button" class="btn btn-secondary btn-sm" (click)="selfieInput.click()" style="flex: 1; padding: 6px; font-size: 11px">
-                                  <span class="material-icons-round" style="font-size:16px; vertical-align:middle">photo_camera</span> Chụp bằng điện thoại
-                                </button>
+                                <div style="display:flex; gap: 8px; width: 100%">
+                                  <button type="button" class="btn btn-secondary btn-sm" (click)="selfieInput.click()" style="flex: 1; padding: 6px; font-size: 11px">
+                                    <span class="material-icons-round" style="font-size:16px; vertical-align:middle">photo_camera</span> Bật Camera
+                                  </button>
+                                  <button type="button" class="btn btn-secondary btn-sm" (click)="selfieGalleryInput.click()" style="flex: 1; padding: 6px; font-size: 11px">
+                                    <span class="material-icons-round" style="font-size:16px; vertical-align:middle">collections</span> Thư viện ảnh
+                                  </button>
+                                </div>
                               </div>
                               <input #selfieInput type="file" accept="image/*" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
+                              <input #selfieGalleryInput type="file" accept="image/*" style="display:none" (change)="onSelfieFileSelected($event)">
                             </div>
                           }
                         </div>
