@@ -7,3 +7,6 @@ appsettings.Development.json
 **/obj/
 **/dist/
 **/node_modules/
+
+# Agent Knowledge
+.agents/

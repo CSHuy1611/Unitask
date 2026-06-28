@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -12,124 +12,174 @@ import { AuthService } from '../../services/auth.service';
       <div class="auth-bg"></div>
       <div class="container">
         <div class="auth-card glass-card animate-fade-in-up">
-          <div class="auth-header">
-            <div class="auth-icon">
-              <span class="material-icons-round">person_add</span>
-            </div>
-            <h1>Đăng ký tài khoản</h1>
-            <p>Tham gia UniTask để bắt đầu hành trình của bạn</p>
-          </div>
-
-          <!-- Role Tabs -->
-          <div class="role-tabs">
-            <button class="role-tab" [class.active]="activeRole() === 'student'" (click)="activeRole.set('student')">
-              🎓 Sinh viên
-            </button>
-            <button class="role-tab" [class.active]="activeRole() === 'employer'" (click)="activeRole.set('employer')">
-              🏢 Doanh nghiệp
-            </button>
-          </div>
-
-          @if (errorMsg()) {
-            <div class="alert alert-error animate-fade-in">
-              <span class="material-icons-round">error</span>
-              {{ errorMsg() }}
-            </div>
-          }
-
-          @if (successMsg()) {
-            <div class="alert alert-success animate-fade-in">
-              <span class="material-icons-round">check_circle</span>
-              {{ successMsg() }}
-            </div>
-          }
-
-          <form (ngSubmit)="onRegister()" class="auth-form">
-            <!-- Common fields -->
-            <div class="form-group">
-              <label class="form-label">Họ và tên</label>
-              <input type="text" class="form-input" placeholder="Nhập họ và tên"
-                     [(ngModel)]="fullName" name="fullName" required>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-input" placeholder="your@email.com"
-                     [(ngModel)]="email" name="email" required>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Mật khẩu</label>
-                <input type="password" class="form-input" placeholder="••••••••"
-                       [(ngModel)]="password" name="password" required>
+          
+          @if (step() === 'register') {
+            <div class="auth-header">
+              <div class="auth-icon">
+                <span class="material-icons-round">person_add</span>
               </div>
-              <div class="form-group">
-                <label class="form-label">Số điện thoại</label>
-                <input type="tel" class="form-input" placeholder="0901234567"
-                       [(ngModel)]="phone" name="phone" required>
-              </div>
+              <h1>Đăng ký tài khoản</h1>
+              <p>Tham gia UniTask để bắt đầu hành trình của bạn</p>
             </div>
 
-            <!-- Student fields -->
-            @if (activeRole() === 'student') {
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Trường đại học</label>
-                  <input type="text" class="form-input" placeholder="VD: Đại học FPT"
-                         [(ngModel)]="university" name="university">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Ngành học</label>
-                  <input type="text" class="form-input" placeholder="VD: Kỹ thuật phần mềm"
-                         [(ngModel)]="major" name="major">
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Năm học</label>
-                <select class="form-select" [(ngModel)]="year" name="year">
-                  <option [ngValue]="1">Năm 1</option>
-                  <option [ngValue]="2">Năm 2</option>
-                  <option [ngValue]="3">Năm 3</option>
-                  <option [ngValue]="4">Năm 4</option>
-                  <option [ngValue]="5">Năm 5+</option>
-                </select>
+            <!-- Role Tabs -->
+            <div class="role-tabs">
+              <button class="role-tab" [class.active]="activeRole() === 'student'" (click)="activeRole.set('student')">
+                🎓 Sinh viên
+              </button>
+              <button class="role-tab" [class.active]="activeRole() === 'employer'" (click)="activeRole.set('employer')">
+                🏢 Doanh nghiệp
+              </button>
+            </div>
+
+            @if (errorMsg()) {
+              <div class="alert alert-error animate-fade-in">
+                <span class="material-icons-round">error</span>
+                {{ errorMsg() }}
               </div>
             }
 
-            <!-- Employer fields -->
-            @if (activeRole() === 'employer') {
-              <div class="form-group">
-                <label class="form-label">Tên công ty</label>
-                <input type="text" class="form-input" placeholder="VD: FPT Software"
-                       [(ngModel)]="companyName" name="companyName">
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Chức vụ</label>
-                  <input type="text" class="form-input" placeholder="VD: HR Manager"
-                         [(ngModel)]="position" name="position">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Mã số thuế</label>
-                  <input type="text" class="form-input" placeholder="VD: 0101234567"
-                         [(ngModel)]="taxCode" name="taxCode">
-                </div>
+            @if (successMsg()) {
+              <div class="alert alert-success animate-fade-in">
+                <span class="material-icons-round">check_circle</span>
+                {{ successMsg() }}
               </div>
             }
 
-            <button type="submit" class="btn btn-primary btn-lg full-width" [disabled]="loading()">
-              @if (loading()) {
-                <span class="spinner"></span> Đang xử lý...
-              } @else {
-                Đăng ký {{ activeRole() === 'student' ? 'Sinh viên' : 'Doanh nghiệp' }}
+            <form (ngSubmit)="onRegister()" class="auth-form">
+              <!-- Common fields -->
+              <div class="form-group">
+                <label class="form-label">Họ và tên</label>
+                <input type="text" class="form-input" placeholder="Nhập họ và tên"
+                       [(ngModel)]="fullName" name="fullName" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" placeholder="your@email.com"
+                       [(ngModel)]="email" name="email" required>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Mật khẩu</label>
+                  <input type="password" class="form-input" placeholder="••••••••"
+                         [(ngModel)]="password" name="password" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Số điện thoại</label>
+                  <input type="tel" class="form-input" placeholder="0901234567"
+                         [(ngModel)]="phone" name="phone" required>
+                </div>
+              </div>
+
+              <!-- Student fields -->
+              @if (activeRole() === 'student') {
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Trường đại học</label>
+                    <input type="text" class="form-input" placeholder="VD: Đại học FPT"
+                           [(ngModel)]="university" name="university">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Ngành học</label>
+                    <input type="text" class="form-input" placeholder="VD: Kỹ thuật phần mềm"
+                           [(ngModel)]="major" name="major">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Năm học</label>
+                  <select class="form-select" [(ngModel)]="year" name="year">
+                    <option [ngValue]="1">Năm 1</option>
+                    <option [ngValue]="2">Năm 2</option>
+                    <option [ngValue]="3">Năm 3</option>
+                    <option [ngValue]="4">Năm 4</option>
+                    <option [ngValue]="5">Năm 5+</option>
+                  </select>
+                </div>
               }
-            </button>
-          </form>
 
-          <div class="auth-footer">
-            <p>Đã có tài khoản? <a routerLink="/login">Đăng nhập</a></p>
-          </div>
+              <!-- Employer fields -->
+              @if (activeRole() === 'employer') {
+                <div class="form-group">
+                  <label class="form-label">Tên công ty</label>
+                  <input type="text" class="form-input" placeholder="VD: FPT Software"
+                         [(ngModel)]="companyName" name="companyName">
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Chức vụ</label>
+                    <input type="text" class="form-input" placeholder="VD: HR Manager"
+                           [(ngModel)]="position" name="position">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Mã số thuế</label>
+                    <input type="text" class="form-input" placeholder="VD: 0101234567"
+                           [(ngModel)]="taxCode" name="taxCode">
+                  </div>
+                </div>
+              }
+
+              <button type="submit" class="btn btn-primary btn-lg full-width" [disabled]="loading()">
+                @if (loading()) {
+                  <span class="spinner"></span> Đang xử lý...
+                } @else {
+                  Đăng ký {{ activeRole() === 'student' ? 'Sinh viên' : 'Doanh nghiệp' }}
+                }
+              </button>
+            </form>
+
+            <div class="auth-footer">
+              <p>Đã có tài khoản? <a routerLink="/login">Đăng nhập</a></p>
+            </div>
+          } @else {
+            <!-- OTP Form -->
+            <div class="auth-header">
+              <div class="auth-icon">
+                <span class="material-icons-round">mark_email_read</span>
+              </div>
+              <h1>Xác thực Email</h1>
+              <p>Nhập mã OTP gồm 6 chữ số đã được gửi tới <strong>{{ email }}</strong></p>
+            </div>
+
+            @if (errorMsg()) {
+              <div class="alert alert-error animate-fade-in" style="margin-bottom: var(--space-4);">
+                <span class="material-icons-round">error</span>
+                {{ errorMsg() }}
+              </div>
+            }
+
+            @if (successMsg()) {
+              <div class="alert alert-success animate-fade-in" style="margin-bottom: var(--space-4);">
+                <span class="material-icons-round">check_circle</span>
+                {{ successMsg() }}
+              </div>
+            }
+
+            <form (ngSubmit)="onVerifyOtp()" class="auth-form">
+              <div class="form-group" style="text-align: center;">
+                <input type="text" class="form-input otp-input" placeholder="------" maxlength="6"
+                       [(ngModel)]="otpCode" name="otpCode" required autocomplete="off">
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg full-width" style="margin-bottom: var(--space-3);" [disabled]="loading()">
+                @if (loading()) {
+                  <span class="spinner"></span> Đang xử lý...
+                } @else {
+                  Xác nhận
+                }
+              </button>
+              
+              <div class="form-row">
+                <button type="button" class="btn btn-outline" [disabled]="countdown() > 0 || loading()" (click)="resendOtp()">
+                  {{ countdown() > 0 ? 'Gửi lại mã (' + countdown() + 's)' : 'Gửi lại mã' }}
+                </button>
+                <button type="button" class="btn btn-ghost" (click)="onChangeEmail()">
+                  Đổi Email
+                </button>
+              </div>
+            </form>
+          }
         </div>
       </div>
     </section>
@@ -262,6 +312,14 @@ import { AuthService } from '../../services/auth.service';
       border-radius: 50%;
       animation: spin 0.6s linear infinite;
     }
+    
+    .otp-input {
+      font-size: 24px;
+      letter-spacing: 8px;
+      text-align: center;
+      font-weight: 700;
+      color: var(--primary);
+    }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -279,7 +337,7 @@ import { AuthService } from '../../services/auth.service';
     }
   `]
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnDestroy {
   private auth = inject(AuthService);
   private router = inject(Router);
 
@@ -287,6 +345,10 @@ export class RegisterComponent {
   loading = signal(false);
   errorMsg = signal('');
   successMsg = signal('');
+  
+  step = signal<'register' | 'otp'>('register');
+  countdown = signal(0);
+  private countdownInterval: any;
 
   // Common
   fullName = '';
@@ -303,6 +365,13 @@ export class RegisterComponent {
   companyName = '';
   position = '';
   taxCode = '';
+  
+  // OTP
+  otpCode = '';
+
+  ngOnDestroy() {
+    this.clearCountdown();
+  }
 
   onRegister() {
     this.errorMsg.set('');
@@ -330,6 +399,33 @@ export class RegisterComponent {
       next: (result) => {
         this.loading.set(false);
         if (result.success) {
+          this.step.set('otp');
+          this.startCountdown();
+        } else {
+          this.errorMsg.set(result.message); // Will show SMTP error if any
+        }
+      },
+      error: () => {
+        this.loading.set(false);
+        this.errorMsg.set('Đã có lỗi xảy ra khi kết nối máy chủ.');
+      }
+    });
+  }
+  
+  onVerifyOtp() {
+    this.errorMsg.set('');
+    this.successMsg.set('');
+
+    if (!this.otpCode || this.otpCode.length !== 6) {
+      this.errorMsg.set('Vui lòng nhập đủ 6 chữ số mã OTP.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.auth.verifyOtp(this.email, this.otpCode).subscribe({
+      next: (result) => {
+        this.loading.set(false);
+        if (result.success) {
           this.successMsg.set(result.message);
           setTimeout(() => this.router.navigate(['/login']), 1500);
         } else {
@@ -341,5 +437,67 @@ export class RegisterComponent {
         this.errorMsg.set('Đã có lỗi xảy ra khi kết nối máy chủ.');
       }
     });
+  }
+
+  onChangeEmail() {
+    this.step.set('register');
+    this.clearCountdown();
+    this.errorMsg.set('');
+    this.successMsg.set('');
+    this.otpCode = '';
+  }
+
+  resendOtp() {
+    if (this.countdown() > 0) return;
+    
+    // Just call register again to resend OTP
+    this.loading.set(true);
+    this.auth.register({
+      role: this.activeRole(),
+      fullName: this.fullName,
+      email: this.email,
+      password: this.password,
+      phone: this.phone,
+      university: this.university,
+      major: this.major,
+      year: this.year,
+      companyName: this.companyName,
+      position: this.position,
+    }).subscribe({
+      next: (result) => {
+        this.loading.set(false);
+        if (result.success) {
+          this.startCountdown();
+          this.successMsg.set('Mã OTP mới đã được gửi tới email của bạn.');
+          setTimeout(() => this.successMsg.set(''), 3000);
+        } else {
+          this.errorMsg.set(result.message);
+        }
+      },
+      error: () => {
+        this.loading.set(false);
+        this.errorMsg.set('Đã có lỗi xảy ra khi kết nối máy chủ.');
+      }
+    });
+  }
+
+  private startCountdown() {
+    this.clearCountdown();
+    this.countdown.set(60);
+    this.countdownInterval = setInterval(() => {
+      const current = this.countdown();
+      if (current > 0) {
+        this.countdown.set(current - 1);
+      } else {
+        this.clearCountdown();
+      }
+    }, 1000);
+  }
+
+  private clearCountdown() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
   }
 }

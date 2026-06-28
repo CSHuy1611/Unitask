@@ -39,6 +39,8 @@ export interface User {
   companyWebsite?: string;
   companyLogoUrl?: string;
   position?: string;
+  businessLicenseUrl?: string;
+  isBusinessLicenseVerified?: boolean;
 
   // Payment & Subscriptions
   balance?: number;

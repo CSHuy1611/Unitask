@@ -19,5 +19,8 @@ namespace UniTask.Business.Interfaces
         // CV Upload
         Task<string?> UploadCvAsync(string userId, Microsoft.AspNetCore.Http.IFormFile cvFile);
         Task<bool> DeleteCvAsync(string userId);
+
+        // Business License Upload
+        Task<bool> UploadBusinessLicenseAsync(string userId, Microsoft.AspNetCore.Http.IFormFile licenseFile, bool isVerified);
     }
 }

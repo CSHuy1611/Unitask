@@ -50,5 +50,23 @@ namespace UniTask.Api.Controllers
 
             return Ok(response);
         }
+
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var response = await _authService.VerifyOtpAsync(request);
+
+            if (!response.IsSuccess)
+            {
+                return BadRequest(new { message = response.Message });
+            }
+
+            return Ok(response);
+        }
     }
 }

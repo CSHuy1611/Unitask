@@ -39,6 +39,10 @@ namespace UniTask.DataAcesss.Entities
         public bool IsFlagged { get; set; } = false;
         public string? FlagReason { get; set; }
 
+        // ===== OTP Verification =====
+        public string? OtpCode { get; set; }
+        public DateTime? OtpExpiryTime { get; set; }
+
         // ===== Navigation Properties =====
         public StudentProfile? StudentProfile { get; set; }
         public EmployerProfile? EmployerProfile { get; set; }

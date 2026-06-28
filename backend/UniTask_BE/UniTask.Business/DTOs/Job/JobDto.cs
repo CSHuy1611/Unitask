@@ -9,6 +9,8 @@ namespace UniTask.Business.DTOs.Job
         public string? Description { get; set; }
         public string? Location { get; set; }
         public string Type { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string? Salary { get; set; }
         public string? SalaryText { get; set; }
         public List<decimal> SalaryRange { get; set; } = new();
         public decimal Budget { get; set; }

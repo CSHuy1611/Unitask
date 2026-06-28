@@ -711,5 +711,27 @@ namespace UniTask.Business.Services
                 selfieImageUrl = selfieUrl
             };
         }
+
+        public async Task<bool> UploadBusinessLicenseAsync(string userId, Microsoft.AspNetCore.Http.IFormFile licenseFile, bool isVerified)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return false;
+
+            var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (profile == null) return false;
+
+            if (licenseFile != null && licenseFile.Length > 0)
+            {
+                var url = await _cloudinaryService.UploadImageAsync(licenseFile, "business_licenses");
+                if (url == null) return false;
+
+                profile.BusinessLicenseUrl = url;
+            }
+
+            profile.IsBusinessLicenseVerified = isVerified;
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
     }
 }

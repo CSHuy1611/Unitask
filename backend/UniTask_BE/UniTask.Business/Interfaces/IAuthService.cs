@@ -6,5 +6,6 @@ namespace UniTask.Business.Interfaces
     {
         Task<AuthResponse> LoginAsync(LoginRequest request);
         Task<AuthResponse> RegisterAsync(RegisterRequest request);
+        Task<AuthResponse> VerifyOtpAsync(VerifyOtpRequest request);
     }
 }

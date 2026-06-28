@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj": {}
+    "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj": {}
   },
   "projects": {
-    "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj": {
+    "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj",
+        "projectUniqueName": "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj",
         "projectName": "UniTask.DataAcesss",
-        "projectPath": "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj",
+        "projectPath": "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj",
         "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
-        "outputPath": "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\obj\\",
+        "outputPath": "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

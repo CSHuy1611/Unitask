@@ -153,5 +153,20 @@ namespace UniTask.Api.Controllers
 
             return Ok(new { message = "CV deleted successfully." });
         }
+
+        [HttpPost("employer/business-license")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> UploadBusinessLicense([FromForm] IFormFile file, [FromForm] bool isVerified)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            if (file == null || file.Length == 0) return BadRequest(new { message = "File is required." });
+
+            var result = await _profileService.UploadBusinessLicenseAsync(userId, file, isVerified);
+            if (!result) return BadRequest(new { message = "Failed to upload business license." });
+
+            return Ok(new { message = "Business license uploaded successfully." });
+        }
     }
 }

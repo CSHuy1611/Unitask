@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
 import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
+import Tesseract from 'tesseract.js';
 
 @Component({
   selector: 'app-profile',
@@ -302,6 +303,43 @@ import { Job } from '../../models/job.model';
                         {{ auth.currentUser()?.companyDescription || 'Chưa cập nhật giới thiệu chi tiết về công ty.' }}
                       </p>
                     </div>
+
+                    <div style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px dashed var(--border-color);">
+                      <h4 style="margin-bottom: var(--space-3);"><span class="material-icons-round" style="vertical-align: middle; font-size: 18px;">verified</span> Giấy phép kinh doanh</h4>
+                      
+                      @if (auth.currentUser()?.businessLicenseUrl) {
+                        <div class="cv-uploaded" style="margin-bottom: var(--space-3);">
+                          <div class="cv-file-info">
+                            <span class="material-icons-round cv-file-icon" style="color: var(--primary-light);">receipt_long</span>
+                            <div>
+                              <strong>Giấy phép kinh doanh (Đã tải lên)</strong>
+                              <span class="cv-date">Trạng thái: 
+                                @if (auth.currentUser()?.isBusinessLicenseVerified) {
+                                  <strong style="color: var(--success);">Đã xác thực AI</strong>
+                                } @else {
+                                  <strong style="color: var(--warning);">Đang chờ hoặc không hợp lệ</strong>
+                                }
+                              </span>
+                            </div>
+                          </div>
+                          <div class="cv-actions">
+                            <a [href]="auth.currentUser()?.businessLicenseUrl" target="_blank" class="btn btn-secondary btn-sm">Xem chi tiết</a>
+                          </div>
+                        </div>
+                      }
+                      
+                      <div class="upload-area" (click)="licenseInput.click()" [class.disabled]="licenseUploading()" style="min-height: 120px;">
+                        @if (licenseUploading()) {
+                          <div class="upload-spinner"></div>
+                          <p><strong>{{ licenseUploadStatus() }}</strong></p>
+                        } @else {
+                          <span class="material-icons-round upload-icon" style="font-size: 32px; color: var(--primary-light);">add_photo_alternate</span>
+                          <p><strong>Tải lên Giấy phép kinh doanh mới</strong></p>
+                          <span class="upload-note">Hỗ trợ JPG, PNG (AI tự động kiểm tra MST)</span>
+                        }
+                      </div>
+                      <input #licenseInput type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" (change)="onLicenseSelected($event)">
+                    </div>
                   </div>
                 </div>
               }
@@ -441,8 +479,12 @@ import { Job } from '../../models/job.model';
                           @if (cameraErrorMessage()) {
                             <div class="p-4 text-center" style="color:var(--warning); font-size:12px; display:flex; flex-direction:column; align-items:center; gap:8px">
                               <span class="material-icons-round" style="font-size:32px">videocam_off</span>
-                              <span>{{ cameraErrorMessage() }}</span>
+                              <span style="line-height: 1.4">{{ cameraErrorMessage() }}</span>
+                              <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2)" (click)="selfieInputError.click()">
+                                <span class="material-icons-round" style="font-size:14px; vertical-align:middle">photo_camera</span> Thử dùng Camera thiết bị
+                              </button>
                             </div>
+                            <input #selfieInputError type="file" accept="image/png,image/jpeg,image/jpg" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
                           } @else if (selfiePreview()) {
                             <img [src]="selfiePreview()" alt="Selfie Preview" style="width:100%; height:100%; object-fit:cover" />
                             <span class="preview-label" style="position:absolute; bottom:0; left:0; right:0;">Ảnh chụp chân dung ✓</span>
@@ -452,11 +494,17 @@ import { Job } from '../../models/job.model';
                               <span class="material-icons-round">photo_camera</span> Chụp ảnh
                             </button>
                           } @else {
-                            <div class="text-center" style="display:flex; flex-direction:column; align-items:center; gap:12px">
-                              <span class="material-icons-round" style="font-size:48px; color:var(--text-muted)">face</span>
-                              <button type="button" class="btn btn-secondary btn-sm" (click)="startCamera()">
-                                <span class="material-icons-round" style="font-size:16px; vertical-align:middle">videocam</span> Bật Camera
-                              </button>
+                            <div class="text-center" style="display:flex; flex-direction:column; align-items:center; gap:12px; width: 100%; padding: 0 12px;">
+                              <span class="material-icons-round" style="font-size:40px; color:var(--text-muted); margin-bottom: -4px">face</span>
+                              <div style="display:flex; gap: 8px; width: 100%; justify-content: center">
+                                <button type="button" class="btn btn-secondary btn-sm" (click)="startCamera()" style="flex: 1; padding: 6px; font-size: 11px">
+                                  <span class="material-icons-round" style="font-size:16px; vertical-align:middle">videocam</span> Chụp bằng máy tính
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" (click)="selfieInput.click()" style="flex: 1; padding: 6px; font-size: 11px">
+                                  <span class="material-icons-round" style="font-size:16px; vertical-align:middle">photo_camera</span> Chụp bằng điện thoại
+                                </button>
+                              </div>
+                              <input #selfieInput type="file" accept="image/png,image/jpeg,image/jpg" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
                             </div>
                           }
                         </div>
@@ -1451,7 +1499,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isEditing = signal(false);
   editSuccess = signal(false);
   editMessage = signal('');
-  
+
   showWithdrawModal = signal(false);
   selectedJobToComplete = signal<Job | null>(null);
 
@@ -1473,7 +1521,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     'Chuyên nghiệp',
     'Địa điểm dễ tìm'
   ];
-  
+
   withdrawForm = {
     amount: '' as any,
     bank: '',
@@ -1488,15 +1536,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
   workingJobs = computed(() => {
     const user = this.auth.currentUser();
     if (!user || user.role !== 'student') return [];
-    
+
     const acceptedJobIds = this.myApplications()
       .filter(app => app.status === 2 || app.status === 'Accepted' || app.status === 'accepted')
       .map(app => app.jobId);
 
-    return this.jobService.getAllJobs().filter(j => 
-      (j.selectedStudentId === user.id || 
-       (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
-       acceptedJobIds.includes(j.id)) &&
+    return this.jobService.getAllJobs().filter(j =>
+      (j.selectedStudentId === user.id ||
+        (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
+        acceptedJobIds.includes(j.id)) &&
       (j.status === 'in_progress' || j.status === 'pending_confirmation' || j.status === 'disputed')
     );
   });
@@ -1504,15 +1552,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
   completedJobsHistory = computed(() => {
     const user = this.auth.currentUser();
     if (!user || user.role !== 'student') return [];
-    
+
     const acceptedJobIds = this.myApplications()
       .filter(app => app.status === 2 || app.status === 'Accepted' || app.status === 'accepted')
       .map(app => app.jobId);
 
-    return this.jobService.getAllJobs().filter(j => 
-      (j.selectedStudentId === user.id || 
-       (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
-       acceptedJobIds.includes(j.id)) &&
+    return this.jobService.getAllJobs().filter(j =>
+      (j.selectedStudentId === user.id ||
+        (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
+        acceptedJobIds.includes(j.id)) &&
       (j.status === 'completed' || j.status === 'closed')
     );
   });
@@ -1520,7 +1568,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   appliedJobs = computed(() => {
     const user = this.auth.currentUser();
     if (!user || user.role !== 'student') return [];
-    
+
     const excludedJobIds = [
       ...this.workingJobs().map(j => j.id),
       ...this.completedJobsHistory().map(j => j.id)
@@ -1563,7 +1611,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.auth.fetchBalance().subscribe();
       this.jobService.fetchJobs();
       this.refreshStudentApplications();
-      
+
       // Load eKYC libraries in background to warm up
       if (this.auth.isStudent() && this.auth.currentUser()?.ekycStatus !== 'verified') {
         this.loadEkycLibraries();
@@ -1841,9 +1889,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.auth.uploadCV(file).subscribe({
       next: (res) => {
         if (res.success) {
-           this.toast.success(res.message);
+          this.toast.success(res.message);
         } else {
-           this.toast.error(res.message);
+          this.toast.error(res.message);
         }
       },
       error: () => this.toast.error('Lỗi kết nối máy chủ.')
@@ -1864,6 +1912,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   avatarUploading = signal(false);
+
+  licenseUploading = signal(false);
+  licenseUploadStatus = signal('');
   ekycFrontPreview = signal<string>('');
   ekycBackPreview = signal<string>('');
   ekycFrontFile: File | null = null;
@@ -1890,11 +1941,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
           // optimistically update preview locally
           const reader = new FileReader();
           reader.onload = () => {
-             const user = this.auth.currentUser();
-             if (user) {
-               const updated = { ...user, avatarUrl: reader.result as string };
-               this.auth.currentUser.set(updated);
-             }
+            const user = this.auth.currentUser();
+            if (user) {
+              const updated = { ...user, avatarUrl: reader.result as string };
+              this.auth.currentUser.set(updated);
+            }
           };
           reader.readAsDataURL(file);
         } else {
@@ -1906,6 +1957,57 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.toast.error('Upload ảnh thất bại do lỗi máy chủ.');
       }
     });
+  }
+
+  async onLicenseSelected(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    this.licenseUploading.set(true);
+    this.licenseUploadStatus.set('Đang phân tích hình ảnh AI...');
+
+    try {
+      // 1. Chạy OCR để tìm mã số thuế hoặc chữ "giấy phép kinh doanh"
+      const worker = await Tesseract.createWorker('vie');
+      const ret = await worker.recognize(file);
+      const text = ret.data.text.toLowerCase();
+      await worker.terminate();
+
+      let isVerified = false;
+      
+      // Các từ khóa đơn giản để xác thực cơ bản
+      if (text.includes('giấy chứng nhận') || text.includes('đăng ký doanh nghiệp') || text.includes('mã số doanh nghiệp') || text.includes('mã số thuế')) {
+        isVerified = true;
+        this.licenseUploadStatus.set('Đã xác thực thành công. Đang tải lên...');
+      } else {
+        this.licenseUploadStatus.set('Hình ảnh không hợp lệ. Đang tải lên chờ duyệt thủ công...');
+      }
+
+      // 2. Upload file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('isVerified', isVerified.toString());
+
+      const res = await fetch('http://localhost:5000/api/profile/employer/business-license', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('unitask_token') || localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        this.toast.success('Đã cập nhật Giấy phép kinh doanh thành công');
+        await this.auth.fetchProfile().toPromise(); // Refresh profile
+      } else {
+        this.toast.error('Không thể tải lên Giấy phép kinh doanh');
+      }
+    } catch (error) {
+      console.error(error);
+      this.toast.error('Có lỗi xảy ra khi phân tích hình ảnh');
+    } finally {
+      this.licenseUploading.set(false);
+    }
   }
 
   async onEkycFileSelected(event: Event, side: 'front' | 'back') {
@@ -1929,6 +2031,26 @@ export class ProfileComponent implements OnInit, OnDestroy {
     reader.readAsDataURL(file);
   }
 
+  async onSelfieFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+    const file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      this.toast.warning('File quá lớn! Vui lòng chọn file nhỏ hơn 5MB.');
+      return;
+    }
+
+    this.cameraErrorMessage.set(''); // Clear error if any
+
+    this.selfieFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.selfiePreview.set(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
+
+
   // Webcam eKYC properties
   selfiePreview = signal<string>('');
   selfieFile: File | null = null;
@@ -1947,7 +2069,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       this.webMediaStream = stream;
-      
+
       setTimeout(() => {
         const video = document.getElementById('webcamVideo') as HTMLVideoElement;
         if (video) {
@@ -1987,7 +2109,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       const blob = this.dataURLtoBlob(dataUrl);
       this.selfieFile = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
-      
+
       this.stopCamera();
     }
   }
@@ -2058,7 +2180,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (this.modelsLoaded) return;
     const faceapi = (window as any).faceapi;
     if (!faceapi) throw new Error('Thư viện face-api chưa được tải.');
-    
+
     const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
     await Promise.all([
       faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
@@ -2103,26 +2225,26 @@ export class ProfileComponent implements OnInit, OnDestroy {
         .replace(/\s+/g, " ")
         .trim();
     };
-    
+
     try {
       this.ekycStepMessage.set('Đang khởi tạo các mô hình AI nhận diện (tải từ CDN)...');
       await this.loadEkycLibraries();
-      
+
       const faceapi = (window as any).faceapi;
       const Tesseract = (window as any).Tesseract;
-      
+
       if (!this.librariesLoaded || !faceapi || !Tesseract) {
         console.warn('Không thể tải thư viện AI từ CDN. Chuyển sang chế độ xác thực dự phòng...');
         this.runFallbackEkycSubmit();
         return;
       }
-      
+
       this.ekycStepMessage.set('Đang tải mô hình đối chiếu khuôn mặt...');
       await this.loadFaceModels();
 
       this.ekycStepMessage.set('Đang phân tích OCR ảnh mặt trước CCCD để nhận diện thẻ...');
       const cccdFrontImg = await this.loadImage(this.ekycFrontPreview());
-      
+
       let frontOcrText = '';
       try {
         const frontOcr = await Tesseract.recognize(cccdFrontImg, 'vie+eng');
@@ -2133,13 +2255,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       const normFrontText = normalizeText(frontOcrText);
       const frontKeywords = [
-        "can cuoc", "cong dan", "giay to", "chung minh", "identity", 
-        "socialist", "vietnam", "cong hoa", "xa hoi", "chu nghia", 
+        "can cuoc", "cong dan", "giay to", "chung minh", "identity",
+        "socialist", "vietnam", "cong hoa", "xa hoi", "chu nghia",
         "doc lap", "tu do", "hanh phuc", "quoc tich", "que quan", "thuong tru"
       ];
       const isFrontKeywordsOk = frontKeywords.some(kw => normFrontText.includes(kw));
       if (frontOcrText && !isFrontKeywordsOk) {
-         throw new Error("Ảnh mặt trước không hợp lệ. Vui lòng tải lên ảnh chụp mặt trước thẻ Căn cước công dân (CCCD).");
+        throw new Error("Ảnh mặt trước không hợp lệ. Vui lòng tải lên ảnh chụp mặt trước thẻ Căn cước công dân (CCCD).");
       }
 
       // Trích xuất số thẻ CCCD (làm sạch các ký tự nhận dạng sai thông dụng)
@@ -2148,13 +2270,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
         .replace(/i/g, '1')
         .replace(/l/g, '1')
         .replace(/[^0-9]/g, '');
-      
+
       let cccdNumber = '';
       const digitMatch = cleanOcrNumbers.match(/\d{12}/) || cleanOcrNumbers.match(/\d{9}/);
       if (digitMatch) {
         cccdNumber = digitMatch[0];
       }
-      
+
       if (!cccdNumber) {
         throw new Error("Không thể nhận diện số thẻ CCCD (9 hoặc 12 số) trên mặt trước. Vui lòng chọn ảnh chụp rõ nét hơn.");
       }
@@ -2171,21 +2293,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       const normBackText = normalizeText(backOcrText);
       const backKeywords = [
-        "van tay", "ngon tro", "ky ten", "cuc truong", "cuc canh sat", 
-        "dac diem", "nhan dang", "cuc", "canh", "sat", "quan ly", 
-        "trat tu", "xa hoi", "trai", "phai", "ngon", "tro", "van", "tay", 
+        "van tay", "ngon tro", "ky ten", "cuc truong", "cuc canh sat",
+        "dac diem", "nhan dang", "cuc", "canh", "sat", "quan ly",
+        "trat tu", "xa hoi", "trai", "phai", "ngon", "tro", "van", "tay",
         "dang", "ky", "ten", "dan", "chu"
       ];
       const isBackKeywordsOk = backKeywords.some(kw => normBackText.includes(kw));
       if (backOcrText && !isBackKeywordsOk) {
-         throw new Error("Ảnh mặt sau không hợp lệ. Vui lòng tải lên ảnh chụp mặt sau thẻ Căn cước công dân (CCCD).");
+        throw new Error("Ảnh mặt sau không hợp lệ. Vui lòng tải lên ảnh chụp mặt sau thẻ Căn cước công dân (CCCD).");
       }
 
       this.ekycStepMessage.set('Đang tìm kiếm khuôn mặt trên ảnh CCCD mặt trước...');
       const cccdFace = await faceapi.detectSingleFace(cccdFrontImg)
         .withFaceLandmarks()
         .withFaceDescriptor();
-      
+
       if (!cccdFace) {
         throw new Error("Không tìm thấy khuôn mặt trong ảnh mặt trước CCCD. Vui lòng chọn ảnh rõ nét, không bị lóa sáng.");
       }
@@ -2203,11 +2325,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.ekycStepMessage.set('Đang so khớp sinh trắc học khuôn mặt...');
       const distance = faceapi.euclideanDistance(cccdFace.descriptor, selfieFace.descriptor);
       const similarity = Math.round((1 - distance) * 100);
-      
+
       console.log(`[eKYC AI Match] Distance: ${distance.toFixed(4)}, Similarity: ${similarity}%`);
 
-      if (similarity < 70) {
-        throw new Error(`Xác thực thất bại: Khuôn mặt trong ảnh chụp chân dung không khớp với khuôn mặt trên thẻ CCCD (Độ khớp đạt ${similarity}% < 70%). Vui lòng chụp lại rõ nét.`);
+      if (similarity < 60) {
+        throw new Error(`Xác thực thất bại: Khuôn mặt trong ảnh chụp chân dung không khớp với khuôn mặt trên thẻ CCCD (Độ khớp đạt ${similarity}% < 60%). Vui lòng chụp lại rõ nét.`);
       }
 
       // Nén mảng đặc trưng khuôn mặt (128 số thực) thành chuỗi Base64 để tiết kiệm không gian database
@@ -2223,7 +2345,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const faceDescriptorBase64 = btoa(binary);
 
       this.ekycStepMessage.set(`So khớp thành công (${similarity}%). Đang cập nhật trạng thái...`);
-      
+
       this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile, this.selfieFile, cccdNumber, faceDescriptorBase64).subscribe({
         next: (res) => {
           this.ekycSubmitting.set(false);

@@ -11,6 +11,8 @@ namespace UniTask.Business.DTOs.Job
         public string Location { get; set; } = string.Empty;
         [Required]
         public string Type { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Salary { get; set; } = string.Empty;
         public string SalaryText { get; set; } = string.Empty;
         public List<decimal> SalaryRange { get; set; } = new();
         public decimal Budget { get; set; }

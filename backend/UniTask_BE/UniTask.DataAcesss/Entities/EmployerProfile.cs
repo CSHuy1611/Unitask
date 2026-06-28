@@ -27,5 +27,9 @@ namespace UniTask.DataAcesss.Entities
 
         [MaxLength(200)]
         public string? Position { get; set; }
+
+        // ===== Business License =====
+        public string? BusinessLicenseUrl { get; set; }
+        public bool IsBusinessLicenseVerified { get; set; } = false;
     }
 }

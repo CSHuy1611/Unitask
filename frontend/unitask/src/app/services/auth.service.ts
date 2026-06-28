@@ -133,9 +133,19 @@ export class AuthService {
     };
 
     return this.http.post<any>(`${API_BASE_URL}/account/register`, payload).pipe(
+      map(() => ({ success: true, message: 'Vui lòng kiểm tra email để lấy mã OTP.' })),
+      catchError(err => {
+        // Backend returns "Không thể gửi mã xác nhận. Vui lòng kiểm tra lại địa chỉ Email." when SMTP fails.
+        return of({ success: false, message: this.parseError(err, 'Đăng ký thất bại. Vui lòng thử lại.') });
+      })
+    );
+  }
+
+  verifyOtp(email: string, otpCode: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/account/verify-otp`, { email, otpCode }).pipe(
       map(() => ({ success: true, message: 'Đăng ký thành công! Vui lòng đăng nhập.' })),
       catchError(err => {
-        return of({ success: false, message: this.parseError(err, 'Đăng ký thất bại. Vui lòng thử lại.') });
+        return of({ success: false, message: this.parseError(err, 'Mã OTP không chính xác.') });
       })
     );
   }

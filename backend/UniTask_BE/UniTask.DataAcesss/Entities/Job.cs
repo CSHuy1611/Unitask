@@ -44,6 +44,12 @@ namespace UniTask.DataAcesss.Entities
         public string Type { get; set; } = "Part-time";
 
         /// <summary>
+        /// Danh mục công việc: Marketing & Content, IT & Công nghệ, v.v.
+        /// </summary>
+        [MaxLength(200)]
+        public string Category { get; set; } = string.Empty;
+
+        /// <summary>
         /// Mức lương hiển thị dạng text (VD: "5 - 8 triệu/tháng").
         /// </summary>
         [MaxLength(200)]

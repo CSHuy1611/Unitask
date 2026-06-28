@@ -141,9 +141,16 @@ import { Job } from '../../models/job.model';
                            [(ngModel)]="formData.location" name="location">
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Mức lương</label>
-                    <input type="text" class="form-input" placeholder="VD: 5 - 8 triệu/tháng"
-                           [(ngModel)]="formData.salary" name="salary">
+                    <label class="form-label">Danh mục công việc</label>
+                    <select class="form-select" [(ngModel)]="formData.category" name="category">
+                      <option value="">-- Chọn danh mục --</option>
+                      <option>Marketing & Content</option>
+                      <option>IT & Công nghệ</option>
+                      <option>Hành chính & Nhân sự (Admin/HR)</option>
+                      <option>Kinh doanh & Bán hàng</option>
+                      <option>Sự kiện & Giải trí</option>
+                      <option>Khác</option>
+                    </select>
                   </div>
                 </div>
                 <div class="form-group" style="grid-column: 1 / -1">
@@ -866,91 +873,79 @@ export class EmployerDashboardComponent implements OnInit {
   disputeEvidenceText = '';
   disputeEvidenceUrl = '';
 
-  // 7 Predefined student job templates
+  // Predefined student job templates according to AGENTS.md
   jobTemplates = [
     {
-      name: 'Mẫu ảnh lookbook thời trang',
-      title: 'Mẫu ảnh lookbook thời trang',
+      name: 'Viết bài Fanpage/Seeding (Marketing)',
+      title: 'Cộng tác viên viết bài Fanpage & Seeding',
       type: 'Freelance',
-      location: 'TP. Hồ Chí Minh',
-      salary: '300.000đ - 500.000đ/buổi',
+      category: 'Marketing & Content',
+      location: 'Remote',
       budget: 300000,
-      description: 'Cần tuyển mẫu ảnh nam/nữ chụp lookbook cho BST xuân-hè 2026. Chụp tại studio và ngoài trời.',
-      requirementsStr: 'Sinh viên 18-24 tuổi, Chiều cao từ 1m60 (nữ) / 1m70 (nam), Có ảnh profile, Đúng giờ và chuyên nghiệp',
-      benefitsStr: 'Thanh toán ngay sau buổi chụp, Nhận ảnh đã chỉnh sửa làm portfolio, Giờ làm linh hoạt theo lịch học',
-      tagsStr: 'Mẫu ảnh, Thời trang, Lookbook, Freelance'
+      description: 'Cần sinh viên năng động viết 3 bài post Fanpage và đi seeding trên 10 group Facebook mục tiêu. Sản phẩm: Thời trang giới trẻ.',
+      requirementsStr: 'Hiểu biết về trend Gen Z, Có kỹ năng viết content tốt, Có tài khoản Facebook cá nhân để seeding',
+      benefitsStr: 'Làm việc hoàn toàn tại nhà, Nhận thù lao ngay sau khi nghiệm thu, Có cơ hội làm lâu dài',
+      tagsStr: 'Marketing, Content, Seeding, Fanpage'
     },
     {
-      name: 'Mẫu makeup - Thực hành trang điểm',
-      title: 'Mẫu makeup - Thực hành trang điểm',
+      name: 'Thiết kế Banner cơ bản (Marketing)',
+      title: 'Thiết kế Banner chạy Ads',
       type: 'Freelance',
-      location: 'Hà Nội',
-      salary: '150.000đ - 250.000đ/buổi',
-      budget: 150000,
-      description: 'Cần bạn nữ làm mẫu cho học viên lớp makeup thực hành trang điểm cô dâu và chụp ảnh.',
-      requirementsStr: 'Nữ 18-25 tuổi, Da mặt không quá nhạy cảm, Ngồi yên trong 1-2 tiếng, Đúng giờ',
-      benefitsStr: 'Được makeup miễn phí, Giờ cực linh hoạt, Thanh toán ngay sau buổi thực hành',
-      tagsStr: 'Mẫu makeup, Làm đẹp, Linh hoạt, Freelance'
+      category: 'Marketing & Content',
+      location: 'Remote',
+      budget: 500000,
+      description: 'Cần bạn thiết kế 5 ảnh banner vuông (1080x1080) cho chiến dịch khuyến mãi cuối tháng của shop.',
+      requirementsStr: 'Sử dụng thành thạo Canva hoặc Photoshop, Tư duy thẩm mỹ tốt, Bàn giao file gốc, Chỉnh sửa tối đa 2 lần',
+      benefitsStr: 'Linh hoạt thời gian, Thêm tác phẩm vào Portfolio, Thưởng nếu banner chạy Ads ra nhiều đơn',
+      tagsStr: 'Design, Banner, Canva, Photoshop'
     },
     {
-      name: 'Bê tráp đám cưới - Cuối tuần',
-      title: 'Bê tráp đám cưới - Cuối tuần',
+      name: 'Kiểm thử phần mềm / Bug hunting (IT)',
+      title: 'Software Testing / Tìm Bug ứng dụng',
       type: 'Freelance',
-      location: 'TP. Hồ Chí Minh',
-      salary: '400.000đ - 600.000đ/lần',
+      category: 'IT & Công nghệ',
+      location: 'Remote',
       budget: 400000,
-      description: 'Tuyển nam/nữ bê tráp cho lễ ăn hỏi và đám cưới vào cuối tuần. Áo dài được chuẩn bị sẵn.',
-      requirementsStr: '18-24 tuổi, Ngoại hình ưa nhìn, Chiều cao phù hợp (nữ > 1m58, nam > 1m70), Đi đúng giờ',
-      benefitsStr: 'Thanh toán cao cho 2-3 tiếng, Trang phục áo dài được cấp, Ăn tiệc miễn phí, Bao lì bao lì xì',
-      tagsStr: 'Bê tráp, Đám cưới, Sự kiện, Cuối tuần'
+      description: 'Cần sinh viên IT test ứng dụng di động mới ra mắt trên cả iOS và Android. Cung cấp danh sách bug kèm video quay màn hình.',
+      requirementsStr: 'Sinh viên năm 2-4 ngành CNTT, Có cả máy iOS và Android là lợi thế, Kỹ năng báo cáo bug rõ ràng',
+      benefitsStr: 'Làm quen với quy trình QC/Tester, Thời gian làm việc tự do, Thanh toán nhanh gọn',
+      tagsStr: 'IT, Testing, QC, Bug'
     },
     {
-      name: 'PG sự kiện khai trương cửa hàng',
-      title: 'PG sự kiện khai trương cửa hàng',
+      name: 'Viết script ngắn / Crawl dữ liệu (IT)',
+      title: 'Crawl dữ liệu website',
       type: 'Freelance',
-      location: 'Đà Nẵng',
-      salary: '250.000đ - 400.000đ/buổi',
-      budget: 250000,
-      description: 'Cần PG/PB cho sự kiện khai trương chi nhánh mới. Nhiệm vụ đón khách và hỗ trợ cắt băng.',
-      requirementsStr: 'Ngoại hình sáng và thân thiện, Năng động và giao tiếp tốt, Có kinh nghiệm PG là lợi thế',
-      benefitsStr: 'Thanh toán cuối ngày, Được mặc đồng phục thương hiệu, Bữa trưa miễn phí, Thưởng doanh số nếu có',
-      tagsStr: 'PG, Sự kiện, Khai trương, Freelance'
-    },
-    {
-      name: 'Livestream bán hàng online',
-      title: 'Livestream bán hàng online',
-      type: 'Freelance',
+      category: 'IT & Công nghệ',
       location: 'Remote',
-      salary: '200.000đ/buổi + hoa hồng',
-      budget: 200000,
-      description: 'Tuyển bạn có khả năng nói chuyện lưu loát để livestream bán hoa tươi trên kênh TikTok/Shopee.',
-      requirementsStr: 'Tự tin trước camera, Giọng nói rõ ràng và truyền cảm, Có điện thoại/laptop chất lượng tốt',
-      benefitsStr: 'Làm việc từ nhà, Hoa hồng theo doanh số, Lịch linh hoạt tự chọn, Được training kỹ năng livestream',
-      tagsStr: 'Livestream, Bán hàng, TikTok, Remote'
+      budget: 600000,
+      description: 'Cần một bạn viết script (Python/NodeJS) crawl thông tin sản phẩm từ một trang thương mại điện tử công khai và xuất ra file Excel.',
+      requirementsStr: 'Thành thạo Python/NodeJS, Biết dùng Selenium/Puppeteer/BeautifulSoup, Bàn giao mã nguồn',
+      benefitsStr: 'Áp dụng kiến thức học vào thực tế, Không gò bó giờ giấc',
+      tagsStr: 'Crawl, Python, Code, Script'
     },
     {
-      name: 'Mẫu ảnh sản phẩm - Phụ kiện handmade',
-      title: 'Mẫu ảnh sản phẩm - Phụ kiện handmade',
+      name: 'Nhập liệu văn bản (Admin/HR)',
+      title: 'Nhập liệu danh sách khách hàng vào Excel',
       type: 'Freelance',
+      category: 'Hành chính & Nhân sự (Admin/HR)',
       location: 'Remote',
-      salary: '200.000đ - 350.000đ/set ảnh',
       budget: 200000,
-      description: 'Cần bạn nữ chụp ảnh đeo phụ kiện handmade (nhẫn, vòng tay) bằng điện thoại cá nhân.',
-      requirementsStr: 'Nữ 18-25 có bàn tay đẹp, Có điện thoại camera tốt, Biết chụp ảnh aesthetic và đúng deadline',
-      benefitsStr: 'Làm hoàn toàn từ nhà, Nhận sản phẩm phụ kiện miễn phí, Thanh toán qua chuyển khoản',
-      tagsStr: 'Mẫu ảnh, Sản phẩm, Handmade, Remote'
+      description: 'Cần sinh viên đánh máy cẩn thận nhập liệu 500 thông tin từ file ảnh/PDF sang định dạng Excel theo mẫu.',
+      requirementsStr: 'Chăm chỉ, Cẩn thận, Gõ phím nhanh, Thành thạo Excel/Google Sheets',
+      benefitsStr: 'Công việc đơn giản, Nhận tiền ngay',
+      tagsStr: 'Data entry, Nhập liệu, Admin'
     },
     {
-      name: 'Phụ chụp ảnh cưới - Cuối tuần',
-      title: 'Phụ chụp ảnh cưới - Cuối tuần',
-      type: 'Freelance',
-      location: 'TP. Hồ Chí Minh',
-      salary: '350.000đ - 500.000đ/buổi',
+      name: 'Hỗ trợ sự kiện / Lễ tân (Admin)',
+      title: 'Hỗ trợ sự kiện khai trương / Check-in',
+      type: 'Part-time',
+      category: 'Sự kiện & Giải trí',
+      location: 'Hà Nội',
       budget: 350000,
-      description: 'Tuyển assistant photographer cho các buổi chụp ảnh cưới outdoor. Hỗ trợ hắt sáng và di chuyển đồ.',
-      requirementsStr: 'Có sức khỏe tốt, Yêu thích nhiếp ảnh, Có thể làm cuối tuần, Chịu khó và nhanh nhẹn',
-      benefitsStr: 'Học hỏi kỹ thuật chụp ảnh cưới từ nhiếp ảnh gia, Portfolio assistant, Hỗ trợ ăn trưa và đi lại',
-      tagsStr: 'Photography, Ảnh cưới, Assistant, Cuối tuần'
+      description: 'Cần 2 bạn nam/nữ hỗ trợ check-in khách mời, phát tài liệu và hướng dẫn chỗ ngồi tại hội thảo sự kiện công ty.',
+      requirementsStr: 'Ngoại hình sáng, Giao tiếp tốt, Đúng giờ, Trang phục lịch sự (quần âu, áo sơ mi trắng)',
+      benefitsStr: 'Được phục vụ ăn nhẹ, Giao lưu với các diễn giả và khách mời doanh nghiệp',
+      tagsStr: 'Sự kiện, Lễ tân, Check-in'
     }
   ];
 
@@ -1005,8 +1000,8 @@ export class EmployerDashboardComponent implements OnInit {
     return {
       title: '',
       type: 'Freelance',
+      category: '',
       location: '',
-      salary: '',
       budget: null as number | null,
       description: '',
       requirementsStr: '',
@@ -1043,8 +1038,8 @@ export class EmployerDashboardComponent implements OnInit {
     this.formData = {
       title: job.title,
       type: job.type,
+      category: (job as any).category || '',
       location: job.location,
-      salary: job.salary,
       budget: job.budget || null,
       description: job.description,
       requirementsStr: (job.requirements || []).join(', '),
@@ -1091,7 +1086,8 @@ export class EmployerDashboardComponent implements OnInit {
         title: this.formData.title,
         location: this.formData.location,
         type: this.formData.type,
-        salary: this.formData.salary,
+        category: this.formData.category,
+        salary: this.formData.budget ? `${this.formData.budget.toLocaleString('vi-VN')}đ` : 'Thỏa thuận',
         budget: this.formData.budget || 0,
         description: this.formData.description,
         requirements,
@@ -1100,7 +1096,7 @@ export class EmployerDashboardComponent implements OnInit {
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
-      }).subscribe({
+      } as any).subscribe({
         next: (result) => {
           this.postSuccess.set(result.success);
           this.postMessage.set(result.message);
@@ -1162,12 +1158,13 @@ export class EmployerDashboardComponent implements OnInit {
 
       this.jobService.addJob({
         title: this.formData.title,
-        company: user.companyName || 'My Company',
-        companyId: user.companyId || 0,
-        companyLogo: user.avatar,
+        company: user.companyName || user.fullName || 'My Company',
+        companyId: user.companyId || user.id || 0,
+        companyLogo: user.companyLogoUrl || user.avatarUrl || user.avatar,
         location: this.formData.location,
         type: this.formData.type,
-        salary: this.formData.salary,
+        category: this.formData.category,
+        salary: this.formData.budget ? `${this.formData.budget.toLocaleString('vi-VN')}đ` : 'Thỏa thuận',
         budget: budget,
         commission: commission,
         description: this.formData.description,
@@ -1177,7 +1174,7 @@ export class EmployerDashboardComponent implements OnInit {
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
-      }).subscribe({
+      } as any).subscribe({
         next: (result) => {
           this.postSuccess.set(result.success);
           this.postMessage.set(result.message);
@@ -1262,8 +1259,8 @@ export class EmployerDashboardComponent implements OnInit {
   applyTemplate(tpl: any) {
     this.formData.title = tpl.title;
     this.formData.type = tpl.type;
+    this.formData.category = tpl.category || '';
     this.formData.location = tpl.location;
-    this.formData.salary = tpl.salary;
     this.formData.budget = tpl.budget;
     this.formData.description = tpl.description;
     this.formData.requirementsStr = tpl.requirementsStr;

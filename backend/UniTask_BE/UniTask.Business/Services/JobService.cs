@@ -136,7 +136,8 @@ namespace UniTask.Business.Services
                 Description = dto.Description,
                 Location = dto.Location,
                 Type = dto.Type,
-                SalaryText = dto.SalaryRange.Any() ? string.Join("-", dto.SalaryRange) : dto.SalaryText,
+                Category = dto.Category,
+                SalaryText = dto.SalaryRange.Any() ? string.Join("-", dto.SalaryRange) : (dto.Salary ?? dto.SalaryText),
                 Budget = roundedBudget,
                 Commission = roundedCommission,
                 PostedDate = DateTime.UtcNow,
@@ -209,7 +210,8 @@ namespace UniTask.Business.Services
             job.Description = dto.Description;
             job.Location = dto.Location;
             job.Type = dto.Type;
-            job.SalaryText = dto.SalaryRange.Any() ? string.Join("-", dto.SalaryRange) : dto.SalaryText;
+            job.Category = dto.Category;
+            job.SalaryText = dto.SalaryRange.Any() ? string.Join("-", dto.SalaryRange) : (dto.Salary ?? dto.SalaryText);
             job.Budget = dto.Budget;
             job.Commission = dto.Commission;
             job.Deadline = dto.Deadline;
@@ -364,6 +366,8 @@ namespace UniTask.Business.Services
                 Description = j.Description,
                 Location = j.Location,
                 Type = j.Type,
+                Category = j.Category,
+                Salary = j.SalaryText,
                 SalaryText = j.SalaryText,
                 SalaryRange = salaryRange,
                 Budget = j.Budget,
