@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
 import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
+import { API_BASE_URL } from '../../config/api.config';
 import Tesseract from 'tesseract.js';
 
 @Component({
@@ -484,7 +485,7 @@ import Tesseract from 'tesseract.js';
                                 <span class="material-icons-round" style="font-size:14px; vertical-align:middle">photo_camera</span> Thử dùng Camera thiết bị
                               </button>
                             </div>
-                            <input #selfieInputError type="file" accept="image/png,image/jpeg,image/jpg" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
+                            <input #selfieInputError type="file" accept="image/*" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
                           } @else if (selfiePreview()) {
                             <img [src]="selfiePreview()" alt="Selfie Preview" style="width:100%; height:100%; object-fit:cover" />
                             <span class="preview-label" style="position:absolute; bottom:0; left:0; right:0;">Ảnh chụp chân dung ✓</span>
@@ -504,7 +505,7 @@ import Tesseract from 'tesseract.js';
                                   <span class="material-icons-round" style="font-size:16px; vertical-align:middle">photo_camera</span> Chụp bằng điện thoại
                                 </button>
                               </div>
-                              <input #selfieInput type="file" accept="image/png,image/jpeg,image/jpg" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
+                              <input #selfieInput type="file" accept="image/*" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
                             </div>
                           }
                         </div>
@@ -1977,12 +1978,41 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (!file) return;
 
     this.licenseUploading.set(true);
-    this.licenseUploadStatus.set('Đang phân tích hình ảnh AI...');
+    this.licenseUploadStatus.set('Đang xử lý hình ảnh...');
 
     try {
+      // Nén ảnh để tránh crash bộ nhớ trên điện thoại khi chạy AI
+      const resizedBase64 = await new Promise<string>((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+        reader.onload = (e) => { img.src = e.target?.result as string; };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let scale = 1;
+          if (img.width > 1200) {
+             scale = 1200 / img.width;
+          }
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          } else {
+            reject('Canvas error');
+          }
+        };
+        img.onerror = reject;
+      });
+
+      this.licenseUploadStatus.set('Đang phân tích hình ảnh AI...');
       // 1. Chạy OCR để tìm mã số thuế hoặc chữ "giấy phép kinh doanh"
-      const worker = await Tesseract.createWorker('vie');
-      const ret = await worker.recognize(file);
+      await this.loadEkycLibraries();
+      const TesseractObj = (window as any).Tesseract;
+      const worker = await TesseractObj.createWorker('vie');
+      const ret = await worker.recognize(resizedBase64);
       const text = ret.data.text.toLowerCase();
       await worker.terminate();
 
@@ -2001,7 +2031,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       formData.append('file', file);
       formData.append('isVerified', isVerified.toString());
 
-      const res = await fetch('http://localhost:5000/api/profile/employer/business-license', {
+      const res = await fetch(`${API_BASE_URL}/profile/employer/business-license`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('unitask_token') || localStorage.getItem('token')}`
