@@ -100,6 +100,15 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "Withdrawal marked as completed successfully." });
         }
 
+        [HttpPut("withdrawals/{id}/reject")]
+        public async Task<IActionResult> RejectWithdrawal(int id, [FromBody] WithdrawalRejectDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var result = await _adminService.RejectWithdrawalAsync(id, dto.Reason);
+            if (!result) return BadRequest(new { message = "Failed to reject withdrawal." });
+            return Ok(new { message = "Withdrawal rejected successfully and funds refunded." });
+        }
+
         [HttpPost("withdrawals/batch-process")]
         public async Task<IActionResult> BatchProcessWithdrawals()
         {

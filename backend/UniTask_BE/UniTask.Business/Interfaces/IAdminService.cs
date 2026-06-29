@@ -17,6 +17,7 @@ namespace UniTask.Business.Interfaces
         Task<object> GetWithdrawalsAsync(int page = 1, int pageSize = 10);
         Task<bool> CompleteWithdrawalAsync(int transactionId);
         Task<bool> BatchProcessWithdrawalsAsync();
+        Task<bool> RejectWithdrawalAsync(int transactionId, string reason);
 
         // Dispute Management
         Task<object> GetDisputesAsync(int page = 1, int pageSize = 10);

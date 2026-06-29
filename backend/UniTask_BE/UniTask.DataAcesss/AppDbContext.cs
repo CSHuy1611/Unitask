@@ -106,11 +106,6 @@ namespace UniTask.DataAcesss
                       .HasForeignKey(j => j.CompanyId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // Job → SelectedStudent (N-1, nullable)
-                entity.HasOne(j => j.SelectedStudent)
-                      .WithMany()
-                      .HasForeignKey(j => j.SelectedStudentId)
-                      .OnDelete(DeleteBehavior.SetNull);
 
                 // Job → Requirements (1-N)
                 entity.HasMany(j => j.Requirements)

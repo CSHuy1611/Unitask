@@ -22,7 +22,7 @@ namespace UniTask.Business.DTOs.Job
         public bool IsUrgent { get; set; }
         public bool IsRemote { get; set; }
         public JobStatus Status { get; set; }
-        public string? SelectedStudentId { get; set; }
+        public int HeadCount { get; set; } = 1;
 
         // ===== Dispute Fields =====
         public string? DisputeReason { get; set; }
@@ -32,14 +32,6 @@ namespace UniTask.Business.DTOs.Job
         public string? StudentEvidenceUrl { get; set; }
         public DateTime? DisputedDate { get; set; }
 
-        // ===== Check-in / Check-out & Escrow Fields =====
-        public DateTime? CheckInTime { get; set; }
-        public DateTime? CheckOutTime { get; set; }
-        public string? CheckInOtp { get; set; }
-        public DateTime? CheckInOtpExpiredAt { get; set; }
-        public string? CheckOutOtp { get; set; }
-        public DateTime? CheckOutOtpExpiredAt { get; set; }
-        public DateTime? EscrowReleaseDate { get; set; }
         public int RequiredReliabilityScore { get; set; }
 
         // ===== Two-way Rating Fields =====

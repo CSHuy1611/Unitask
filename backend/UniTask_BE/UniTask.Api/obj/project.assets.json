@@ -7706,11 +7706,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Api\\UniTask.Api.csproj",
+      "projectUniqueName": "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Api\\UniTask.Api.csproj",
       "projectName": "UniTask.Api",
-      "projectPath": "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Api\\UniTask.Api.csproj",
+      "projectPath": "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Api\\UniTask.Api.csproj",
       "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
-      "outputPath": "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Api\\obj\\",
+      "outputPath": "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Api\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -7732,11 +7732,11 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Business\\UniTask.Business.csproj": {
-              "projectPath": "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Business\\UniTask.Business.csproj"
+            "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Business\\UniTask.Business.csproj": {
+              "projectPath": "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.Business\\UniTask.Business.csproj"
             },
-            "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj": {
-              "projectPath": "d:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj"
+            "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj": {
+              "projectPath": "D:\\7rd_Semester_FPTU\\EXE101\\Demo_MVP\\backend\\UniTask_BE\\UniTask.DataAcesss\\UniTask.DataAcesss.csproj"
             }
           }
         }
