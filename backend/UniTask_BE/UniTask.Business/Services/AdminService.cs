@@ -610,5 +610,212 @@ namespace UniTask.Business.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<object> GetTransactionsAsync(int page = 1, int pageSize = 10, string? type = null)
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+
+            var query = _context.Transactions
+                .Include(t => t.Wallet)
+                .ThenInclude(w => w.User)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(type) && type != "All")
+            {
+                if (type == "CashIn")
+                {
+                    query = query.Where(t => t.Type == TransactionType.Deposit);
+                }
+                else if (type == "CashOut")
+                {
+                    query = query.Where(t => t.Type == TransactionType.Withdrawal);
+                }
+                else if (type == "Revenue")
+                {
+                    query = query.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee);
+                }
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(t => t.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(t => new TransactionDto
+                {
+                    Id = t.Id,
+                    WalletId = t.WalletId,
+                    FullName = t.Wallet.User.FullName,
+                    Email = t.Wallet.User.Email,
+                    Amount = t.Amount,
+                    Type = t.Type,
+                    Description = t.Description,
+                    RelatedJobId = t.RelatedJobId,
+                    CreatedAt = t.CreatedAt
+                })
+                .ToListAsync();
+
+            return new
+            {
+                items = items,
+                totalCount = totalCount,
+                hasMore = page * pageSize < totalCount
+            };
+        }
+
+        public async Task<byte[]> ExportRevenueReportExcelAsync(DateTime? startDate, DateTime? endDate)
+        {
+            var query = _context.Transactions
+                .Include(t => t.Wallet)
+                .ThenInclude(w => w.User)
+                .AsQueryable();
+
+            if (startDate.HasValue)
+                query = query.Where(t => t.CreatedAt >= startDate.Value);
+            if (endDate.HasValue)
+                query = query.Where(t => t.CreatedAt <= endDate.Value.AddDays(1).AddTicks(-1));
+
+            var transactions = await query.ToListAsync();
+
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+
+            // 1. Sheet Dòng Tiền (Cashflow)
+            var cashflowSheet = workbook.Worksheets.Add("Dòng Tiền");
+            cashflowSheet.Cell(1, 1).Value = "ID";
+            cashflowSheet.Cell(1, 2).Value = "Ngày giao dịch";
+            cashflowSheet.Cell(1, 3).Value = "Tên khách hàng";
+            cashflowSheet.Cell(1, 4).Value = "Email";
+            cashflowSheet.Cell(1, 5).Value = "Loại GD (Nạp/Rút)";
+            cashflowSheet.Cell(1, 6).Value = "Số tiền";
+            cashflowSheet.Cell(1, 7).Value = "Trạng thái";
+            cashflowSheet.Cell(1, 8).Value = "Mã tham chiếu (PayOS)";
+
+            var cashflows = transactions.Where(t => t.Type == TransactionType.Deposit || t.Type == TransactionType.Withdrawal).ToList();
+            for (int i = 0; i < cashflows.Count; i++)
+            {
+                var t = cashflows[i];
+                int row = i + 2;
+                cashflowSheet.Cell(row, 1).Value = t.Id;
+                cashflowSheet.Cell(row, 2).Value = t.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
+                cashflowSheet.Cell(row, 3).Value = t.Wallet.User.FullName;
+                cashflowSheet.Cell(row, 4).Value = t.Wallet.User.Email;
+                cashflowSheet.Cell(row, 5).Value = t.Type == TransactionType.Deposit ? "Nạp tiền" : "Rút tiền";
+                cashflowSheet.Cell(row, 6).Value = t.Amount;
+                
+                string status = "Hoàn thành";
+                if (t.Type == TransactionType.Withdrawal && t.Description != null)
+                {
+                    if (t.Description.StartsWith("[Pending]")) status = "Chờ xử lý";
+                    else if (t.Description.StartsWith("[Processing]")) status = "Đang xử lý";
+                    else if (t.Description.StartsWith("[Rejected]")) status = "Bị từ chối";
+                }
+                else if (t.Type == TransactionType.Deposit && t.Description != null && t.Description.Contains("[PAYOS_PENDING]"))
+                {
+                    status = "Đang chờ PayOS";
+                }
+                cashflowSheet.Cell(row, 7).Value = status;
+
+                // Extract PayOS OrderCode if Deposit
+                string refCode = "";
+                if (t.Type == TransactionType.Deposit && t.Description != null)
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(t.Description, @"Mã ĐH: (\d+)");
+                    if (match.Success) refCode = match.Groups[1].Value;
+                }
+                cashflowSheet.Cell(row, 8).Value = refCode;
+            }
+            cashflowSheet.Columns().AdjustToContents();
+
+            // 2. Sheet Doanh Thu
+            var revenueSheet = workbook.Worksheets.Add("Doanh Thu");
+            revenueSheet.Cell(1, 1).Value = "ID";
+            revenueSheet.Cell(1, 2).Value = "Ngày giao dịch";
+            revenueSheet.Cell(1, 3).Value = "Tên khách hàng";
+            revenueSheet.Cell(1, 4).Value = "Loại doanh thu";
+            revenueSheet.Cell(1, 5).Value = "Số tiền";
+
+            var revenues = transactions.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee).ToList();
+            for (int i = 0; i < revenues.Count; i++)
+            {
+                var t = revenues[i];
+                int row = i + 2;
+                revenueSheet.Cell(row, 1).Value = t.Id;
+                revenueSheet.Cell(row, 2).Value = t.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
+                revenueSheet.Cell(row, 3).Value = t.Wallet.User.FullName;
+                
+                string typeName = "Khác";
+                if (t.Type == TransactionType.CommissionFee) typeName = "Hoa hồng (10%)";
+                else if (t.Type == TransactionType.SubscriptionFee) typeName = "Gói dịch vụ";
+                else if (t.Type == TransactionType.PostingFee) typeName = "Phí đăng tin";
+
+                revenueSheet.Cell(row, 4).Value = typeName;
+                revenueSheet.Cell(row, 5).Value = Math.Abs(t.Amount); // Thu vào nên hiển thị số dương
+            }
+            revenueSheet.Columns().AdjustToContents();
+
+            // 3. Sheet Khách trả phí
+            var payingSheet = workbook.Worksheets.Add("Khách hàng trả phí");
+            payingSheet.Cell(1, 1).Value = "Tên khách hàng";
+            payingSheet.Cell(1, 2).Value = "Email";
+            payingSheet.Cell(1, 3).Value = "Tổng tiền nạp";
+            payingSheet.Cell(1, 4).Value = "Doanh thu mang lại";
+
+            var payingUsers = transactions
+                .Where(t => t.Type == TransactionType.Deposit || t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee)
+                .GroupBy(t => t.Wallet.User)
+                .Select(g => new
+                {
+                    User = g.Key,
+                    TotalDeposit = g.Where(t => t.Type == TransactionType.Deposit && !(t.Description != null && t.Description.Contains("[PAYOS_PENDING]"))).Sum(t => t.Amount),
+                    TotalRevenue = g.Where(t => t.Type != TransactionType.Deposit).Sum(t => Math.Abs(t.Amount))
+                })
+                .Where(u => u.TotalDeposit > 0 || u.TotalRevenue > 0)
+                .ToList();
+
+            for (int i = 0; i < payingUsers.Count; i++)
+            {
+                var u = payingUsers[i];
+                int row = i + 2;
+                payingSheet.Cell(row, 1).Value = u.User.FullName;
+                payingSheet.Cell(row, 2).Value = u.User.Email;
+                payingSheet.Cell(row, 3).Value = u.TotalDeposit;
+                payingSheet.Cell(row, 4).Value = u.TotalRevenue;
+            }
+            payingSheet.Columns().AdjustToContents();
+
+            // 4. Sheet Active Users
+            var activeSheet = workbook.Worksheets.Add("Active Users");
+            activeSheet.Cell(1, 1).Value = "Tên khách hàng";
+            activeSheet.Cell(1, 2).Value = "Email";
+            activeSheet.Cell(1, 3).Value = "Vai trò";
+            activeSheet.Cell(1, 4).Value = "Trạng thái eKYC";
+
+            var userIdsWithTx = transactions.Select(t => t.Wallet.UserId).Distinct().ToList();
+            
+            var jobQuery = _context.Jobs.AsQueryable();
+            if (startDate.HasValue) jobQuery = jobQuery.Where(j => j.PostedDate >= startDate.Value);
+            if (endDate.HasValue) jobQuery = jobQuery.Where(j => j.PostedDate <= endDate.Value.AddDays(1).AddTicks(-1));
+            var userIdsWithJobs = await jobQuery.Select(j => j.EmployerId).Distinct().ToListAsync();
+
+            var allActiveIds = userIdsWithTx.Union(userIdsWithJobs).ToList();
+            var activeUsers = await _context.Users.Where(u => allActiveIds.Contains(u.Id)).ToListAsync();
+
+            for (int i = 0; i < activeUsers.Count; i++)
+            {
+                var u = activeUsers[i];
+                int row = i + 2;
+                activeSheet.Cell(row, 1).Value = u.FullName;
+                activeSheet.Cell(row, 2).Value = u.Email;
+                activeSheet.Cell(row, 3).Value = u.UserType == UserType.Student ? "Sinh viên" : "Nhà tuyển dụng";
+                activeSheet.Cell(row, 4).Value = u.EkycStatus.ToString();
+            }
+            activeSheet.Columns().AdjustToContents();
+
+            using var stream = new System.IO.MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
     }
 }

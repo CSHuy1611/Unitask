@@ -133,5 +133,21 @@ namespace UniTask.Api.Controllers
             if (!result) return BadRequest(new { message = "Failed to resolve dispute. Job might not be in Disputed status." });
             return Ok(new { message = "Dispute resolved successfully." });
         }
+
+        // ===== REVENUE & TRANSACTIONS =====
+        [HttpGet("transactions")]
+        public async Task<IActionResult> GetTransactions([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? type = null)
+        {
+            var result = await _adminService.GetTransactionsAsync(page, pageSize, type);
+            return Ok(result);
+        }
+
+        [HttpGet("transactions/export")]
+        public async Task<IActionResult> ExportRevenueReport([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            var excelBytes = await _adminService.ExportRevenueReportExcelAsync(startDate, endDate);
+            var fileName = $"RevenueReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
     }
 }
