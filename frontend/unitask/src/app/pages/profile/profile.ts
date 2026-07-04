@@ -487,7 +487,11 @@ import Tesseract from 'tesseract.js';
 
                       <!-- Cột 2: Webcam Selfie -->
                       <div>
-                        <h4 style="margin-bottom:12px; color: var(--text-primary);">2. Chụp ảnh Selfie đối chiếu</h4>
+                        <h4 style="margin-bottom:8px; color: var(--text-primary);">2. Chụp ảnh Selfie đối chiếu</h4>
+                        <p style="font-size: 11px; color: #fbbf24; margin-bottom: 12px; line-height: 1.4; background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(251, 191, 36, 0.2);">
+                          <span class="material-icons-round" style="font-size: 14px; vertical-align: middle;">warning</span> 
+                          <b>Lưu ý:</b> Vui lòng tháo kính, khẩu trang và mũ. Để mặt mộc giống với ảnh trên thẻ CCCD nhất giúp hệ thống so khớp chính xác.
+                        </p>
                         
                         <div class="selfie-camera-box" style="border: 2px dashed var(--border-color); border-radius: var(--radius-xl); height: 252px; background: rgba(255,255,255,0.02); display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; position:relative;">
                           @if (cameraErrorMessage()) {
@@ -495,11 +499,8 @@ import Tesseract from 'tesseract.js';
                               <span class="material-icons-round" style="font-size:32px">videocam_off</span>
                               <span style="line-height: 1.4">{{ cameraErrorMessage() }}</span>
                               <div style="display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 8px;">
-                                <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 11px;" (click)="selfieInputError.click()">
-                                  <span class="material-icons-round" style="font-size:14px; vertical-align:middle">photo_camera</span> Bật Camera
-                                </button>
-                                <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 11px;" (click)="selfieGalleryInputError.click()">
-                                  <span class="material-icons-round" style="font-size:14px; vertical-align:middle">collections</span> Chọn Thư viện
+                                <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 11px;" (click)="startCamera()">
+                                  <span class="material-icons-round" style="font-size:14px; vertical-align:middle">videocam</span> Thử lại Webcam
                                 </button>
                               </div>
                             </div>
@@ -520,14 +521,6 @@ import Tesseract from 'tesseract.js';
                                 <button type="button" class="btn btn-secondary btn-sm" (click)="startCamera()" style="width: 100%; padding: 6px; font-size: 11px">
                                   <span class="material-icons-round" style="font-size:16px; vertical-align:middle">videocam</span> Chụp bằng máy tính
                                 </button>
-                                <div style="display:flex; gap: 8px; width: 100%">
-                                  <button type="button" class="btn btn-secondary btn-sm" (click)="selfieInput.click()" style="flex: 1; padding: 6px; font-size: 11px">
-                                    <span class="material-icons-round" style="font-size:16px; vertical-align:middle">photo_camera</span> Bật Camera
-                                  </button>
-                                  <button type="button" class="btn btn-secondary btn-sm" (click)="selfieGalleryInput.click()" style="flex: 1; padding: 6px; font-size: 11px">
-                                    <span class="material-icons-round" style="font-size:16px; vertical-align:middle">collections</span> Thư viện ảnh
-                                  </button>
-                                </div>
                               </div>
                               <input #selfieInput type="file" accept="image/*" capture="user" style="display:none" (change)="onSelfieFileSelected($event)">
                               <input #selfieGalleryInput type="file" accept="image/*" style="display:none" (change)="onSelfieFileSelected($event)">
@@ -1957,7 +1950,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   licenseUploading = signal(false);
   licenseUploadStatus = signal('');
-  
+
 
 
   ekycFrontPreview = signal<string>('');
@@ -2023,7 +2016,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           const canvas = document.createElement('canvas');
           let scale = 1;
           if (img.width > 1200) {
-             scale = 1200 / img.width;
+            scale = 1200 / img.width;
           }
           canvas.width = img.width * scale;
           canvas.height = img.height * scale;
@@ -2080,7 +2073,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         try {
           const errData = await res.json();
           if (errData && errData.message) errStr = errData.message;
-        } catch(e) {}
+        } catch (e) { }
         this.toast.error(errStr);
       }
     } catch (error) {
@@ -2338,12 +2331,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       const normFrontText = normalizeText(frontOcrText);
       const frontKeywords = [
-        "can cuoc cong dan", 
-        "chung minh nhan dan", 
+        "can cuoc cong dan",
+        "chung minh nhan dan",
         "identity card",
-        "noi thuong tru", 
+        "noi thuong tru",
         "que quan",
-        "quoc tich", 
+        "quoc tich",
         "cong hoa xa hoi chu nghia"
       ];
       const isFrontKeywordsOk = frontKeywords.some(kw => normFrontText.includes(kw));
