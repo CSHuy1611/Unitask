@@ -754,7 +754,7 @@ namespace UniTask.Business.Services
                     businessLicenseUrl = p.BusinessLicenseUrl,
                     isVerified = p.IsBusinessLicenseVerified
                 })
-                .ToListAsync<object>();
+                .ToListAsync();
 
             return profiles;
         }
