@@ -18,7 +18,7 @@ namespace UniTask.Business.DTOs.Auth
         [Required(ErrorMessage = "Role is required (Student or Employer)")]
         public string Role { get; set; } = string.Empty;
         
-        [RegularExpression(@"^(0[3|5|7|8|9])+([0-9]{8})$", ErrorMessage = "Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam hợp lệ.")]
+        [RegularExpression(@"^0[0-9]{9}$", ErrorMessage = "Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam hợp lệ.")]
         public string? PhoneNumber { get; set; }
 
         // Optional Student Fields

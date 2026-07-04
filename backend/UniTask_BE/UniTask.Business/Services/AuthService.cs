@@ -109,6 +109,17 @@ namespace UniTask.Business.Services
                     return new AuthResponse { IsSuccess = false, Message = "Mã số thuế này đã được đăng ký trước đó trong hệ thống. Vui lòng kiểm tra lại." };
                 }
             }
+            // Check Phone uniqueness
+            if (!string.IsNullOrEmpty(request.PhoneNumber))
+            {
+                var phoneExists = await _userManager.Users
+                    .AnyAsync(u => u.PhoneNumber == request.PhoneNumber && u.EmailConfirmed);
+                
+                if (phoneExists)
+                {
+                    return new AuthResponse { IsSuccess = false, Message = "Số điện thoại này đã được sử dụng cho một tài khoản khác." };
+                }
+            }
 
             var existingUser = await _userManager.FindByEmailAsync(request.Email);
             ApplicationUser user = existingUser;
@@ -120,7 +131,7 @@ namespace UniTask.Business.Services
             {
                 if (existingUser.EmailConfirmed)
                 {
-                    return new AuthResponse { IsSuccess = false, Message = "Email is already registered." };
+                    return new AuthResponse { IsSuccess = false, Message = "Email này đã được đăng ký trong hệ thống." };
                 }
                 
                 // Reuse unconfirmed ghost account

@@ -377,8 +377,26 @@ export class RegisterComponent implements OnDestroy {
     this.errorMsg.set('');
     this.successMsg.set('');
 
-    if (!this.fullName || !this.email || !this.password) {
+    if (!this.fullName || !this.email || !this.password || !this.phone) {
       this.errorMsg.set('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      return;
+    }
+
+    const nameRegex = /^[a-zA-ZÀ-Ỹà-ỹ\s]+$/;
+    if (!nameRegex.test(this.fullName)) {
+      this.errorMsg.set('Họ và tên không hợp lệ (chỉ được chứa chữ cái, không chứa số hoặc kí tự đặc biệt).');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(this.email)) {
+      this.errorMsg.set('Email không đúng định dạng.');
+      return;
+    }
+
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(this.phone)) {
+      this.errorMsg.set('Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số.');
       return;
     }
 
