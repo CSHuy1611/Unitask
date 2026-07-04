@@ -251,8 +251,7 @@ export class AuthService {
           this.saveToStorage(updated);
         }
       }),
-      map(() => ({ success: true, message: 'Xác thực eKYC tự động thành công!' })),
-      catchError(err => of({ success: false, message: err.error?.message || 'Gửi xác thực thất bại.' }))
+      map(() => ({ success: true, message: 'Xác thực eKYC tự động thành công!' }))
     );
   }
 

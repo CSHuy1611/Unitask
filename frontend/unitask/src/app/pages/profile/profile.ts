@@ -437,9 +437,6 @@ import Tesseract from 'tesseract.js';
                         </div>
                         <div class="upload-spinner" style="margin-bottom:12px"></div>
                         <p class="scanning-text">{{ ekycStepMessage() }}</p>
-                        <button type="button" class="btn btn-secondary" style="margin-top: 15px; font-size: 13px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.35); color: white; border-radius: 6px; padding: 8px 16px; cursor: pointer; transition: all 0.2s;" (click)="triggerManualFallback()">
-                          Bỏ qua quét AI & Gửi trực tiếp
-                        </button>
                       </div>
                     }
 
@@ -538,7 +535,7 @@ import Tesseract from 'tesseract.js';
                     <p class="upload-hint" style="margin-top:16px;">Hệ thống sử dụng camera của bạn để đối chiếu sinh trắc học với ảnh thẻ CCCD.</p>
 
                     <button class="btn btn-primary btn-lg full-width"
-                            [disabled]="!ekycFrontPreview() || !ekycBackPreview() || !selfiePreview() || ekycSubmitting() || !!cameraErrorMessage()"
+                            [disabled]="!ekycFrontPreview() || !ekycBackPreview() || !selfiePreview() || ekycSubmitting()"
                             (click)="onSubmitEkyc()">
                       <span class="material-icons-round">verified</span> Gửi xác thực tự động
                     </button>
@@ -1945,19 +1942,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   licenseUploading = signal(false);
   licenseUploadStatus = signal('');
   
-  isFallbackTriggered = false;
-  fallbackTimeout: any = null;
 
-  triggerManualFallback() {
-    this.isFallbackTriggered = true;
-    if (this.fallbackTimeout) {
-      clearTimeout(this.fallbackTimeout);
-      this.fallbackTimeout = null;
-    }
-    console.warn('Manual fallback triggered. Submitting directly...');
-    this.ekycStepMessage.set('Đang chuyển sang chế độ xác thực trực tiếp...');
-    this.runFallbackEkycSubmit();
-  }
 
   ekycFrontPreview = signal<string>('');
   ekycBackPreview = signal<string>('');
@@ -2283,16 +2268,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.isFallbackTriggered = false;
     this.ekycSubmitting.set(true);
     this.ekycErrorMessage.set('');
-
-    // Thiết lập timeout tự động bỏ qua nếu AI xử lý quá lâu (ví dụ 4 giây) do đường truyền tải mô hình CDN chậm
-    this.fallbackTimeout = setTimeout(() => {
-      if (this.ekycSubmitting() && !this.isFallbackTriggered) {
-        this.triggerManualFallback();
-      }
-    }, 4000);
 
     const normalizeText = (str: string): string => {
       if (!str) return '';
@@ -2310,52 +2287,42 @@ export class ProfileComponent implements OnInit, OnDestroy {
     try {
       this.ekycStepMessage.set('Đang khởi tạo các mô hình AI nhận diện (tải từ CDN)...');
       await this.loadEkycLibraries();
-      if (this.isFallbackTriggered) return;
 
       const faceapi = (window as any).faceapi;
       const Tesseract = (window as any).Tesseract;
 
       if (!this.librariesLoaded || !faceapi || !Tesseract) {
-        if (this.fallbackTimeout) {
-          clearTimeout(this.fallbackTimeout);
-          this.fallbackTimeout = null;
-        }
-        console.warn('Không thể tải thư viện AI từ CDN. Chuyển sang chế độ xác thực dự phòng...');
-        this.runFallbackEkycSubmit();
-        return;
+        throw new Error('Không thể tải thư viện AI nhận diện khuôn mặt (face-api.js hoặc Tesseract.js). Vui lòng kiểm tra kết nối mạng và thử lại.');
       }
 
       this.ekycStepMessage.set('Đang tải mô hình đối chiếu khuôn mặt...');
       await this.loadFaceModels();
-      if (this.isFallbackTriggered) return;
 
       this.ekycStepMessage.set('Đang phân tích OCR ảnh mặt trước CCCD để nhận diện thẻ...');
       const cccdFrontImg = await this.loadImage(this.ekycFrontPreview());
-      if (this.isFallbackTriggered) return;
 
       let frontOcrText = '';
       try {
         const frontOcr = await Tesseract.recognize(cccdFrontImg, 'vie+eng');
-        if (this.isFallbackTriggered) return;
         frontOcrText = (frontOcr.data?.text || '').toLowerCase();
-      } catch (ocrErr) {
+      } catch (ocrErr: any) {
         console.error('OCR Front Card error:', ocrErr);
+        throw new Error('Ảnh mặt trước quá mờ. Vui lòng chụp lại rõ nét hơn.');
       }
-      if (this.isFallbackTriggered) return;
 
       const normFrontText = normalizeText(frontOcrText);
       const frontKeywords = [
-        "can cuoc", "cong dan", "giay to", "chung minh", "identity",
-        "socialist", "vietnam", "cong hoa", "xa hoi", "chu nghia",
-        "doc lap", "tu do", "hanh phuc", "quoc tich", "que quan", "thuong tru"
+        "can cuoc cong dan", 
+        "chung minh nhan dan", 
+        "identity card",
+        "noi thuong tru", 
+        "que quan",
+        "quoc tich", 
+        "cong hoa xa hoi chu nghia"
       ];
       const isFrontKeywordsOk = frontKeywords.some(kw => normFrontText.includes(kw));
       if (frontOcrText && !isFrontKeywordsOk) {
-        if (this.fallbackTimeout) {
-          clearTimeout(this.fallbackTimeout);
-          this.fallbackTimeout = null;
-        }
-        throw new Error("Ảnh mặt trước không hợp lệ. Vui lòng tải lên ảnh chụp mặt trước thẻ Căn cước công dân (CCCD).");
+        throw new Error("Ảnh mặt trước thẻ CCCD không hợp lệ. Vui lòng tải đúng thẻ CCCD.");
       }
 
       // Trích xuất số thẻ CCCD (làm sạch các ký tự nhận dạng sai thông dụng)
@@ -2372,72 +2339,50 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
 
       if (!cccdNumber) {
-        if (this.fallbackTimeout) {
-          clearTimeout(this.fallbackTimeout);
-          this.fallbackTimeout = null;
-        }
-        throw new Error("Không thể nhận diện số thẻ CCCD (9 hoặc 12 số) trên mặt trước. Vui lòng chọn ảnh chụp rõ nét hơn.");
+        throw new Error("Ảnh mặt trước quá mờ. Vui lòng chụp lại rõ nét hơn.");
       }
 
       this.ekycStepMessage.set('Đang phân tích OCR ảnh mặt sau CCCD để nhận diện thẻ...');
       const cccdBackImg = await this.loadImage(this.ekycBackPreview());
-      if (this.isFallbackTriggered) return;
 
       let backOcrText = '';
       try {
         const backOcr = await Tesseract.recognize(cccdBackImg, 'vie+eng');
-        if (this.isFallbackTriggered) return;
         backOcrText = (backOcr.data?.text || '').toLowerCase();
-      } catch (ocrErr) {
+      } catch (ocrErr: any) {
         console.error('OCR Back Card error:', ocrErr);
+        throw new Error('Ảnh mặt sau quá mờ. Vui lòng chụp lại rõ nét hơn.');
       }
-      if (this.isFallbackTriggered) return;
 
       const normBackText = normalizeText(backOcrText);
       const backKeywords = [
-        "van tay", "ngon tro", "ky ten", "cuc truong", "cuc canh sat",
-        "dac diem", "nhan dang", "cuc", "canh", "sat", "quan ly",
-        "trat tu", "xa hoi", "trai", "phai", "ngon", "tro", "van", "tay",
-        "dang", "ky", "ten", "dan", "chu"
+        "dac diem", "nhan dang", "cuc canh sat", "quan ly", "hanh chinh",
+        "trat tu", "xa hoi", "ngon tro", "van tay", "kieu van", "giam doc",
+        "cong an", "ngay thang nam"
       ];
       const isBackKeywordsOk = backKeywords.some(kw => normBackText.includes(kw));
       if (backOcrText && !isBackKeywordsOk) {
-        if (this.fallbackTimeout) {
-          clearTimeout(this.fallbackTimeout);
-          this.fallbackTimeout = null;
-        }
-        throw new Error("Ảnh mặt sau không hợp lệ. Vui lòng tải lên ảnh chụp mặt sau thẻ Căn cước công dân (CCCD).");
+        throw new Error("Ảnh mặt sau thẻ CCCD không hợp lệ. Vui lòng tải đúng thẻ CCCD.");
       }
 
       this.ekycStepMessage.set('Đang tìm kiếm khuôn mặt trên ảnh CCCD mặt trước...');
       const cccdFace = await faceapi.detectSingleFace(cccdFrontImg)
         .withFaceLandmarks()
         .withFaceDescriptor();
-      if (this.isFallbackTriggered) return;
 
       if (!cccdFace) {
-        if (this.fallbackTimeout) {
-          clearTimeout(this.fallbackTimeout);
-          this.fallbackTimeout = null;
-        }
-        throw new Error("Không tìm thấy khuôn mặt trong ảnh mặt trước CCCD. Vui lòng chọn ảnh rõ nét, không bị lóa sáng.");
+        throw new Error("Ảnh mặt trước quá mờ hoặc bị lóa. Vui lòng chụp lại rõ nét hơn.");
       }
 
       this.ekycStepMessage.set('Đang tìm kiếm khuôn mặt trên ảnh chụp Selfie...');
       const selfieImg = await this.loadImage(this.selfiePreview());
-      if (this.isFallbackTriggered) return;
 
       const selfieFace = await faceapi.detectSingleFace(selfieImg)
         .withFaceLandmarks()
         .withFaceDescriptor();
-      if (this.isFallbackTriggered) return;
 
       if (!selfieFace) {
-        if (this.fallbackTimeout) {
-          clearTimeout(this.fallbackTimeout);
-          this.fallbackTimeout = null;
-        }
-        throw new Error("Không tìm thấy khuôn mặt trong ảnh chụp chân dung Selfie. Vui lòng bật đèn sáng và chụp lại rõ mặt.");
+        throw new Error("Khuôn mặt chụp Selfie quá mờ. Vui lòng chụp lại rõ nét hơn.");
       }
 
       this.ekycStepMessage.set('Đang so khớp sinh trắc học khuôn mặt...');
@@ -2447,11 +2392,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       console.log(`[eKYC AI Match] Distance: ${distance.toFixed(4)}, Similarity: ${similarity}%`);
 
       if (similarity < 50) {
-        if (this.fallbackTimeout) {
-          clearTimeout(this.fallbackTimeout);
-          this.fallbackTimeout = null;
-        }
-        throw new Error(`Xác thực thất bại: Khuôn mặt trong ảnh chụp chân dung không khớp với khuôn mặt trên thẻ CCCD (Độ khớp nhỏ hơn 50%). Vui lòng chụp lại rõ nét.`);
+        throw new Error("Khuôn mặt chụp Selfie không khớp với ảnh trên thẻ CCCD. Vui lòng thử lại.");
       }
 
       // Nén mảng đặc trưng khuôn mặt (128 số thực) thành chuỗi Base64 để tiết kiệm không gian database
@@ -2466,18 +2407,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
       const faceDescriptorBase64 = btoa(binary);
 
-      this.ekycStepMessage.set(`So khớp thành công (${similarity}%). Đang cập nhật trạng thái...`);
-
-      if (this.fallbackTimeout) {
-        clearTimeout(this.fallbackTimeout);
-        this.fallbackTimeout = null;
-      }
+      this.ekycStepMessage.set(`So khớp thành công. Đang gửi lên máy chủ...`);
 
       this.auth.submitEkyc(this.ekycFrontFile, this.ekycBackFile, this.selfieFile, cccdNumber, faceDescriptorBase64).subscribe({
         next: (res) => {
           this.ekycSubmitting.set(false);
           if (res.success) {
-            this.toast.success(`Xác thực tự động thành công! Độ trùng khớp đạt ${similarity}%.`);
+            this.toast.success(`Xác thực tự động thành công!`);
             this.selfiePreview.set('');
             this.selfieFile = null;
             this.ekycFrontPreview.set('');
@@ -2486,9 +2422,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
             this.ekycBackFile = null;
             this.stopCamera();
             this.auth.fetchProfile().subscribe();
-          } else {
-            this.ekycErrorMessage.set(res.message);
-            this.showEkycErrorModal.set(true);
           }
         },
         error: (err) => {
@@ -2496,6 +2429,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
           let msg = 'Gửi xác thực thất bại do lỗi máy chủ.';
           if (err.status === 413) {
             msg = 'Kích thước tệp ảnh quá lớn (vui lòng chụp ảnh độ phân giải thấp hơn hoặc nén ảnh dưới 10MB).';
+          } else if (err.status === 0) {
+            msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
           } else if (err.error) {
             if (typeof err.error === 'string') {
               msg = err.error;
@@ -2505,59 +2440,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
           } else if (err.message) {
             msg = err.message;
           }
+          if (err.status) {
+            msg += ` (Mã lỗi: ${err.status})`;
+          }
           this.ekycErrorMessage.set(msg);
           this.showEkycErrorModal.set(true);
         }
       });
 
     } catch (err: any) {
-      if (this.isFallbackTriggered) return;
-      if (this.fallbackTimeout) {
-        clearTimeout(this.fallbackTimeout);
-        this.fallbackTimeout = null;
-      }
       this.ekycSubmitting.set(false);
       this.ekycErrorMessage.set(err.message || 'Có lỗi xảy ra trong quá trình xác thực eKYC.');
       this.showEkycErrorModal.set(true);
     }
-  }
-
-  runFallbackEkycSubmit() {
-    this.auth.submitEkyc(this.ekycFrontFile!, this.ekycBackFile!, this.selfieFile!).subscribe({
-      next: (res) => {
-        this.ekycSubmitting.set(false);
-        if (res.success) {
-          this.toast.success(res.message);
-          this.selfiePreview.set('');
-          this.selfieFile = null;
-          this.ekycFrontPreview.set('');
-          this.ekycBackPreview.set('');
-          this.ekycFrontFile = null;
-          this.ekycBackFile = null;
-          this.stopCamera();
-          this.auth.fetchProfile().subscribe();
-        } else {
-          this.ekycErrorMessage.set(res.message);
-          this.showEkycErrorModal.set(true);
-        }
-      },
-      error: (err) => {
-        this.ekycSubmitting.set(false);
-        let msg = 'Gửi xác thực thất bại do lỗi máy chủ.';
-        if (err.status === 413) {
-          msg = 'Kích thước tệp ảnh quá lớn (vui lòng chụp ảnh độ phân giải thấp hơn hoặc nén ảnh dưới 10MB).';
-        } else if (err.error) {
-          if (typeof err.error === 'string') {
-            msg = err.error;
-          } else if (typeof err.error === 'object') {
-            msg = err.error.message || err.error.Message || err.error.title || msg;
-          }
-        } else if (err.message) {
-          msg = err.message;
-        }
-        this.ekycErrorMessage.set(msg);
-        this.showEkycErrorModal.set(true);
-      }
-    });
   }
 }
