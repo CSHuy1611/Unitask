@@ -129,7 +129,8 @@ export class AuthService {
       major: userData.major,
       year: userData.year,
       companyName: userData.companyName,
-      position: userData.position
+      position: userData.position,
+      taxCode: userData.taxCode
     };
 
     return this.http.post<any>(`${API_BASE_URL}/account/register`, payload).pipe(
@@ -279,7 +280,7 @@ export class AuthService {
       tap(res => {
         const user = this.currentUser();
         if (user) {
-          const updated = { ...user, balance: res.balance };
+          const updated = { ...user, balance: res.balance, recentTransactions: res.recentTransactions || [] };
           this.currentUser.set(updated);
           this.saveToStorage(updated);
         }
