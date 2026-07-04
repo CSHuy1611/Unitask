@@ -6,6 +6,8 @@ import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
 import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
+import { HttpClient } from '@angular/common/http';
+import { API_BASE_URL } from '../../config/api.config';
 
 @Component({
   selector: 'app-employer-dashboard',
@@ -599,9 +601,15 @@ import { Job } from '../../models/job.model';
               <div class="modal-content glass-card p-6" style="width: 100%; max-width: 600px; max-height: 80vh; overflow-y: auto; text-align: left;">
                 <div class="modal-header d-flex justify-between items-center mb-6">
                   <h3 style="font-size:1.25rem; font-weight:700">Lịch sử giao dịch</h3>
-                  <button class="btn btn-secondary icon-btn" (click)="showTransactions.set(false)">
-                    <span class="material-icons-round">close</span>
-                  </button>
+                  <div class="d-flex gap-3">
+                    <button class="btn btn-primary btn-sm" (click)="syncPending()" [disabled]="isSyncing()">
+                      <span class="material-icons-round" style="font-size: 16px" [class.rotating]="isSyncing()">sync</span>
+                      {{ isSyncing() ? 'Đang đồng bộ...' : 'Đồng bộ' }}
+                    </button>
+                    <button class="btn btn-secondary icon-btn" (click)="showTransactions.set(false)">
+                      <span class="material-icons-round">close</span>
+                    </button>
+                  </div>
                 </div>
                 
                 <div class="transactions-list">
@@ -907,9 +915,11 @@ export class EmployerDashboardComponent implements OnInit {
   auth = inject(AuthService);
   jobService = inject(JobService);
   private toast = inject(ToastService);
+  private http = inject(HttpClient);
 
   showPostForm = signal(false);
   showTransactions = signal(false);
+  isSyncing = signal(false);
   postSuccess = signal(false);
   postMessage = signal('');
   editingJobId = signal<number | null>(null);
@@ -1381,6 +1391,25 @@ export class EmployerDashboardComponent implements OnInit {
         }
       },
       error: () => this.toast.error('Lỗi gửi đánh giá.')
+    });
+  }
+
+  syncPending() {
+    this.isSyncing.set(true);
+    this.http.post<any>(`${API_BASE_URL}/payment/sync-pending`, {}).subscribe({
+      next: (res) => {
+        if (res.success && res.syncedCount > 0) {
+          this.toast.success(`Đã đồng bộ thành công ${res.syncedCount} giao dịch!`);
+          this.auth.fetchBalance().subscribe();
+        } else {
+          this.toast.success('Không có giao dịch nào cần đồng bộ (hoặc chưa thanh toán thành công).');
+        }
+        this.isSyncing.set(false);
+      },
+      error: () => {
+        this.toast.error('Lỗi khi đồng bộ giao dịch.');
+        this.isSyncing.set(false);
+      }
     });
   }
 }
