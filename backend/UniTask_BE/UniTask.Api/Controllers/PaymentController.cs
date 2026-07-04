@@ -101,5 +101,42 @@ namespace UniTask.Api.Controllers
 
             return BadRequest(new { success = false });
         }
+
+        [HttpGet("verify-local/{orderCode}")]
+        [Authorize]
+        public async Task<IActionResult> VerifyPaymentLocal(long orderCode)
+        {
+            try
+            {
+                var success = await _paymentService.VerifyPaymentLocalAsync(orderCode);
+                if (success)
+                {
+                    return Ok(new { success = true, message = "Payment verified and wallet updated." });
+                }
+                return BadRequest(new { success = false, message = "Payment not paid or failed to verify." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("sync-pending")]
+        [Authorize]
+        public async Task<IActionResult> SyncPendingTransactions()
+        {
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null) return Unauthorized();
+
+                var syncedCount = await _paymentService.SyncPendingTransactionsAsync(userId);
+                return Ok(new { success = true, syncedCount, message = $"Synced {syncedCount} pending transactions." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

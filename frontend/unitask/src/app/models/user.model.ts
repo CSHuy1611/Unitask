@@ -45,6 +45,7 @@ export interface User {
 
   // Payment & Subscriptions
   balance?: number;
+  recentTransactions?: any[];
   activePackage?: string;
   packageExpiry?: string;
   postedJobs?: number[];

@@ -280,7 +280,7 @@ export class AuthService {
       tap(res => {
         const user = this.currentUser();
         if (user) {
-          const updated = { ...user, balance: res.balance };
+          const updated = { ...user, balance: res.balance, recentTransactions: res.recentTransactions || [] };
           this.currentUser.set(updated);
           this.saveToStorage(updated);
         }

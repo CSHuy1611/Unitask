@@ -40,6 +40,9 @@ import { Job } from '../../models/job.model';
                   </span>
                 }
               </div>
+              <button class="btn btn-secondary btn-sm" title="Lịch sử giao dịch" (click)="showTransactions.set(true)">
+                <span class="material-icons-round" style="font-size:16px">history</span>
+              </button>
               <a routerLink="/pricing" class="btn btn-secondary btn-sm" title="Nạp thêm tiền">
                 <span class="material-icons-round" style="font-size:16px">add</span>
               </a>
@@ -589,6 +592,39 @@ import { Job } from '../../models/job.model';
               </div>
             </div>
           }
+
+          <!-- Transactions Modal -->
+          @if (showTransactions()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 600px; max-height: 80vh; overflow-y: auto; text-align: left;">
+                <div class="modal-header d-flex justify-between items-center mb-6">
+                  <h3 style="font-size:1.25rem; font-weight:700">Lịch sử giao dịch</h3>
+                  <button class="btn btn-secondary icon-btn" (click)="showTransactions.set(false)">
+                    <span class="material-icons-round">close</span>
+                  </button>
+                </div>
+                
+                <div class="transactions-list">
+                  @for (txn of auth.currentUser()?.recentTransactions; track txn.id) {
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                      <div>
+                        <strong style="display:block; color:var(--text-primary)">{{ txn.description }}</strong>
+                        <span style="font-size: 12px; color: var(--text-muted)">{{ txn.createdAt | date:'HH:mm dd/MM/yyyy' }}</span>
+                      </div>
+                      <div [ngStyle]="{'color': txn.amount > 0 ? 'var(--success)' : '#EF4444'}" style="font-weight: bold; font-size: 16px;">
+                        {{ txn.amount > 0 ? '+' : '' }}{{ txn.amount.toLocaleString('vi-VN') }}đ
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="text-center p-8 text-muted">
+                      <span class="material-icons-round" style="font-size: 48px; opacity: 0.5;">receipt_long</span>
+                      <p style="margin-top: 12px;">Chưa có giao dịch nào.</p>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
         }
       </div>
     </section>
@@ -873,6 +909,7 @@ export class EmployerDashboardComponent implements OnInit {
   private toast = inject(ToastService);
 
   showPostForm = signal(false);
+  showTransactions = signal(false);
   postSuccess = signal(false);
   postMessage = signal('');
   editingJobId = signal<number | null>(null);
