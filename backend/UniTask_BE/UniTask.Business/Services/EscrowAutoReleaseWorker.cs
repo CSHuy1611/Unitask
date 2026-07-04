@@ -49,40 +49,77 @@ namespace UniTask.Business.Services
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var now = DateTime.UtcNow;
-            var jobsToRelease = await context.Jobs
-                .Where(j => j.Status == JobStatus.PendingConfirmation && j.EscrowReleaseDate != null && j.EscrowReleaseDate <= now && j.SelectedStudentId != null)
+            
+            var appsToRelease = await context.Applications
+                .Include(a => a.Job)
+                .Include(a => a.StudentProfile)
+                .Where(a => a.Status == ApplicationStatus.Completed && a.EscrowReleaseDate != null && a.EscrowReleaseDate <= now)
                 .ToListAsync();
 
-            if (jobsToRelease.Any())
+            if (appsToRelease.Any())
             {
-                _logger.LogInformation($"Found {jobsToRelease.Count} jobs with expired escrow periods. Releasing funds...");
+                _logger.LogInformation($"Found {appsToRelease.Count} applications with expired escrow periods. Releasing funds...");
 
-                foreach (var job in jobsToRelease)
+                foreach (var app in appsToRelease)
                 {
-                    job.Status = JobStatus.Completed;
-                    job.EscrowReleaseDate = null; // Clear release date
+                    app.EscrowReleaseDate = null; // Clear release date
 
-                    var studentWallet = await context.Wallets.FirstOrDefaultAsync(w => w.UserId == job.SelectedStudentId);
-                    if (studentWallet != null)
+                    if (app.StudentProfile?.UserId != null)
                     {
-                        var roundedBudget = Math.Round(job.Budget, 0);
-                        studentWallet.Balance += roundedBudget;
-
-                        context.Transactions.Add(new Transaction
+                        var studentWallet = await context.Wallets.FirstOrDefaultAsync(w => w.UserId == app.StudentProfile.UserId);
+                        if (studentWallet != null)
                         {
-                            WalletId = studentWallet.Id,
-                            Amount = roundedBudget,
-                            Type = TransactionType.EscrowRelease,
-                            Description = $"[System Auto-Release] Nhận tiền công tự động từ công việc: {job.Title}",
-                            RelatedJobId = job.Id,
-                            CreatedAt = DateTime.UtcNow
-                        });
+                            var portion = app.Job.Budget / (app.Job.HeadCount > 0 ? app.Job.HeadCount : 1);
+                            var roundedBudget = Math.Round(portion, 0);
+                            
+                            studentWallet.Balance += roundedBudget;
 
-                        // Add +5 Reliability Score for completing job
-                        var studentProfile = await context.StudentProfiles.FirstOrDefaultAsync(p => p.UserId == job.SelectedStudentId);
-                        if (studentProfile != null)
+                            context.Transactions.Add(new Transaction
+                            {
+                                WalletId = studentWallet.Id,
+                                Amount = roundedBudget,
+                                Type = TransactionType.EscrowRelease,
+                                Description = $"[System Auto-Release] Nhận tiền công tự động từ công việc: {app.Job.Title}",
+                                RelatedJobId = app.Job.Id,
+                                CreatedAt = DateTime.UtcNow
+                            });
+
+                            // Add +5 Reliability Score for completing job
+                            app.StudentProfile.ReliabilityScore += 5;
+                        }
+                    }
+
+                    // Complete the Job if all apps are released
+                    var otherAppsWithEscrow = await context.Applications.AnyAsync(a => a.JobId == app.JobId && a.Id != app.Id && a.EscrowReleaseDate != null);
+                    var anyPending = await context.Applications.AnyAsync(a => a.JobId == app.JobId && a.Status == ApplicationStatus.Accepted);
+                    
+                    // If no other apps are pending or waiting for escrow release
+                    if (!otherAppsWithEscrow && !anyPending && (app.Job.Status == JobStatus.PendingConfirmation || app.Job.Status == JobStatus.InProgress))
+                    {
+                        app.Job.Status = JobStatus.Completed;
+
+                        // Calculate total paid and refund the rest
+                        var completedAppsCount = await context.Applications.CountAsync(a => a.JobId == app.JobId && a.Status == ApplicationStatus.Completed);
+                        var salaryPerPerson = Math.Round(app.Job.Budget / (app.Job.HeadCount > 0 ? app.Job.HeadCount : 1), 0);
+                        var totalPaid = completedAppsCount * salaryPerPerson; // Approximated. In real case we might want to sum Transactions.
+                        
+                        var refundAmount = Math.Round(app.Job.Budget - totalPaid, 0);
+                        if (refundAmount > 0)
                         {
-                            studentProfile.ReliabilityScore += 5;
+                            var employerWallet = await context.Wallets.FirstOrDefaultAsync(w => w.UserId == app.Job.EmployerId);
+                            if (employerWallet != null)
+                            {
+                                employerWallet.Balance += refundAmount;
+                                context.Transactions.Add(new Transaction
+                                {
+                                    WalletId = employerWallet.Id,
+                                    Amount = refundAmount,
+                                    Type = TransactionType.Refund,
+                                    Description = $"Hoàn tiền dư tự động do không đủ người hoàn thành công việc: {app.Job.Title}",
+                                    RelatedJobId = app.Job.Id,
+                                    CreatedAt = DateTime.UtcNow
+                                });
+                            }
                         }
                     }
                 }

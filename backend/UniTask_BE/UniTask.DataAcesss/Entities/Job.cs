@@ -79,12 +79,9 @@ namespace UniTask.DataAcesss.Entities
         public JobStatus Status { get; set; } = JobStatus.Open;
 
         /// <summary>
-        /// FK - Sinh viên được giao việc (khi status chuyển sang InProgress).
+        /// Số lượng sinh viên cần tuyển cho công việc này.
         /// </summary>
-        public string? SelectedStudentId { get; set; }
-
-        [ForeignKey(nameof(SelectedStudentId))]
-        public ApplicationUser? SelectedStudent { get; set; }
+        public int HeadCount { get; set; } = 1;
 
         // ===== Dispute Fields =====
         public string? DisputeReason { get; set; }
@@ -94,14 +91,6 @@ namespace UniTask.DataAcesss.Entities
         public string? StudentEvidenceUrl { get; set; }
         public DateTime? DisputedDate { get; set; }
 
-        // ===== Check-in / Check-out & Escrow Fields =====
-        public DateTime? CheckInTime { get; set; }
-        public DateTime? CheckOutTime { get; set; }
-        public string? CheckInOtp { get; set; }
-        public DateTime? CheckInOtpExpiredAt { get; set; }
-        public string? CheckOutOtp { get; set; }
-        public DateTime? CheckOutOtpExpiredAt { get; set; }
-        public DateTime? EscrowReleaseDate { get; set; }
         public int RequiredReliabilityScore { get; set; } = 0;
 
         // ===== Two-way Rating Fields =====

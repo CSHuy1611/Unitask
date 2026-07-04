@@ -14,9 +14,6 @@ namespace UniTask.DataAcesss
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            // Skip if already seeded
-            if (await context.Companies.AnyAsync()) return;
-
             // ===== 1. Seed Roles =====
             string[] roles = { "Admin", "Student", "Employer" };
             foreach (var role in roles)
@@ -24,6 +21,32 @@ namespace UniTask.DataAcesss
                 if (!await roleManager.RoleExistsAsync(role))
                     await roleManager.CreateAsync(new IdentityRole(role));
             }
+
+            // ===== 1.1 Ensure Admin Exists (Hotfix) =====
+            if (!await userManager.Users.AnyAsync(u => u.Email == "admin@unitask.vn"))
+            {
+                var admin = new ApplicationUser
+                {
+                    UserName = "admin@unitask.vn", Email = "admin@unitask.vn", FullName = "Admin UniTask",
+                    PhoneNumber = "0900000000", UserType = UserType.Admin, EkycStatus = EkycStatus.Verified,
+                    EkycDate = new DateTime(2026, 1, 1), CreatedAt = new DateTime(2026, 1, 1), EmailConfirmed = true
+                };
+                await userManager.CreateAsync(admin, "admin123");
+                await userManager.AddToRoleAsync(admin, "Admin");
+                context.Wallets.Add(new Wallet { UserId = admin.Id, Balance = 0 });
+                await context.SaveChangesAsync();
+            }
+
+            // ===== 1.2 Fix ReliabilityScore = 0 bug (Hotfix) =====
+            var zeroScoreStudents = await context.StudentProfiles.Where(sp => sp.ReliabilityScore == 0).ToListAsync();
+            if (zeroScoreStudents.Any())
+            {
+                foreach (var sp in zeroScoreStudents) sp.ReliabilityScore = 100;
+                await context.SaveChangesAsync();
+            }
+
+            // Skip the rest if already seeded
+            if (await context.Companies.AnyAsync()) return;
 
             // ===== 2. Seed Companies =====
             var companies = new List<Company>
@@ -66,7 +89,7 @@ namespace UniTask.DataAcesss
                 UserId = student1.Id, University = "Đại học FPT", Major = "Truyền thông đa phương tiện",
                 Year = 3, GPA = 3.5m, Skills = "[\"Mẫu ảnh\",\"Makeup cơ bản\",\"Canva\",\"TikTok Content\",\"MC sự kiện\"]",
                 Bio = "Sinh viên năm 3, từng làm mẫu ảnh lookbook và bê tráp cuối tuần.",
-                Address = "Quận 9, TP. Hồ Chí Minh", DateOfBirth = new DateTime(2004, 5, 12)
+                Address = "Quận 9, TP. Hồ Chí Minh", DateOfBirth = new DateTime(2004, 5, 12), ReliabilityScore = 100
             });
             context.Wallets.Add(new Wallet { UserId = student1.Id, Balance = 0 });
 
@@ -85,7 +108,7 @@ namespace UniTask.DataAcesss
                 UserId = student2.Id, University = "Đại học Bách Khoa", Major = "Quản trị kinh doanh",
                 Year = 2, GPA = 3.2m, Skills = "[\"MC\",\"Nhảy K-pop\",\"Giao tiếp\",\"Bê tráp\"]",
                 Bio = "Sinh viên năm 2, ngoại hình ưa nhìn, thích tham gia sự kiện.",
-                Address = "Quận Bình Thạnh, TP. HCM", DateOfBirth = new DateTime(2005, 9, 3)
+                Address = "Quận Bình Thạnh, TP. HCM", DateOfBirth = new DateTime(2005, 9, 3), ReliabilityScore = 100
             });
             context.Wallets.Add(new Wallet { UserId = student2.Id, Balance = 0 });
 
@@ -104,17 +127,6 @@ namespace UniTask.DataAcesss
                 UserId = employer.Id, CompanyId = studioAnhSang.Id, Position = "CEO"
             });
             context.Wallets.Add(new Wallet { UserId = employer.Id, Balance = 1500000 });
-
-            // Admin
-            var admin = new ApplicationUser
-            {
-                UserName = "admin@unitask.vn", Email = "admin@unitask.vn", FullName = "Admin UniTask",
-                PhoneNumber = "0900000000", UserType = UserType.Admin, EkycStatus = EkycStatus.Verified,
-                EkycDate = new DateTime(2026, 1, 1), CreatedAt = new DateTime(2026, 1, 1), EmailConfirmed = true
-            };
-            await userManager.CreateAsync(admin, "admin123");
-            await userManager.AddToRoleAsync(admin, "Admin");
-            context.Wallets.Add(new Wallet { UserId = admin.Id, Balance = 0 });
 
             await context.SaveChangesAsync();
 

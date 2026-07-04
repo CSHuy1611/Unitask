@@ -1,10 +1,23 @@
 # Ignore environment configuration files
 .env
+.env.*
 appsettings.Development.json
 
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
 # C# Build Outputs
-**/bin/
-**/obj/
+[bB]in/
+[oO]bj/
+**/[bB]in/
+**/[oO]bj/
+
+# Frontend Build/Node Outputs
 **/dist/
 **/node_modules/
 

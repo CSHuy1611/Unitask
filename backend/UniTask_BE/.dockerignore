@@ -1,5 +1,7 @@
-**/bin/
-**/obj/
+[bB]in/
+[oO]bj/
+**/[bB]in/
+**/[oO]bj/
 .vs/
 .vscode/
 *.user

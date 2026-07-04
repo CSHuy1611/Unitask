@@ -2383,8 +2383,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       console.log(`[eKYC AI Match] Distance: ${distance.toFixed(4)}, Similarity: ${similarity}%`);
 
-      if (similarity < 60) {
-        throw new Error(`Xác thực thất bại: Khuôn mặt trong ảnh chụp chân dung không khớp với khuôn mặt trên thẻ CCCD (Độ khớp đạt ${similarity}% < 60%). Vui lòng chụp lại rõ nét.`);
+      if (similarity < 50) {
+        throw new Error(`Xác thực thất bại: Khuôn mặt trong ảnh chụp chân dung không khớp với khuôn mặt trên thẻ CCCD (Độ khớp nhỏ hơn 50%). Vui lòng chụp lại rõ nét.`);
       }
 
       // Nén mảng đặc trưng khuôn mặt (128 số thực) thành chuỗi Base64 để tiết kiệm không gian database

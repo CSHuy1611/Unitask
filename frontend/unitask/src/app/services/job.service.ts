@@ -93,6 +93,7 @@ export class JobService {
       isRemote: dto.isRemote || false,
       budget: dto.budget || 0,
       commission: dto.commission || 0,
+      headCount: dto.headCount || 1,
       status: statusMap[dto.status] || 'open',
       applicants: dto.applicants || [],
       selectedStudentId: dto.selectedStudentId,

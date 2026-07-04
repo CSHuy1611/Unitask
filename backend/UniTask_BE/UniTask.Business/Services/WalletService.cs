@@ -171,6 +171,30 @@ namespace UniTask.Business.Services
 </div>";
                     await _emailService.SendEmailAsync(admin.Email, subject, body);
                 }
+
+                // Send email to the User acknowledging their withdrawal request
+                if (!string.IsNullOrEmpty(wallet.User.Email))
+                {
+                    var userSubject = "[UniTask] Yêu cầu rút tiền của bạn đang được xử lý";
+                    var userBody = $@"
+<div style=""font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;"">
+    <div style=""text-align: center; margin-bottom: 20px;"">
+        <h2 style=""color: #059669; margin: 0;"">Yêu Cầu Đã Được Tiếp Nhận</h2>
+        <p style=""color: #6b7280; font-size: 14px;"">UniTask Matching Platform</p>
+    </div>
+    <div style=""background-color: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px;"">
+        <p style=""color: #1f2937; margin-bottom: 15px;"">Chào {wallet.User.FullName},</p>
+        <p style=""color: #1f2937; margin-bottom: 15px;"">Hệ thống đã ghi nhận yêu cầu rút <strong>{dto.Amount.ToString("N0")} VND</strong> về tài khoản <strong>{dto.Bank} - {dto.AccountNumber}</strong> của bạn.</p>
+        <p style=""color: #1f2937; margin-bottom: 15px;"">Yêu cầu của bạn đang ở trạng thái <strong>[Chờ xử lý]</strong> và sẽ được Admin tiến hành duyệt và chuyển khoản trong đợt thanh toán tiếp theo.</p>
+        <p style=""color: #1f2937;"">Cảm ơn bạn đã tin tưởng và sử dụng UniTask!</p>
+    </div>
+    <hr style=""border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0 15px 0;"" />
+    <div style=""text-align: center; font-size: 12px; color: #9ca3af;"">
+        Đây là email tự động từ hệ thống UniTask. Vui lòng không phản hồi email này.
+    </div>
+</div>";
+                    await _emailService.SendEmailAsync(wallet.User.Email, userSubject, userBody);
+                }
             }
             catch (Exception ex)
             {
