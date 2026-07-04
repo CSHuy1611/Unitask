@@ -28,5 +28,14 @@ namespace UniTask.DataAcesss.Entities
         public ApplicationStatus Status { get; set; } = ApplicationStatus.Applied;
 
         public DateTime AppliedDate { get; set; } = DateTime.UtcNow;
+
+        // ===== Check-in / Check-out & Escrow Fields =====
+        public DateTime? CheckInTime { get; set; }
+        public DateTime? CheckOutTime { get; set; }
+        public string? CheckInOtp { get; set; }
+        public DateTime? CheckInOtpExpiredAt { get; set; }
+        public string? CheckOutOtp { get; set; }
+        public DateTime? CheckOutOtpExpiredAt { get; set; }
+        public DateTime? EscrowReleaseDate { get; set; }
     }
 }

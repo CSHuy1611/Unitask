@@ -157,22 +157,33 @@ import { Job } from '../../models/job.model';
                   <label class="form-label">Mô tả công việc <span class="required">*</span></label>
                   <textarea class="form-input" rows="4" [(ngModel)]="formData.description" name="description" placeholder="Mô tả chi tiết công việc..." required></textarea>
                 </div>
-                <!-- Escrow Budget Input -->
+                <!-- Escrow Budget & HeadCount Input -->
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Số lượng tuyển <span class="required">*</span></label>
+                    <input type="number" class="form-input" [(ngModel)]="formData.headCount" name="headCount" placeholder="VD: 2" min="1" max="100" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tổng ngân sách (VND) <span class="required">*</span></label>
+                    <input type="number" class="form-input" [(ngModel)]="formData.budget" name="budget" placeholder="VD: 300000" min="50000" required>
+                  </div>
+                </div>
                 <div class="form-group" style="grid-column: 1 / -1">
-                  <label class="form-label">Ngân sách tính lương (VND) <span class="required">*</span></label>
-                  <input type="number" class="form-input" [(ngModel)]="formData.budget" name="budget" placeholder="VD: 300000" min="50000" required>
-                  <p class="text-caption" style="margin-top:4px; font-size: 13px; color: var(--text-secondary)">Hệ thống sẽ giữ khoản tiền trung gian này và thêm 10% phí nền tảng để đảm bảo quyền lợi 2 bên.</p>
+                  <p class="text-caption" style="margin-top:-10px; font-size: 13px; color: var(--text-secondary)">Hệ thống sẽ giữ khoản tiền trung gian này và thêm 10% phí nền tảng để đảm bảo quyền lợi 2 bên.</p>
                   
                   @if (formData.budget && formData.budget > 0) {
                     <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px; font-size:var(--font-size-sm); background:rgba(255,255,255,0.03); padding:12px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.05)">
                       <div class="d-flex justify-between">
-                        <span>Lương trả cho ứng viên:</span> <strong>{{ getRounded(formData.budget).toLocaleString('vi-VN') }}đ</strong>
+                        <span>Lương mỗi người (Budget / Số lượng):</span> <strong style="color:var(--success)">{{ getRounded(formData.budget / (formData.headCount || 1)).toLocaleString('vi-VN') }}đ</strong>
+                      </div>
+                      <div class="d-flex justify-between">
+                        <span>Tổng ngân sách trả ứng viên:</span> <strong>{{ getRounded(formData.budget).toLocaleString('vi-VN') }}đ</strong>
                       </div>
                       <div class="d-flex justify-between">
                         <span>Phí nền tảng (10%):</span> <strong style="color:var(--warning)">{{ getRounded(formData.budget * 0.1).toLocaleString('vi-VN') }}đ</strong>
                       </div>
                       <div class="d-flex justify-between" style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.1)">
-                        <span>Tổng tạm giữ (Escrow):</span> <strong style="color:var(--primary-light); font-size:var(--font-size-lg)">{{ (getRounded(formData.budget) + getRounded(formData.budget * 0.1)).toLocaleString('vi-VN') }}đ</strong>
+                        <span>Tổng cần thanh toán (Escrow):</span> <strong style="color:var(--primary-light); font-size:var(--font-size-lg)">{{ (getRounded(formData.budget) + getRounded(formData.budget * 0.1)).toLocaleString('vi-VN') }}đ</strong>
                       </div>
                     </div>
                   }
@@ -247,7 +258,7 @@ import { Job } from '../../models/job.model';
                         <span class="material-icons-round">visibility</span> {{ job.views }}
                       </span>
                       <span class="stat-mini">
-                        <span class="material-icons-round">people</span> {{ job.applications }}
+                        <span class="material-icons-round">people</span> {{ job.applications }}/{{ job.headCount || 1 }}
                       </span>
                       @if (jobService.isJobEditable(job) && job.status === 'open') {
                         <button class="btn btn-secondary btn-sm" (click)="onEditJob(job)">
@@ -1002,6 +1013,7 @@ export class EmployerDashboardComponent implements OnInit {
       type: 'Freelance',
       category: '',
       location: '',
+      headCount: 1,
       budget: null as number | null,
       description: '',
       requirementsStr: '',
@@ -1044,6 +1056,7 @@ export class EmployerDashboardComponent implements OnInit {
       type: job.type,
       category: (job as any).category || '',
       location: job.location,
+      headCount: job.headCount || 1,
       budget: job.budget || null,
       description: job.description,
       requirementsStr: (job.requirements || []).join(', '),
@@ -1169,6 +1182,7 @@ export class EmployerDashboardComponent implements OnInit {
         type: this.formData.type,
         category: this.formData.category,
         salary: this.formData.budget ? `${this.formData.budget.toLocaleString('vi-VN')}đ` : 'Thỏa thuận',
+        headCount: this.formData.headCount || 1,
         budget: budget,
         commission: commission,
         description: this.formData.description,

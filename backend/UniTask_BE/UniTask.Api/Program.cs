@@ -98,6 +98,7 @@ builder.Services.AddScoped<UniTask.Business.Interfaces.IEmailService, UniTask.Bu
 // ===== Hosted Services (Background Workers) =====
 builder.Services.AddHostedService<UniTask.Business.Services.WithdrawalBatchWorker>();
 builder.Services.AddHostedService<UniTask.Business.Services.EscrowAutoReleaseWorker>();
+builder.Services.AddHostedService<UniTask.Business.Services.JobExpirationWorker>();
 
 // ===== JWT Authentication =====
 var jwtSettings = builder.Configuration.GetSection("Jwt");

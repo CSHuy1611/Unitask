@@ -267,7 +267,7 @@ namespace UniTask.Business.Services
 
             if (frontName.Contains("fail_face") || backName.Contains("fail_face") || selfieName.Contains("fail_face"))
             {
-                throw new System.Exception("Khuôn mặt trong ảnh chân dung không trùng khớp với ảnh trên CCCD (Độ tương đồng < 70%). Vui lòng chụp lại rõ ràng.");
+                throw new System.Exception("Khuôn mặt trong ảnh chân dung không trùng khớp với ảnh trên CCCD (Độ tương đồng < 50%). Vui lòng chụp lại rõ ràng.");
             }
 
             if (frontName.Contains("fail_invalid") || backName.Contains("fail_invalid") || selfieName.Contains("fail_invalid"))

@@ -145,6 +145,7 @@ namespace UniTask.Business.Services
                 IsUrgent = dto.IsUrgent,
                 IsRemote = dto.IsRemote,
                 RequiredReliabilityScore = dto.RequiredReliabilityScore,
+                HeadCount = dto.HeadCount,
                 Status = DataAcesss.Entities.Enums.JobStatus.Open,
                 Tags = dto.Tags.Select(t => new JobTag { TagName = t }).ToList(),
                 Requirements = dto.Requirements.Select(r => new JobRequirement { Content = r }).ToList(),
@@ -244,7 +245,7 @@ namespace UniTask.Business.Services
             var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
             if (wallet != null)
             {
-                var roundedRefund = Math.Round(job.Budget, 0) + Math.Round(job.Commission, 0);
+                var roundedRefund = Math.Round(job.Budget, 0);
                 wallet.Balance += roundedRefund;
 
                 // Log Refund transaction
@@ -253,7 +254,7 @@ namespace UniTask.Business.Services
                     WalletId = wallet.Id,
                     Amount = roundedRefund,
                     Type = DataAcesss.Entities.Enums.TransactionType.Refund,
-                    Description = $"Hoàn trả chi phí (Budget + Commission) do hủy tin tuyển dụng: {job.Title}",
+                    Description = $"Hoàn trả chi phí (Budget) do hủy tin tuyển dụng: {job.Title}",
                     RelatedJobId = job.Id,
                     CreatedAt = DateTime.UtcNow
                 });
@@ -266,43 +267,99 @@ namespace UniTask.Business.Services
 
         public async Task<bool> ReportCompletionAsync(int id, string studentId)
         {
-            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.SelectedStudentId == studentId);
+            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == id);
             
             if (job == null || job.Status != DataAcesss.Entities.Enums.JobStatus.InProgress) 
                 return false;
 
-            job.Status = DataAcesss.Entities.Enums.JobStatus.PendingConfirmation;
+            var app = await _context.Applications.Include(a => a.StudentProfile).FirstOrDefaultAsync(a => a.JobId == id && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
+            if (app == null) return false;
+
+            app.Status = ApplicationStatus.Completed;
+
+            // If ALL accepted apps for this job are completed, set job to PendingConfirmation
+            var allApps = await _context.Applications.Where(a => a.JobId == id && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed)).ToListAsync();
+            if (allApps.All(a => a.Status == ApplicationStatus.Completed))
+            {
+                job.Status = DataAcesss.Entities.Enums.JobStatus.PendingConfirmation;
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> ApproveJobAsync(int id, string employerId)
         {
-            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.EmployerId == employerId);
+            var job = await _context.Jobs.Include(j => j.Applications).ThenInclude(a => a.StudentProfile).FirstOrDefaultAsync(j => j.Id == id && j.EmployerId == employerId);
             
-            if (job == null || job.Status != DataAcesss.Entities.Enums.JobStatus.PendingConfirmation || string.IsNullOrEmpty(job.SelectedStudentId)) 
+            if (job == null || job.Status != DataAcesss.Entities.Enums.JobStatus.PendingConfirmation) 
                 return false;
+
+            var acceptedApps = job.Applications.Where(a => a.Status == ApplicationStatus.Completed || a.Status == ApplicationStatus.Accepted).ToList();
 
             // Update Job Status
             job.Status = DataAcesss.Entities.Enums.JobStatus.Completed;
 
-            // Find Student's Wallet
-            var studentWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == job.SelectedStudentId);
-            if (studentWallet != null)
-            {
-                var roundedBudget = Math.Round(job.Budget, 0);
-                // Transfer money to student
-                studentWallet.Balance += roundedBudget;
+            var salaryPerPerson = Math.Round(job.Budget / (job.HeadCount > 0 ? job.HeadCount : 1), 0);
+            var totalPaid = 0m;
 
-                _context.Transactions.Add(new Transaction
+            if (acceptedApps.Any())
+            {
+                foreach (var app in acceptedApps)
                 {
-                    WalletId = studentWallet.Id,
-                    Amount = roundedBudget,
-                    Type = DataAcesss.Entities.Enums.TransactionType.EscrowRelease,
-                    Description = $"Nhận tiền công từ công việc: {job.Title}",
-                    RelatedJobId = job.Id,
-                    CreatedAt = DateTime.UtcNow
-                });
+                    bool alreadyPaid = (app.Status == ApplicationStatus.Completed && app.EscrowReleaseDate == null);
+
+                    if (alreadyPaid) 
+                    {
+                        // Sinh viên đã được nhận tiền bởi EscrowAutoReleaseWorker
+                        totalPaid += salaryPerPerson;
+                        continue; // Bỏ qua, không chuyển tiền lần 2
+                    }
+
+                    app.EscrowReleaseDate = null;
+                    app.Status = ApplicationStatus.Completed;
+                    var studentId = app.StudentProfile?.UserId;
+                    if (studentId != null)
+                    {
+                        var studentWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == studentId);
+                        if (studentWallet != null)
+                        {
+                            // Transfer money to student
+                            studentWallet.Balance += salaryPerPerson;
+                            totalPaid += salaryPerPerson;
+
+                            _context.Transactions.Add(new Transaction
+                            {
+                                WalletId = studentWallet.Id,
+                                Amount = salaryPerPerson,
+                                Type = DataAcesss.Entities.Enums.TransactionType.EscrowRelease,
+                                Description = $"Nhận tiền công từ công việc: {job.Title}",
+                                RelatedJobId = job.Id,
+                                CreatedAt = DateTime.UtcNow
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Refund remaining budget to employer
+            var refundAmount = Math.Round(job.Budget - totalPaid, 0);
+            if (refundAmount > 0)
+            {
+                var employerWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
+                if (employerWallet != null)
+                {
+                    employerWallet.Balance += refundAmount;
+                    _context.Transactions.Add(new Transaction
+                    {
+                        WalletId = employerWallet.Id,
+                        Amount = refundAmount,
+                        Type = DataAcesss.Entities.Enums.TransactionType.Refund,
+                        Description = $"Hoàn tiền dư từ công việc chưa tuyển đủ người: {job.Title}",
+                        RelatedJobId = job.Id,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
             }
 
             await _context.SaveChangesAsync();
@@ -331,9 +388,12 @@ namespace UniTask.Business.Services
 
         public async Task<bool> SubmitStudentEvidenceAsync(int id, string studentId, StudentEvidenceSubmitDto dto)
         {
-            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.SelectedStudentId == studentId);
+            var job = await _context.Jobs.Include(j => j.Applications).ThenInclude(a => a.StudentProfile).FirstOrDefaultAsync(j => j.Id == id);
             if (job == null || job.Status != DataAcesss.Entities.Enums.JobStatus.Disputed)
                 return false;
+
+            var app = job.Applications.FirstOrDefault(a => a.StudentProfile?.UserId == studentId);
+            if (app == null) return false;
 
             job.StudentEvidenceText = dto.EvidenceText;
             job.StudentEvidenceUrl = dto.EvidenceUrl;
@@ -379,21 +439,13 @@ namespace UniTask.Business.Services
                 IsUrgent = j.IsUrgent,
                 IsRemote = j.IsRemote,
                 Status = j.Status,
-                SelectedStudentId = j.SelectedStudentId,
+                HeadCount = j.HeadCount,
                 DisputeReason = j.DisputeReason,
                 EmployerEvidenceText = j.EmployerEvidenceText,
                 EmployerEvidenceUrl = j.EmployerEvidenceUrl,
                 StudentEvidenceText = j.StudentEvidenceText,
                 StudentEvidenceUrl = j.StudentEvidenceUrl,
                 DisputedDate = j.DisputedDate,
-
-                CheckInTime = j.CheckInTime,
-                CheckOutTime = j.CheckOutTime,
-                CheckInOtp = j.CheckInOtp,
-                CheckInOtpExpiredAt = j.CheckInOtpExpiredAt,
-                CheckOutOtp = j.CheckOutOtp,
-                CheckOutOtpExpiredAt = j.CheckOutOtpExpiredAt,
-                EscrowReleaseDate = j.EscrowReleaseDate,
                 RequiredReliabilityScore = j.RequiredReliabilityScore,
                 EmployerToStudentRating = j.EmployerToStudentRating,
                 EmployerToStudentTags = j.EmployerToStudentTags,
@@ -423,8 +475,13 @@ namespace UniTask.Business.Services
             if (job == null || job.Status != JobStatus.InProgress) return null;
 
             var otp = new Random().Next(100000, 999999).ToString();
-            job.CheckInOtp = otp;
-            job.CheckInOtpExpiredAt = DateTime.UtcNow.AddMinutes(3);
+            
+            var apps = await _context.Applications.Where(a => a.JobId == jobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed)).ToListAsync();
+            foreach (var app in apps)
+            {
+                app.CheckInOtp = otp;
+                app.CheckInOtpExpiredAt = DateTime.UtcNow.AddMinutes(3);
+            }
 
             await _context.SaveChangesAsync();
             return otp;
@@ -436,8 +493,12 @@ namespace UniTask.Business.Services
             if (job == null || job.Status != JobStatus.InProgress) return null;
 
             var otp = new Random().Next(100000, 999999).ToString();
-            job.CheckOutOtp = otp;
-            job.CheckOutOtpExpiredAt = DateTime.UtcNow.AddMinutes(3);
+            var apps = await _context.Applications.Where(a => a.JobId == jobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed)).ToListAsync();
+            foreach (var app in apps)
+            {
+                app.CheckOutOtp = otp;
+                app.CheckOutOtpExpiredAt = DateTime.UtcNow.AddMinutes(3);
+            }
 
             await _context.SaveChangesAsync();
             return otp;
@@ -445,14 +506,17 @@ namespace UniTask.Business.Services
 
         public async Task<bool> StudentCheckInAsync(int jobId, string studentId, string otp)
         {
-            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.SelectedStudentId == studentId);
+            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
             if (job == null || job.Status != JobStatus.InProgress) return false;
 
-            if (job.CheckInOtp != otp || job.CheckInOtpExpiredAt < DateTime.UtcNow) return false;
+            var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
+            if (app == null) return false;
 
-            job.CheckInTime = DateTime.UtcNow;
-            job.CheckInOtp = null; // Clear OTP after use
-            job.CheckInOtpExpiredAt = null;
+            if (app.CheckInOtp != otp || app.CheckInOtpExpiredAt < DateTime.UtcNow) return false;
+
+            app.CheckInTime = DateTime.UtcNow;
+            app.CheckInOtp = null; // Clear OTP after use
+            app.CheckInOtpExpiredAt = null;
 
             await _context.SaveChangesAsync();
             return true;
@@ -460,19 +524,26 @@ namespace UniTask.Business.Services
 
         public async Task<bool> StudentCheckOutAsync(int jobId, string studentId, string otp)
         {
-            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.SelectedStudentId == studentId);
+            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
             if (job == null || job.Status != JobStatus.InProgress) return false;
 
-            if (job.CheckOutOtp != otp || job.CheckOutOtpExpiredAt < DateTime.UtcNow) return false;
+            var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
+            if (app == null) return false;
 
-            job.CheckOutTime = DateTime.UtcNow;
-            job.CheckOutOtp = null; // Clear OTP after use
-            job.CheckOutOtpExpiredAt = null;
+            if (app.CheckOutOtp != otp || app.CheckOutOtpExpiredAt < DateTime.UtcNow) return false;
 
-            // Automatically transition to PendingConfirmation (Pending Escrow)
-            job.Status = JobStatus.PendingConfirmation;
-            // Set release time to 24 hours from now
-            job.EscrowReleaseDate = DateTime.UtcNow.AddHours(24);
+            app.CheckOutTime = DateTime.UtcNow;
+            app.CheckOutOtp = null; // Clear OTP after use
+            app.CheckOutOtpExpiredAt = null;
+            app.Status = ApplicationStatus.Completed; // Mark student's application as completed
+            app.EscrowReleaseDate = DateTime.UtcNow.AddHours(24); // Set individual escrow release
+
+            // If ALL accepted apps for this job are completed, set job to PendingConfirmation
+            var allApps = await _context.Applications.Where(a => a.JobId == jobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed)).ToListAsync();
+            if (allApps.All(a => a.Status == ApplicationStatus.Completed))
+            {
+                job.Status = JobStatus.PendingConfirmation;
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -480,13 +551,14 @@ namespace UniTask.Business.Services
 
         public async Task<bool> CancelJobBookingAsync(int jobId, string userId)
         {
-            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && (j.SelectedStudentId == userId || j.EmployerId == userId));
+            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
             if (job == null || job.Status != JobStatus.InProgress) return false;
 
-            // Check if it's the student canceling
-            if (job.SelectedStudentId == userId)
+            var app = await _context.Applications.Include(a => a.StudentProfile).FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == userId && a.Status == ApplicationStatus.Accepted);
+            
+            if (app != null)
             {
-                var studentProfile = await _context.StudentProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+                var studentProfile = app.StudentProfile;
                 var studentUser = await _context.Users.FindAsync(userId);
 
                 if (studentProfile != null)
@@ -515,13 +587,14 @@ namespace UniTask.Business.Services
                     }
                 }
 
-                // Reset job back to Open so other students can apply
-                job.Status = JobStatus.Open;
-                job.SelectedStudentId = null;
-                job.CheckInTime = null;
-                job.CheckOutTime = null;
-                job.CheckInOtp = null;
-                job.CheckOutOtp = null;
+                app.Status = ApplicationStatus.Cancelled;
+
+                // Reset job back to Open if no accepted applications left
+                var otherAccepted = await _context.Applications.AnyAsync(a => a.JobId == jobId && a.Id != app.Id && a.Status == ApplicationStatus.Accepted);
+                if (!otherAccepted)
+                {
+                    job.Status = JobStatus.Open;
+                }
 
                 await _context.SaveChangesAsync();
                 return true;
@@ -532,31 +605,36 @@ namespace UniTask.Business.Services
 
         public async Task<bool> SubmitEmployerReviewAsync(int jobId, string employerId, int rating, string tagsJson, string? comment)
         {
-            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.EmployerId == employerId);
-            if (job == null || job.Status != JobStatus.Completed || string.IsNullOrEmpty(job.SelectedStudentId)) return false;
+            var job = await _context.Jobs.Include(j => j.Applications).ThenInclude(a => a.StudentProfile).FirstOrDefaultAsync(j => j.Id == jobId && j.EmployerId == employerId);
+            if (job == null || job.Status != JobStatus.Completed) return false;
+
+            var acceptedApps = job.Applications.Where(a => a.Status == ApplicationStatus.Completed).ToList();
+            if (!acceptedApps.Any()) return false;
 
             job.EmployerToStudentRating = rating;
             job.EmployerToStudentTags = tagsJson;
             job.EmployerToStudentComment = comment;
 
-            // Process reliability score adjustments
-            var studentProfile = await _context.StudentProfiles.FirstOrDefaultAsync(p => p.UserId == job.SelectedStudentId);
-            if (studentProfile != null)
+            foreach (var app in acceptedApps)
             {
-                if (rating == 5)
+                var studentProfile = app.StudentProfile;
+                if (studentProfile != null)
                 {
-                    studentProfile.ReliabilityScore += 2;
-                }
-
-                // Check negative ratings/tags to auto-flag
-                var studentUser = await _context.Users.FindAsync(job.SelectedStudentId);
-                if (studentUser != null)
-                {
-                    bool hasBadTags = !string.IsNullOrEmpty(tagsJson) && (tagsJson.Contains("Đi muộn") || tagsJson.Contains("Ủa oải") || tagsJson.Contains("Thiếu tập trung") || tagsJson.Contains("Không hoàn thành việc"));
-                    if (rating <= 2 || hasBadTags)
+                    if (rating == 5)
                     {
-                        studentUser.IsFlagged = true;
-                        studentUser.FlagReason = $"Nhận đánh giá tiêu cực ({rating} sao) hoặc tag xấu từ Nhà tuyển dụng.";
+                        studentProfile.ReliabilityScore += 2;
+                    }
+
+                    // Check negative ratings/tags to auto-flag
+                    var studentUser = await _context.Users.FindAsync(studentProfile.UserId);
+                    if (studentUser != null)
+                    {
+                        bool hasBadTags = !string.IsNullOrEmpty(tagsJson) && (tagsJson.Contains("Đi muộn") || tagsJson.Contains("Ủa oải") || tagsJson.Contains("Thiếu tập trung") || tagsJson.Contains("Không hoàn thành việc"));
+                        if (rating <= 2 || hasBadTags)
+                        {
+                            studentUser.IsFlagged = true;
+                            studentUser.FlagReason = $"Nhận đánh giá tiêu cực ({rating} sao) hoặc tag xấu từ Nhà tuyển dụng.";
+                        }
                     }
                 }
             }
@@ -567,8 +645,11 @@ namespace UniTask.Business.Services
 
         public async Task<bool> SubmitStudentReviewAsync(int jobId, string studentId, int rating, string tagsJson, string? comment)
         {
-            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.SelectedStudentId == studentId);
+            var job = await _context.Jobs.Include(j => j.Applications).ThenInclude(a => a.StudentProfile).FirstOrDefaultAsync(j => j.Id == jobId);
             if (job == null || job.Status != JobStatus.Completed) return false;
+
+            var app = job.Applications.FirstOrDefault(a => a.StudentProfile?.UserId == studentId && a.Status == ApplicationStatus.Completed);
+            if (app == null) return false;
 
             job.StudentToEmployerRating = rating;
             job.StudentToEmployerTags = tagsJson;

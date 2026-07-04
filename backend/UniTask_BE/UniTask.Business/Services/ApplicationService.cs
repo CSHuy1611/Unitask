@@ -119,38 +119,49 @@ namespace UniTask.Business.Services
             if (application == null || application.Job.EmployerId != employerId)
                 return false; // Not found or employer doesn't own this job
 
-            application.Status = status;
-
-            // If accepted, update the job status and assign the student
             if (status == ApplicationStatus.Accepted)
             {
-                // We need the user ID for SelectedStudentId
-                await _context.Entry(application).Reference(a => a.StudentProfile).LoadAsync();
-                
-                application.Job.Status = JobStatus.InProgress;
-                application.Job.SelectedStudentId = application.StudentProfile.UserId;
+                // Count current accepted/completed apps
+                var currentAcceptedCount = await _context.Applications
+                    .CountAsync(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed));
 
-                // Optionally, we could automatically reject other pending applications for this job here
-                var otherApps = await _context.Applications
-                    .Where(a => a.JobId == application.JobId && a.Id != applicationId && a.Status == ApplicationStatus.Applied)
-                    .ToListAsync();
-
-                foreach (var app in otherApps)
+                if (currentAcceptedCount >= application.Job.HeadCount)
                 {
-                    app.Status = ApplicationStatus.Rejected;
+                    throw new InvalidOperationException("Đã tuyển đủ số lượng sinh viên cho công việc này.");
+                }
+
+                application.Status = status;
+                application.Job.Status = JobStatus.InProgress;
+
+                // If now full, reject all other pending apps
+                if (currentAcceptedCount + 1 == application.Job.HeadCount)
+                {
+                    var pendingApps = await _context.Applications
+                        .Where(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Applied || a.Status == ApplicationStatus.Interviewing))
+                        .ToListAsync();
+
+                    foreach (var pendingApp in pendingApps)
+                    {
+                        pendingApp.Status = ApplicationStatus.Rejected;
+                    }
                 }
             }
-            // If the application is rejected after being accepted (employer changed mind before student started?), 
-            // we might need logic to reopen the job, but for now we'll keep it simple.
-            else if (status == ApplicationStatus.Rejected)
+            else
             {
-                 // We don't have access to studentId directly without loading the profile
-                 await _context.Entry(application).Reference(a => a.StudentProfile).LoadAsync();
-                 if (application.Job.SelectedStudentId == application.StudentProfile.UserId)
-                 {
-                     application.Job.Status = JobStatus.Open;
-                     application.Job.SelectedStudentId = null;
-                 }
+                application.Status = status;
+
+                // If the application is rejected after being accepted 
+                if (status == ApplicationStatus.Rejected || status == ApplicationStatus.Cancelled)
+                {
+                    // Check if there are any other accepted applications
+                    var hasOtherAccepted = await _context.Applications
+                        .AnyAsync(a => a.JobId == application.JobId && a.Id != applicationId && a.Status == ApplicationStatus.Accepted);
+                    
+                    if (!hasOtherAccepted)
+                    {
+                        application.Job.Status = JobStatus.Open;
+                    }
+                }
             }
 
             await _context.SaveChangesAsync();
