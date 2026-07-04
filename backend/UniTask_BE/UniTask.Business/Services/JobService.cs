@@ -101,6 +101,17 @@ namespace UniTask.Business.Services
             var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == employerId);
             if (profile == null || profile.CompanyId == null) return null;
 
+            // ===== Business License Gate =====
+            // Employer phải upload giấy phép kinh doanh VÀ được Admin xác minh mới được đăng việc.
+            if (string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+            {
+                throw new InvalidOperationException("Bạn chưa upload giấy phép kinh doanh. Vui lòng cập nhật hồ sơ và upload giấy phép trước khi đăng tin tuyển dụng.");
+            }
+            if (!profile.IsBusinessLicenseVerified)
+            {
+                throw new InvalidOperationException("Giấy phép kinh doanh của bạn đang chờ Admin xác minh. Bạn chỉ có thể đăng tin sau khi giấy phép được phê duyệt.");
+            }
+
             // Check Blacklist Count
             var user = await _context.Users.FindAsync(employerId);
             if (user != null && user.BlacklistCount >= 3)

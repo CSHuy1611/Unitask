@@ -156,7 +156,7 @@ namespace UniTask.Api.Controllers
 
         [HttpPost("employer/business-license")]
         [Authorize(Roles = "Employer")]
-        public async Task<IActionResult> UploadBusinessLicense([FromForm] IFormFile file, [FromForm] bool isVerified)
+        public async Task<IActionResult> UploadBusinessLicense(IFormFile file, [FromForm] bool isVerified)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
