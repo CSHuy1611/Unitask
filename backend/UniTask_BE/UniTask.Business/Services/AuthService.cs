@@ -82,6 +82,34 @@ namespace UniTask.Business.Services
                 return new AuthResponse { IsSuccess = false, Message = "Invalid role. Must be 'Student' or 'Employer'." };
             }
 
+            // ===== Employer-specific validations =====
+            if (request.Role == "Employer")
+            {
+                if (string.IsNullOrWhiteSpace(request.CompanyName))
+                {
+                    return new AuthResponse { IsSuccess = false, Message = "Tên công ty là bắt buộc khi đăng ký tài khoản Doanh nghiệp." };
+                }
+
+                if (string.IsNullOrWhiteSpace(request.TaxCode))
+                {
+                    return new AuthResponse { IsSuccess = false, Message = "Mã số thuế là bắt buộc khi đăng ký tài khoản Doanh nghiệp." };
+                }
+
+                // Validate Vietnamese Tax Code format: 10 or 13 digits
+                if (!System.Text.RegularExpressions.Regex.IsMatch(request.TaxCode.Trim(), @"^\d{10}(\d{3})?$"))
+                {
+                    return new AuthResponse { IsSuccess = false, Message = "Mã số thuế không đúng định dạng. Phải gồm 10 hoặc 13 chữ số." };
+                }
+
+                // Check TaxCode uniqueness
+                var taxCodeExists = await _context.Companies
+                    .AnyAsync(c => c.TaxCode == request.TaxCode.Trim());
+                if (taxCodeExists)
+                {
+                    return new AuthResponse { IsSuccess = false, Message = "Mã số thuế này đã được đăng ký trước đó trong hệ thống. Vui lòng kiểm tra lại." };
+                }
+            }
+
             var existingUser = await _userManager.FindByEmailAsync(request.Email);
             ApplicationUser user = existingUser;
             bool isNewUser = false;
@@ -159,14 +187,18 @@ namespace UniTask.Business.Services
                     var employerProfile = new EmployerProfile 
                     { 
                         UserId = user.Id,
-                        Position = request.Position
+                        Position = request.Position,
+                        BusinessLicenseUrl = request.BusinessLicenseUrl,
+                        // License is pending admin review; not verified yet
+                        IsBusinessLicenseVerified = false
                     };
 
                     if (!string.IsNullOrEmpty(request.CompanyName))
                     {
                         var company = new Company 
                         { 
-                            Name = request.CompanyName, 
+                            Name = request.CompanyName,
+                            TaxCode = request.TaxCode?.Trim(),
                             CreatedAt = DateTime.UtcNow 
                         };
                         _context.Companies.Add(company);

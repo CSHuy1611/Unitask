@@ -39,11 +39,13 @@ export interface User {
   companyWebsite?: string;
   companyLogoUrl?: string;
   position?: string;
+  taxCode?: string;
   businessLicenseUrl?: string;
   isBusinessLicenseVerified?: boolean;
 
   // Payment & Subscriptions
   balance?: number;
+  recentTransactions?: any[];
   activePackage?: string;
   packageExpiry?: string;
   postedJobs?: number[];

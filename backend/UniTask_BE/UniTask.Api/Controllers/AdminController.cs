@@ -133,5 +133,45 @@ namespace UniTask.Api.Controllers
             if (!result) return BadRequest(new { message = "Failed to resolve dispute. Job might not be in Disputed status." });
             return Ok(new { message = "Dispute resolved successfully." });
         }
+
+        // ===== REVENUE & TRANSACTIONS =====
+        [HttpGet("transactions")]
+        public async Task<IActionResult> GetTransactions([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? type = null)
+        {
+            var result = await _adminService.GetTransactionsAsync(page, pageSize, type);
+            return Ok(result);
+        }
+
+        [HttpGet("transactions/export")]
+        public async Task<IActionResult> ExportRevenueReport([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            var excelBytes = await _adminService.ExportRevenueReportExcelAsync(startDate, endDate);
+            var fileName = $"RevenueReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        // ===== BUSINESS LICENSE MANAGEMENT =====
+        [HttpGet("business-licenses/pending")]
+        public async Task<IActionResult> GetPendingBusinessLicenses()
+        {
+            var pending = await _profileService.GetPendingBusinessLicensesAsync();
+            return Ok(pending);
+        }
+
+        [HttpPut("business-licenses/{userId}/approve")]
+        public async Task<IActionResult> ApproveBusinessLicense(string userId)
+        {
+            var result = await _profileService.ApproveBusinessLicenseAsync(userId);
+            if (!result) return BadRequest(new { message = "Không tìm thấy hồ sơ hoặc giấy phép kinh doanh chưa được upload." });
+            return Ok(new { message = "Giấy phép kinh doanh đã được phê duyệt. Employer có thể đăng tin tuyển dụng." });
+        }
+
+        [HttpPut("business-licenses/{userId}/reject")]
+        public async Task<IActionResult> RejectBusinessLicense(string userId)
+        {
+            var result = await _profileService.RejectBusinessLicenseAsync(userId);
+            if (!result) return BadRequest(new { message = "Không tìm thấy hồ sơ Employer." });
+            return Ok(new { message = "Giấy phép kinh doanh đã bị từ chối và xóa. Employer cần upload lại." });
+        }
     }
 }

@@ -54,6 +54,9 @@ interface DisputeItem {
             <a routerLink="/admin/disputes" class="admin-tab active">
               <span class="material-icons-round">gavel</span> Giải quyết tranh chấp
             </a>
+            <a routerLink="/admin/revenue" class="admin-tab">
+              <span class="material-icons-round">receipt_long</span> Doanh thu & Dòng tiền
+            </a>
           </div>
 
           <div class="dashboard-header animate-fade-in-up">
