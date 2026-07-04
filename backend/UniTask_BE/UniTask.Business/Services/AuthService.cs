@@ -131,15 +131,14 @@ namespace UniTask.Business.Services
                     client.Timeout = TimeSpan.FromSeconds(5);
                     var response = await client.GetAsync($"https://api.vietqr.io/v2/business/{taxCode}");
                     
-                    if (response.IsSuccessStatusCode)
+                    var content = await response.Content.ReadAsStringAsync();
+                    using var json = System.Text.Json.JsonDocument.Parse(content);
+                    if (json.RootElement.TryGetProperty("code", out var codeElement))
                     {
-                        var content = await response.Content.ReadAsStringAsync();
-                        using var json = System.Text.Json.JsonDocument.Parse(content);
-                        var code = json.RootElement.GetProperty("code").GetString();
-                        
+                        var code = codeElement.GetString();
                         if (code != "00")
                         {
-                            var desc = json.RootElement.GetProperty("desc").GetString();
+                            var desc = json.RootElement.TryGetProperty("desc", out var descElem) ? descElem.GetString() : "Không xác định";
                             return new AuthResponse { IsSuccess = false, Message = $"Mã số thuế không hợp lệ hoặc không tồn tại (Hệ thống Thuế Quốc gia báo: {desc})." };
                         }
                         
