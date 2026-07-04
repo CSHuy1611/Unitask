@@ -22,5 +22,10 @@ namespace UniTask.Business.Interfaces
 
         // Business License Upload
         Task<bool> UploadBusinessLicenseAsync(string userId, Microsoft.AspNetCore.Http.IFormFile licenseFile, bool isVerified);
+
+        // Admin Business License Management
+        Task<IEnumerable<object>> GetPendingBusinessLicensesAsync();
+        Task<bool> ApproveBusinessLicenseAsync(string userId);
+        Task<bool> RejectBusinessLicenseAsync(string userId);
     }
 }

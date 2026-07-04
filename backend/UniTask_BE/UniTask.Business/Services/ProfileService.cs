@@ -730,9 +730,54 @@ namespace UniTask.Business.Services
                 profile.BusinessLicenseUrl = url;
             }
 
+            // When employer uploads, reset to unverified so Admin must re-approve
             profile.IsBusinessLicenseVerified = isVerified;
             await _context.SaveChangesAsync();
 
+            return true;
+        }
+
+        // ===== Admin Business License Management =====
+        public async Task<IEnumerable<object>> GetPendingBusinessLicensesAsync()
+        {
+            var profiles = await _context.EmployerProfiles
+                .Include(p => p.User)
+                .Include(p => p.Company)
+                .Where(p => p.BusinessLicenseUrl != null && !p.IsBusinessLicenseVerified)
+                .Select(p => new
+                {
+                    userId = p.UserId,
+                    fullName = p.User.FullName,
+                    email = p.User.Email,
+                    companyName = p.Company != null ? p.Company.Name : null,
+                    taxCode = p.Company != null ? p.Company.TaxCode : null,
+                    businessLicenseUrl = p.BusinessLicenseUrl,
+                    isVerified = p.IsBusinessLicenseVerified
+                })
+                .ToListAsync<object>();
+
+            return profiles;
+        }
+
+        public async Task<bool> ApproveBusinessLicenseAsync(string userId)
+        {
+            var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (profile == null || string.IsNullOrEmpty(profile.BusinessLicenseUrl)) return false;
+
+            profile.IsBusinessLicenseVerified = true;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RejectBusinessLicenseAsync(string userId)
+        {
+            var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (profile == null) return false;
+
+            // Clear the uploaded license and reset verification flag
+            profile.BusinessLicenseUrl = null;
+            profile.IsBusinessLicenseVerified = false;
+            await _context.SaveChangesAsync();
             return true;
         }
     }

@@ -39,6 +39,7 @@ export interface User {
   companyWebsite?: string;
   companyLogoUrl?: string;
   position?: string;
+  taxCode?: string;
   businessLicenseUrl?: string;
   isBusinessLicenseVerified?: boolean;
 

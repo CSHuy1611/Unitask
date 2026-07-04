@@ -395,6 +395,7 @@ export class RegisterComponent implements OnDestroy {
       year: this.year,
       companyName: this.companyName,
       position: this.position,
+      taxCode: this.taxCode,
     }).subscribe({
       next: (result) => {
         this.loading.set(false);
@@ -463,6 +464,7 @@ export class RegisterComponent implements OnDestroy {
       year: this.year,
       companyName: this.companyName,
       position: this.position,
+      taxCode: this.taxCode,
     }).subscribe({
       next: (result) => {
         this.loading.set(false);

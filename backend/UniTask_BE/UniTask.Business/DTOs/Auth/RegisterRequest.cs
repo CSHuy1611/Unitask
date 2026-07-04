@@ -29,5 +29,18 @@ namespace UniTask.Business.DTOs.Auth
         // Optional Employer Fields
         public string? CompanyName { get; set; }
         public string? Position { get; set; }
+
+        /// <summary>
+        /// Mã số thuế doanh nghiệp - Bắt buộc khi đăng ký với tư cách Employer.
+        /// Định dạng chuẩn Việt Nam: 10 hoặc 13 chữ số.
+        /// </summary>
+        [RegularExpression(@"^\d{10}(\d{3})?$",
+            ErrorMessage = "Mã số thuế không hợp lệ. Vui lòng nhập 10 hoặc 13 chữ số.")]
+        public string? TaxCode { get; set; }
+
+        /// <summary>
+        /// URL giấy phép kinh doanh (Cloudinary URL) - Cần upload trước khi gọI API register.
+        /// </summary>
+        public string? BusinessLicenseUrl { get; set; }
     }
 }

@@ -129,7 +129,8 @@ export class AuthService {
       major: userData.major,
       year: userData.year,
       companyName: userData.companyName,
-      position: userData.position
+      position: userData.position,
+      taxCode: userData.taxCode
     };
 
     return this.http.post<any>(`${API_BASE_URL}/account/register`, payload).pipe(
