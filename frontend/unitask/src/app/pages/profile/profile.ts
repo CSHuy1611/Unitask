@@ -2053,10 +2053,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       if (registeredTaxCode && cleanText.includes(registeredTaxCode)) {
         isVerified = true;
-        this.licenseUploadStatus.set('Hệ thống AI đã tìm thấy Mã số thuế trùng khớp! Đang tải lên...');
+        this.licenseUploadStatus.set('Hệ thống AI đã tìm thấy thông tin trùng khớp! Đang hoàn tất tải lên...');
       } else {
         // Fallback: If AI fails to read the tax code due to blurry image, let it upload but keep unverified for manual review
-        this.licenseUploadStatus.set('AI không tìm thấy Mã số thuế trong ảnh. Đang tải lên chờ Admin duyệt thủ công...');
+        this.licenseUploadStatus.set('Xác thực tự động không thành công do ảnh mờ hoặc thông tin không hợp lệ. Đang chuyển sang chờ xét duyệt thủ công...');
       }
 
       // 2. Upload file
