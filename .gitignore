@@ -12,8 +12,10 @@ appsettings.Development.json
 *.sln.docstates
 
 # C# Build Outputs
-**/bin/
-**/obj/
+[bB]in/
+[oO]bj/
+**/[bB]in/
+**/[oO]bj/
 
 # Frontend Build/Node Outputs
 **/dist/
