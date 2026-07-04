@@ -148,5 +148,88 @@ namespace UniTask.Business.Services
                 return false;
             }
         }
+
+        public async Task<bool> VerifyPaymentLocalAsync(long orderCode)
+        {
+            try
+            {
+                var clientId = _configuration["PayOS:ClientId"];
+                var apiKey = _configuration["PayOS:ApiKey"];
+                
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("x-client-id", clientId);
+                client.DefaultRequestHeaders.Add("x-api-key", apiKey);
+                
+                var response = await client.GetAsync($"https://api-merchant.payos.vn/v2/payment-requests/{orderCode}");
+                if (!response.IsSuccessStatusCode) return false;
+                
+                var content = await response.Content.ReadAsStringAsync();
+                var json = System.Text.Json.JsonDocument.Parse(content);
+                
+                if (json.RootElement.TryGetProperty("data", out var data))
+                {
+                    var status = data.GetProperty("status").GetString();
+                    var amount = data.GetProperty("amount").GetDecimal();
+
+                    if (status == "PAID" || status == "Success")
+                    {
+                    var completedTx = await _context.Transactions
+                        .AnyAsync(t => t.Description != null && t.Description.Contains("thành công") && t.Description.Contains(orderCode.ToString()));
+                    
+                    if (completedTx) return true;
+
+                    var pendingTx = await _context.Transactions
+                        .Include(t => t.Wallet)
+                        .FirstOrDefaultAsync(t => t.Description != null && t.Description.Contains("[PAYOS_PENDING]") && t.Description.Contains(orderCode.ToString()));
+
+                    if (pendingTx != null)
+                    {
+                        var roundedAmount = Math.Round(amount, 0);
+                        pendingTx.Wallet.Balance += roundedAmount;
+                        pendingTx.Description = $"Nạp tiền qua PayOS thành công (demo dự án học tập). Mã ĐH: {orderCode}";
+                        pendingTx.CreatedAt = DateTime.UtcNow;
+
+                        await _context.SaveChangesAsync();
+                        await _hubContext.Clients.All.SendAsync("TransactionOccurred");
+                        return true;
+                    }
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[VerifyPaymentLocalAsync] Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<int> SyncPendingTransactionsAsync(string userId)
+        {
+            try
+            {
+                var pendingTxs = await _context.Transactions
+                    .Include(t => t.Wallet)
+                    .Where(t => t.Wallet.UserId == userId && t.Description != null && t.Description.Contains("[PAYOS_PENDING]"))
+                    .ToListAsync();
+
+                int syncedCount = 0;
+                foreach (var tx in pendingTxs)
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(tx.Description!, @"Mã ĐH: (\d+)");
+                    if (match.Success && long.TryParse(match.Groups[1].Value, out long orderCode))
+                    {
+                        var success = await VerifyPaymentLocalAsync(orderCode);
+                        if (success) syncedCount++;
+                    }
+                }
+                return syncedCount;
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[SyncPendingTransactionsAsync] Error: {ex.Message}");
+                return 0;
+            }
+        }
     }
 }

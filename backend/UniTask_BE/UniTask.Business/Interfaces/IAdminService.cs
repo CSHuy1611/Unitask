@@ -22,5 +22,9 @@ namespace UniTask.Business.Interfaces
         // Dispute Management
         Task<object> GetDisputesAsync(int page = 1, int pageSize = 10);
         Task<bool> ResolveDisputeAsync(int jobId, DisputeResolveDto dto);
+
+        // Revenue & Cashflow
+        Task<object> GetTransactionsAsync(int page = 1, int pageSize = 10, string? type = null);
+        Task<byte[]> ExportRevenueReportExcelAsync(DateTime? startDate, DateTime? endDate);
     }
 }

@@ -41,6 +41,12 @@ namespace UniTask.DataAcesss.Entities
 
         public bool IsVerified { get; set; } = false;
 
+        /// <summary>
+        /// Mã số thuế doanh nghiệp (10 hoặc 13 chữ số theo chuẩn Việt Nam).
+        /// </summary>
+        [MaxLength(20)]
+        public string? TaxCode { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // ===== Navigation Properties =====

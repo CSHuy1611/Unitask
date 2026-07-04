@@ -129,7 +129,8 @@ export class AuthService {
       major: userData.major,
       year: userData.year,
       companyName: userData.companyName,
-      position: userData.position
+      position: userData.position,
+      taxCode: userData.taxCode
     };
 
     return this.http.post<any>(`${API_BASE_URL}/account/register`, payload).pipe(
@@ -183,6 +184,7 @@ export class AuthService {
       if (data.companyLocation) formData.append('Location', data.companyLocation);
       if (data.companyDescription) formData.append('Description', data.companyDescription);
       if (data.companyWebsite) formData.append('Website', data.companyWebsite);
+      if (data.taxCode) formData.append('TaxCode', data.taxCode);
     }
 
     return this.http.put<any>(`${API_BASE_URL}${endpoint}`, formData).pipe(
@@ -251,8 +253,7 @@ export class AuthService {
           this.saveToStorage(updated);
         }
       }),
-      map(() => ({ success: true, message: 'Xác thực eKYC tự động thành công!' })),
-      catchError(err => of({ success: false, message: err.error?.message || 'Gửi xác thực thất bại.' }))
+      map(() => ({ success: true, message: 'Xác thực eKYC tự động thành công!' }))
     );
   }
 
@@ -279,7 +280,7 @@ export class AuthService {
       tap(res => {
         const user = this.currentUser();
         if (user) {
-          const updated = { ...user, balance: res.balance };
+          const updated = { ...user, balance: res.balance, recentTransactions: res.recentTransactions || [] };
           this.currentUser.set(updated);
           this.saveToStorage(updated);
         }
@@ -366,6 +367,7 @@ export class AuthService {
                 companyDescription: companyObj.description || companyObj.Description || user.companyDescription,
                 companyWebsite: companyObj.website || companyObj.Website || user.companyWebsite,
                 companyLogoUrl: companyObj.logoUrl || companyObj.LogoUrl || user.companyLogoUrl,
+                taxCode: companyObj.taxCode || companyObj.TaxCode || user.taxCode,
                 position: res.position || res.Position || user.position,
                 activePackage: res.activePackage || undefined,
                 packageExpiry: res.packageExpiry || undefined,

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using UniTask.DataAcesss;
 
@@ -11,9 +12,11 @@ using UniTask.DataAcesss;
 namespace UniTask.DataAcesss.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260704144940_AddTaxCodeToCompany")]
+    partial class AddTaxCodeToCompany
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -229,15 +232,15 @@ namespace UniTask.DataAcesss.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("EkycBackImageUrl")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("EkycDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("EkycFrontImageUrl")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("EkycStatus")
                         .HasColumnType("int");

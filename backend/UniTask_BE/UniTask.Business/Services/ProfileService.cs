@@ -113,7 +113,8 @@ namespace UniTask.Business.Services
                         location = profile.Company.Location,
                         description = profile.Company.Description,
                         website = profile.Company.Website,
-                        logoUrl = profile.Company.LogoUrl
+                        logoUrl = profile.Company.LogoUrl,
+                        taxCode = profile.Company.TaxCode
                     } : null,
                     businessLicenseUrl = profile.BusinessLicenseUrl,
                     isBusinessLicenseVerified = profile.IsBusinessLicenseVerified,
@@ -237,6 +238,78 @@ namespace UniTask.Business.Services
                 if (!string.IsNullOrEmpty(dto.Location)) profile.Company.Location = dto.Location;
                 if (!string.IsNullOrEmpty(dto.Description)) profile.Company.Description = dto.Description;
                 if (!string.IsNullOrEmpty(dto.Website)) profile.Company.Website = dto.Website;
+
+                // Handle TaxCode Update
+                if (!string.IsNullOrEmpty(dto.TaxCode) && profile.Company.TaxCode != dto.TaxCode)
+                {
+                    var taxCode = dto.TaxCode.Trim();
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(taxCode, @"^\d{10}(\d{3})?$"))
+                    {
+                        throw new InvalidOperationException("Mã số thuế không đúng định dạng. Phải gồm 10 hoặc 13 chữ số.");
+                    }
+
+                    // Check TaxCode uniqueness
+                    var existingCompany = await _context.Companies.FirstOrDefaultAsync(c => c.TaxCode == taxCode);
+                    if (existingCompany != null)
+                    {
+                        throw new InvalidOperationException("Mã số thuế này đã được sử dụng bởi một doanh nghiệp khác trong hệ thống.");
+                    }
+
+                    // Check with external API
+                    try
+                    {
+                        using var client = new HttpClient();
+                        client.Timeout = TimeSpan.FromSeconds(5);
+                        var response = await client.GetAsync($"https://api.vietqr.io/v2/business/{taxCode}");
+                        var content = await response.Content.ReadAsStringAsync();
+                        using var json = System.Text.Json.JsonDocument.Parse(content);
+                        if (json.RootElement.TryGetProperty("code", out var codeElement))
+                        {
+                            var code = codeElement.GetString();
+                            if (code != "00")
+                            {
+                                var desc = json.RootElement.TryGetProperty("desc", out var descElem) ? descElem.GetString() : "Không xác định";
+                                throw new InvalidOperationException($"Mã số thuế không hợp lệ hoặc không tồn tại (Hệ thống Thuế báo: {desc}).");
+                            }
+                            
+                            if (json.RootElement.TryGetProperty("data", out var dataElement) && dataElement.ValueKind != System.Text.Json.JsonValueKind.Null)
+                            {
+                                if (dataElement.TryGetProperty("status", out var statusElement))
+                                {
+                                    var status = statusElement.GetString();
+                                    if (status != null && (status.ToLower().Contains("ngừng") || status.ToLower().Contains("đóng") || status.ToLower().Contains("tạm nghỉ")))
+                                    {
+                                        throw new InvalidOperationException($"Mã số thuế này không thể sử dụng vì tình trạng hiện tại là: {status}.");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (System.Text.Json.JsonException)
+                    {
+                        // Ignore JSON parsing errors if API is returning HTML (Cloudflare etc)
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Ignore timeout
+                    }
+                    // Do NOT catch InvalidOperationException here because we want to throw it to the caller
+                    catch (Exception ex) when (ex is not InvalidOperationException)
+                    {
+                        System.Console.WriteLine($"[TaxCode Verification API] Error: {ex.Message}");
+                    }
+
+                    // If they change the tax code, we MUST reset their business license and verification status
+                    profile.Company.TaxCode = taxCode;
+                    profile.IsBusinessLicenseVerified = false;
+                    
+                    if (!string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+                    {
+                        var publicId = _cloudinaryService.GetPublicIdFromUrl(profile.BusinessLicenseUrl);
+                        if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
+                        profile.BusinessLicenseUrl = null;
+                    }
+                }
 
                 // Handle Logo Upload
                 if (dto.CompanyLogoFile != null)
@@ -724,15 +797,74 @@ namespace UniTask.Business.Services
 
             if (licenseFile != null && licenseFile.Length > 0)
             {
+                // Delete old license if exists
+                if (!string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+                {
+                    try 
+                    {
+                        var publicId = _cloudinaryService.GetPublicIdFromUrl(profile.BusinessLicenseUrl);
+                        if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Console.WriteLine($"[Cloudinary] Delete error: {ex.Message}");
+                    }
+                }
+
                 var url = await _cloudinaryService.UploadImageAsync(licenseFile, "business_licenses");
                 if (url == null) return false;
 
                 profile.BusinessLicenseUrl = url;
             }
 
+            // When employer uploads, reset to unverified so Admin must re-approve
             profile.IsBusinessLicenseVerified = isVerified;
             await _context.SaveChangesAsync();
 
+            return true;
+        }
+
+        // ===== Admin Business License Management =====
+        public async Task<IEnumerable<object>> GetPendingBusinessLicensesAsync()
+        {
+            var profiles = await _context.EmployerProfiles
+                .Include(p => p.User)
+                .Include(p => p.Company)
+                .Where(p => p.BusinessLicenseUrl != null && !p.IsBusinessLicenseVerified)
+                .Select(p => new
+                {
+                    userId = p.UserId,
+                    fullName = p.User.FullName,
+                    email = p.User.Email,
+                    companyName = p.Company != null ? p.Company.Name : null,
+                    taxCode = p.Company != null ? p.Company.TaxCode : null,
+                    businessLicenseUrl = p.BusinessLicenseUrl,
+                    isVerified = p.IsBusinessLicenseVerified
+                })
+                .ToListAsync();
+
+            return profiles;
+        }
+
+        public async Task<bool> ApproveBusinessLicenseAsync(string userId)
+        {
+            var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (profile == null || string.IsNullOrEmpty(profile.BusinessLicenseUrl)) return false;
+
+            profile.IsBusinessLicenseVerified = true;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RejectBusinessLicenseAsync(string userId)
+        {
+            var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (profile == null) return false;
+
+            // Clear the uploaded license and reset verification flag
+            profile.BusinessLicenseUrl = null;
+            profile.IsBusinessLicenseVerified = false;
+            await _context.SaveChangesAsync();
             return true;
         }
     }

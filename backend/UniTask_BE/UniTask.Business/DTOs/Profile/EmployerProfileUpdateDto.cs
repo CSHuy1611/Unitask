@@ -16,6 +16,7 @@ namespace UniTask.Business.DTOs.Profile
         public string? Description { get; set; }
         public string? Website { get; set; }
         public string? Email { get; set; }
+        public string? TaxCode { get; set; }
         // Files
         public IFormFile? AvatarFile { get; set; }
         public IFormFile? CompanyLogoFile { get; set; }

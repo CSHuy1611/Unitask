@@ -122,7 +122,9 @@ import { AuthService } from '../../services/auth.service';
 
               <button type="submit" class="btn btn-primary btn-lg full-width" [disabled]="loading()">
                 @if (loading()) {
-                  <span class="spinner"></span> Đang xử lý...
+                  <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                    <span class="spinner"></span> {{ loadingText() }}
+                  </div>
                 } @else {
                   Đăng ký {{ activeRole() === 'student' ? 'Sinh viên' : 'Doanh nghiệp' }}
                 }
@@ -163,8 +165,10 @@ import { AuthService } from '../../services/auth.service';
               </div>
 
               <button type="submit" class="btn btn-primary btn-lg full-width" style="margin-bottom: var(--space-3);" [disabled]="loading()">
-                @if (loading()) {
-                  <span class="spinner"></span> Đang xử lý...
+                @if (loading() && loadingText() === 'Đang xử lý...') {
+                  <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                    <span class="spinner"></span> Đang xác thực...
+                  </div>
                 } @else {
                   Xác nhận
                 }
@@ -172,7 +176,13 @@ import { AuthService } from '../../services/auth.service';
               
               <div class="form-row">
                 <button type="button" class="btn btn-outline" [disabled]="countdown() > 0 || loading()" (click)="resendOtp()">
-                  {{ countdown() > 0 ? 'Gửi lại mã (' + countdown() + 's)' : 'Gửi lại mã' }}
+                  @if (loading() && loadingText() !== 'Đang xử lý...') {
+                    <div style="display:flex; align-items:center; justify-content:center; gap:8px">
+                      <span class="spinner"></span> {{ loadingText() }}
+                    </div>
+                  } @else {
+                    {{ countdown() > 0 ? 'Gửi lại mã (' + countdown() + 's)' : 'Gửi lại mã' }}
+                  }
                 </button>
                 <button type="button" class="btn btn-ghost" (click)="onChangeEmail()">
                   Đổi Email
@@ -286,6 +296,24 @@ import { AuthService } from '../../services/auth.service';
       font-size: var(--font-size-sm);
       margin-bottom: var(--space-5);
     }
+    
+    .btn-loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+
+    .loading-text-overlay {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0; left: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      gap: 8px;
+    }
 
     .alert .material-icons-round { font-size: 20px; }
 
@@ -343,6 +371,7 @@ export class RegisterComponent implements OnDestroy {
 
   activeRole = signal<'student' | 'employer'>('student');
   loading = signal(false);
+  loadingText = signal('Đang xử lý...');
   errorMsg = signal('');
   successMsg = signal('');
   
@@ -377,12 +406,35 @@ export class RegisterComponent implements OnDestroy {
     this.errorMsg.set('');
     this.successMsg.set('');
 
-    if (!this.fullName || !this.email || !this.password) {
+    if (!this.fullName || !this.email || !this.password || !this.phone) {
       this.errorMsg.set('Vui lòng điền đầy đủ thông tin bắt buộc.');
       return;
     }
 
+    const nameRegex = /^[a-zA-ZÀ-Ỹà-ỹ\s]+$/;
+    if (!nameRegex.test(this.fullName)) {
+      this.errorMsg.set('Họ và tên không hợp lệ (chỉ được chứa chữ cái, không chứa số hoặc kí tự đặc biệt).');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(this.email)) {
+      this.errorMsg.set('Email không đúng định dạng.');
+      return;
+    }
+
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(this.phone)) {
+      this.errorMsg.set('Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số.');
+      return;
+    }
+
     this.loading.set(true);
+    if (this.activeRole() === 'employer') {
+      this.loadingText.set('Đang tra cứu Mã số thuế...');
+    } else {
+      this.loadingText.set('Đang xử lý...');
+    }
 
     this.auth.register({
       role: this.activeRole(),
@@ -395,10 +447,17 @@ export class RegisterComponent implements OnDestroy {
       year: this.year,
       companyName: this.companyName,
       position: this.position,
+      taxCode: this.taxCode,
     }).subscribe({
       next: (result) => {
         this.loading.set(false);
+        this.loadingText.set('Đang xử lý...');
         if (result.success) {
+          if (this.activeRole() === 'employer') {
+            this.successMsg.set('Tra cứu Mã số thuế hợp lệ! Đăng ký thành công. Vui lòng kiểm tra Email để nhận mã OTP.');
+          } else {
+            this.successMsg.set('Đăng ký thành công! Vui lòng kiểm tra Email để nhận mã OTP.');
+          }
           this.step.set('otp');
           this.startCountdown();
         } else {
@@ -452,6 +511,7 @@ export class RegisterComponent implements OnDestroy {
     
     // Just call register again to resend OTP
     this.loading.set(true);
+    this.loadingText.set('Đang gửi lại OTP...');
     this.auth.register({
       role: this.activeRole(),
       fullName: this.fullName,
@@ -463,9 +523,11 @@ export class RegisterComponent implements OnDestroy {
       year: this.year,
       companyName: this.companyName,
       position: this.position,
+      taxCode: this.taxCode,
     }).subscribe({
       next: (result) => {
         this.loading.set(false);
+        this.loadingText.set('Đang xử lý...');
         if (result.success) {
           this.startCountdown();
           this.successMsg.set('Mã OTP mới đã được gửi tới email của bạn.');

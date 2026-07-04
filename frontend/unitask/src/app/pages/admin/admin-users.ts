@@ -35,6 +35,9 @@ import { API_BASE_URL } from '../../config/api.config';
             <a routerLink="/admin/disputes" class="admin-tab">
               <span class="material-icons-round">gavel</span> Giải quyết tranh chấp
             </a>
+            <a routerLink="/admin/revenue" class="admin-tab">
+              <span class="material-icons-round">receipt_long</span> Doanh thu & Dòng tiền
+            </a>
           </div>
 
           <div class="dashboard-header animate-fade-in-up" style="animation-delay:0.1s">

@@ -48,8 +48,8 @@ namespace UniTask.DataAcesss
             {
                 entity.Property(u => u.FullName).HasMaxLength(200).IsRequired();
                 entity.Property(u => u.AvatarUrl).HasMaxLength(500);
-                entity.Property(u => u.EkycFrontImageUrl).HasMaxLength(500);
-                entity.Property(u => u.EkycBackImageUrl).HasMaxLength(500);
+                entity.Property(u => u.EkycFrontImageUrl).HasMaxLength(2000);
+                entity.Property(u => u.EkycBackImageUrl).HasMaxLength(2000);
 
                 // 1-1: User → StudentProfile
                 entity.HasOne(u => u.StudentProfile)

@@ -20,6 +20,7 @@ appsettings.Development.json
 # Frontend Build/Node Outputs
 **/dist/
 **/node_modules/
+.vs/
 
 # Agent Knowledge
 .agents/
