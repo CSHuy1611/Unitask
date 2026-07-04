@@ -48,22 +48,22 @@ import { API_BASE_URL } from '../../config/api.config';
 
           <!-- Export Actions -->
           <div class="filter-actions glass-card animate-fade-in-up" style="animation-delay:0.1s; margin-bottom: var(--space-6); display: flex; gap: var(--space-4); align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group" style="margin-bottom: 0;">
-              <label>Từ ngày</label>
-              <input type="date" class="form-control" [(ngModel)]="startDate" />
+            <div class="form-group custom-input-group" style="margin-bottom: 0;">
+              <label><span class="material-icons-round" style="font-size: 16px;">calendar_today</span> Từ ngày</label>
+              <input type="date" class="form-control custom-input" [(ngModel)]="startDate" />
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <label>Đến ngày</label>
-              <input type="date" class="form-control" [(ngModel)]="endDate" />
+            <div class="form-group custom-input-group" style="margin-bottom: 0;">
+              <label><span class="material-icons-round" style="font-size: 16px;">event</span> Đến ngày</label>
+              <input type="date" class="form-control custom-input" [(ngModel)]="endDate" />
             </div>
-            <button class="btn btn-primary" (click)="exportExcel()" [disabled]="isExporting()">
+            <button class="btn btn-primary" style="height: 42px; display: flex; align-items: center; gap: 8px;" (click)="exportExcel()" [disabled]="isExporting()">
               <span class="material-icons-round">file_download</span> 
               {{ isExporting() ? 'Đang xuất...' : 'Xuất Báo Cáo Excel' }}
             </button>
             <div style="flex: 1"></div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <label>Lọc theo loại</label>
-              <select class="form-control" [(ngModel)]="filterType" (change)="loadTransactions(1)">
+            <div class="form-group custom-input-group" style="margin-bottom: 0; min-width: 250px;">
+              <label><span class="material-icons-round" style="font-size: 16px;">filter_list</span> Lọc theo loại</label>
+              <select class="form-control custom-input" [(ngModel)]="filterType" (change)="loadTransactions(1)">
                 <option value="All">Tất cả giao dịch</option>
                 <option value="CashIn">Dòng tiền Nạp (Deposit)</option>
                 <option value="CashOut">Dòng tiền Rút (Withdrawal)</option>
@@ -157,34 +157,37 @@ import { API_BASE_URL } from '../../config/api.config';
       display: flex;
       gap: var(--space-2);
       margin-bottom: var(--space-8);
-      overflow-x: auto;
-      padding-bottom: var(--space-2);
+      background: var(--bg-glass);
+      padding: var(--space-2);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-light);
+      width: fit-content;
     }
 
     .admin-tab {
       display: flex;
       align-items: center;
       gap: var(--space-2);
-      padding: var(--space-3) var(--space-6);
-      border-radius: var(--radius-full);
-      color: var(--text-muted);
+      padding: var(--space-3) var(--space-5);
+      border-radius: var(--radius-lg);
+      font-size: var(--font-size-sm);
       font-weight: 600;
-      transition: all 0.3s ease;
-      white-space: nowrap;
+      color: var(--text-secondary);
       text-decoration: none;
-      background: rgba(255,255,255,0.02);
+      transition: all var(--transition-fast);
     }
 
     .admin-tab:hover {
       color: var(--text-primary);
-      background: rgba(255,255,255,0.05);
+      background: rgba(79, 70, 229, 0.08);
     }
 
     .admin-tab.active {
-      color: var(--text-primary);
-      background: var(--primary-color);
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+      background: var(--primary);
+      color: white;
     }
+
+    .admin-tab .material-icons-round { font-size: 18px; }
 
     .dashboard-header {
       margin-bottom: var(--space-8);
@@ -268,6 +271,37 @@ import { API_BASE_URL } from '../../config/api.config';
     .page-info {
       font-weight: 600;
       color: var(--text-secondary);
+    }
+
+    .custom-input-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      margin-bottom: 6px;
+    }
+
+    .custom-input {
+      background: rgba(15, 23, 42, 0.6) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: var(--text-primary) !important;
+      border-radius: var(--radius-md) !important;
+      padding: 10px 16px !important;
+      height: 42px !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .custom-input:focus {
+      border-color: var(--primary-color) !important;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2) !important;
+      outline: none !important;
+    }
+
+    .custom-input option {
+      background: #1e293b;
+      color: var(--text-primary);
     }
   `]
 })
@@ -353,13 +387,13 @@ export class AdminRevenueComponent implements OnInit {
   getTypeLabel(type: number): string {
     switch (type) {
       case 0: return 'Nạp tiền';
-      case 1: return 'Rút tiền';
-      case 2: return 'Nhận tiền Job';
-      case 3: return 'Trừ tiền Job';
-      case 4: return 'Hoàn tiền Job';
-      case 5: return 'Phí hoa hồng';
-      case 6: return 'Mua gói dịch vụ';
-      case 7: return 'Phí đăng tin';
+      case 1: return 'Phí đăng tin';
+      case 2: return 'Tạm giữ tiền';
+      case 3: return 'Giải phóng tiền';
+      case 4: return 'Phí hoa hồng';
+      case 5: return 'Hoàn tiền';
+      case 6: return 'Rút tiền';
+      case 7: return 'Gói dịch vụ';
       default: return 'Khác';
     }
   }
@@ -367,9 +401,9 @@ export class AdminRevenueComponent implements OnInit {
   getTypeBadgeClass(type: number): string {
     switch (type) {
       case 0: return 'deposit';
-      case 1: return 'withdrawal';
-      case 5: case 7: return 'commission';
-      case 6: return 'subscription';
+      case 6: return 'withdrawal';
+      case 1: case 4: return 'commission';
+      case 7: return 'subscription';
       default: return 'default';
     }
   }
