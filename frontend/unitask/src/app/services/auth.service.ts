@@ -184,6 +184,7 @@ export class AuthService {
       if (data.companyLocation) formData.append('Location', data.companyLocation);
       if (data.companyDescription) formData.append('Description', data.companyDescription);
       if (data.companyWebsite) formData.append('Website', data.companyWebsite);
+      if (data.taxCode) formData.append('TaxCode', data.taxCode);
     }
 
     return this.http.put<any>(`${API_BASE_URL}${endpoint}`, formData).pipe(
