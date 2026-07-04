@@ -367,6 +367,7 @@ export class AuthService {
                 companyDescription: companyObj.description || companyObj.Description || user.companyDescription,
                 companyWebsite: companyObj.website || companyObj.Website || user.companyWebsite,
                 companyLogoUrl: companyObj.logoUrl || companyObj.LogoUrl || user.companyLogoUrl,
+                taxCode: companyObj.taxCode || companyObj.TaxCode || user.taxCode,
                 position: res.position || res.Position || user.position,
                 activePackage: res.activePackage || undefined,
                 packageExpiry: res.packageExpiry || undefined,
