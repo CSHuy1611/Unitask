@@ -113,7 +113,8 @@ namespace UniTask.Business.Services
                         location = profile.Company.Location,
                         description = profile.Company.Description,
                         website = profile.Company.Website,
-                        logoUrl = profile.Company.LogoUrl
+                        logoUrl = profile.Company.LogoUrl,
+                        taxCode = profile.Company.TaxCode
                     } : null,
                     businessLicenseUrl = profile.BusinessLicenseUrl,
                     isBusinessLicenseVerified = profile.IsBusinessLicenseVerified,
@@ -237,6 +238,21 @@ namespace UniTask.Business.Services
                 if (!string.IsNullOrEmpty(dto.Location)) profile.Company.Location = dto.Location;
                 if (!string.IsNullOrEmpty(dto.Description)) profile.Company.Description = dto.Description;
                 if (!string.IsNullOrEmpty(dto.Website)) profile.Company.Website = dto.Website;
+
+                // Handle TaxCode Update
+                if (!string.IsNullOrEmpty(dto.TaxCode) && profile.Company.TaxCode != dto.TaxCode)
+                {
+                    // If they change the tax code, we MUST reset their business license and verification status
+                    profile.Company.TaxCode = dto.TaxCode;
+                    profile.IsBusinessLicenseVerified = false;
+                    
+                    if (!string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+                    {
+                        var publicId = _cloudinaryService.GetPublicIdFromUrl(profile.BusinessLicenseUrl);
+                        if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
+                        profile.BusinessLicenseUrl = null;
+                    }
+                }
 
                 // Handle Logo Upload
                 if (dto.CompanyLogoFile != null)
@@ -724,6 +740,20 @@ namespace UniTask.Business.Services
 
             if (licenseFile != null && licenseFile.Length > 0)
             {
+                // Delete old license if exists
+                if (!string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+                {
+                    try 
+                    {
+                        var publicId = _cloudinaryService.GetPublicIdFromUrl(profile.BusinessLicenseUrl);
+                        if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Console.WriteLine($"[Cloudinary] Delete error: {ex.Message}");
+                    }
+                }
+
                 var url = await _cloudinaryService.UploadImageAsync(licenseFile, "business_licenses");
                 if (url == null) return false;
 

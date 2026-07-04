@@ -228,9 +228,16 @@ import Tesseract from 'tesseract.js';
                       </div>
                       <div class="form-row">
                         <div class="form-group">
+                          <label class="form-label">Mã số thuế</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.taxCode" name="taxCode" placeholder="VD: 0101234567">
+                          <small class="text-muted" style="font-size: 11px; display: block; margin-top: 4px;">* Lưu ý: Nếu thay đổi MST, bạn sẽ phải tải lên lại ảnh Giấy phép kinh doanh mới để xác thực.</small>
+                        </div>
+                        <div class="form-group">
                           <label class="form-label">Lĩnh vực hoạt động</label>
                           <input type="text" class="form-input" [(ngModel)]="editForm.companyIndustry" name="companyIndustry" placeholder="VD: Nhiếp ảnh / Media, Thời trang">
                         </div>
+                      </div>
+                      <div class="form-row">
                         <div class="form-group">
                           <label class="form-label">Quy mô công ty</label>
                           <input type="text" class="form-input" [(ngModel)]="editForm.companySize" name="companySize" placeholder="VD: 5-10 nhân viên, Cá nhân">
@@ -289,13 +296,19 @@ import Tesseract from 'tesseract.js';
                       </div>
                     </div>
                     
-                    <div>
-                      <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Website</span>
-                      @if (auth.currentUser()?.companyWebsite && auth.currentUser()?.companyWebsite !== '#') {
-                        <a [href]="auth.currentUser()?.companyWebsite" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 600; font-size: 14px;">{{ auth.currentUser()?.companyWebsite }}</a>
-                      } @else {
-                        <strong style="color: var(--text-primary); font-size: 14px;">Chưa cập nhật</strong>
-                      }
+                    <div class="grid-2-cols">
+                      <div>
+                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Mã số thuế</span>
+                        <strong style="color: var(--success); font-size: 15px;">{{ auth.currentUser()?.taxCode || 'Chưa cập nhật' }}</strong>
+                      </div>
+                      <div>
+                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Website</span>
+                        @if (auth.currentUser()?.companyWebsite && auth.currentUser()?.companyWebsite !== '#') {
+                          <a [href]="auth.currentUser()?.companyWebsite" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 600; font-size: 14px;">{{ auth.currentUser()?.companyWebsite }}</a>
+                        } @else {
+                          <strong style="color: var(--text-primary); font-size: 14px;">Chưa cập nhật</strong>
+                        }
+                      </div>
                     </div>
                     
                     <div>
@@ -1625,7 +1638,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     companySize: '',
     companyLocation: '',
     companyDescription: '',
-    companyWebsite: ''
+    companyWebsite: '',
+    taxCode: ''
   };
 
   constructor() {
@@ -1677,7 +1691,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
           companySize: user.companySize || '',
           companyLocation: user.companyLocation || '',
           companyDescription: user.companyDescription || '',
-          companyWebsite: user.companyWebsite || ''
+          companyWebsite: user.companyWebsite || '',
+          taxCode: user.taxCode || ''
         };
       }
     }
@@ -1708,6 +1723,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       payload.companyLocation = this.editForm.companyLocation || undefined;
       payload.companyDescription = this.editForm.companyDescription || undefined;
       payload.companyWebsite = this.editForm.companyWebsite || undefined;
+      payload.taxCode = this.editForm.taxCode || undefined;
     }
 
     this.auth.updateProfile(payload).subscribe({
@@ -2032,13 +2048,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
       await worker.terminate();
 
       let isVerified = false;
-      
-      // Các từ khóa đơn giản để xác thực cơ bản
-      if (text.includes('giấy chứng nhận') || text.includes('đăng ký doanh nghiệp') || text.includes('mã số doanh nghiệp') || text.includes('mã số thuế')) {
+      const registeredTaxCode = this.auth.currentUser()?.taxCode;
+      const cleanText = text.replace(/[\s\-\.]/g, ''); // Clean spaces, dashes, dots
+
+      if (registeredTaxCode && cleanText.includes(registeredTaxCode)) {
         isVerified = true;
-        this.licenseUploadStatus.set('Đã xác thực thành công. Đang tải lên...');
+        this.licenseUploadStatus.set('Hệ thống AI đã tìm thấy Mã số thuế trùng khớp! Đang tải lên...');
       } else {
-        this.licenseUploadStatus.set('Hình ảnh không hợp lệ. Đang tải lên chờ duyệt thủ công...');
+        // Fallback: If AI fails to read the tax code due to blurry image, let it upload but keep unverified for manual review
+        this.licenseUploadStatus.set('AI không tìm thấy Mã số thuế trong ảnh. Đang tải lên chờ Admin duyệt thủ công...');
       }
 
       // 2. Upload file
@@ -2058,13 +2076,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.toast.success('Đã cập nhật Giấy phép kinh doanh thành công');
         await this.auth.fetchProfile().toPromise(); // Refresh profile
       } else {
-        this.toast.error('Không thể tải lên Giấy phép kinh doanh');
+        let errStr = `Không thể tải lên Giấy phép kinh doanh (Lỗi ${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) errStr = errData.message;
+        } catch(e) {}
+        this.toast.error(errStr);
       }
     } catch (error) {
       console.error(error);
       this.toast.error('Có lỗi xảy ra khi phân tích hình ảnh');
     } finally {
       this.licenseUploading.set(false);
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   }
 
