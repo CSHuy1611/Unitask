@@ -99,7 +99,7 @@ namespace UniTask.Api.Controllers
             try
             {
                 var result = await _profileService.UpdateEkycAsync(userId, dto);
-                if (!result) return BadRequest(new { message = "Failed to submit eKYC" });
+                if (!result) return BadRequest(new { message = "Gửi xác thực eKYC thất bại: Không tìm thấy tài khoản người dùng trong hệ thống." });
 
                 return Ok(new { message = "eKYC documents submitted for review" });
             }
