@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -1559,10 +1559,10 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     return [];
   });
   
-  currentPage = signal(1);
-  pageSize = signal(5);
-  sortOrder = signal<'newest' | 'oldest'>('newest');
-  searchKeyword = signal('');
+  currentPage = signal(parseInt(sessionStorage.getItem('emp_dash_page') || '1', 10));
+  pageSize = signal(parseInt(sessionStorage.getItem('emp_dash_pageSize') || '5', 10));
+  sortOrder = signal<'newest' | 'oldest'>((sessionStorage.getItem('emp_dash_sortOrder') as 'newest' | 'oldest') || 'newest');
+  searchKeyword = signal(sessionStorage.getItem('emp_dash_searchKeyword') || '');
 
   filteredJobs = computed(() => {
     let jobs = [...this.employerJobs()];
@@ -1612,6 +1612,12 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   totalApplications = computed(() => this.employerJobs().reduce((sum, j) => sum + j.applications, 0));
 
   constructor() {
+    effect(() => {
+      sessionStorage.setItem('emp_dash_page', this.currentPage().toString());
+      sessionStorage.setItem('emp_dash_pageSize', this.pageSize().toString());
+      sessionStorage.setItem('emp_dash_sortOrder', this.sortOrder());
+      sessionStorage.setItem('emp_dash_searchKeyword', this.searchKeyword());
+    });
   }
 
   ngOnInit() {
@@ -2011,6 +2017,14 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       console.log('[SignalR] CheckOutSuccess received for appId:', appId);
       if (this.waitingOtpAppId === appId && this.otpType() === 'checkout') {
         this.handleOtpSuccess('checkout');
+      }
+    });
+
+    this.hubConnection.on('JobApplicationAdded', (jobId: number) => {
+      console.log('[SignalR] JobApplicationAdded received for jobId:', jobId);
+      const belongsToEmployer = this.employerJobs().some(j => j.id === jobId);
+      if (belongsToEmployer) {
+        this.jobService.fetchJobs();
       }
     });
 
