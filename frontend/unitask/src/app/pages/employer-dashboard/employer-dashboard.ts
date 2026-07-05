@@ -14,85 +14,68 @@ import { API_BASE_URL } from '../../config/api.config';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <section class="dashboard-page">
-      <div class="container">
+    <section class="dashboard-page layout-sidebar">
+      <div class="container layout-container">
         @if (!auth.isLoggedIn() || !auth.isEmployer()) {
-          <div class="auth-required glass-card animate-fade-in-up">
+          <div class="auth-required glass-card animate-fade-in-up" style="width: 100%">
             <span class="material-icons-round" style="font-size:64px;color:var(--primary-light)">lock</span>
             <h2>Chỉ dành cho Nhà tuyển dụng</h2>
             <p>Vui lòng đăng nhập bằng tài khoản doanh nghiệp để truy cập dashboard.</p>
             <a routerLink="/login" class="btn btn-primary btn-lg">Đăng nhập</a>
           </div>
         } @else {
-          <div class="dashboard-header animate-fade-in-up">
-            <div>
-              <h1>Dashboard <span class="gradient-text">Nhà tuyển dụng</span></h1>
-              <p>Xin chào, {{ auth.currentUser()?.fullName }} 👋</p>
-            </div>
-            <div style="display:flex; gap:var(--space-3); align-items:center">
-              <div style="text-align:right">
-                <span style="display:block; font-size:var(--font-size-xs); color:var(--text-muted)">Số dư tài khoản</span>
-                <strong style="color:var(--primary-light); font-size:var(--font-size-lg)">
-                  {{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ
-                </strong>
+          <!-- SIDEBAR -->
+          <aside class="dashboard-sidebar animate-fade-in-up">
+            <div class="sidebar-card glass-card profile-card">
+              <div class="profile-header">
+                <div class="avatar">{{ auth.currentUser()?.fullName?.charAt(0) || 'E' }}</div>
+                <div>
+                  <h3>{{ auth.currentUser()?.fullName }}</h3>
+                  <span class="role-badge">Nhà tuyển dụng</span>
+                </div>
+              </div>
+              <div class="wallet-info">
+                <span class="label">Số dư khả dụng</span>
+                <strong class="balance">{{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ</strong>
                 @if (auth.currentUser()?.activePackage) {
-                  <span style="display:block; font-size:var(--font-size-xs); color:var(--success)">
-                    <span class="material-icons-round" style="font-size:12px; vertical-align:middle">stars</span> 
-                    {{ auth.currentUser()?.activePackage }}
-                  </span>
+                  <span class="package-badge"><span class="material-icons-round">stars</span> {{ auth.currentUser()?.activePackage }}</span>
                 }
+                <div class="wallet-actions">
+                  <a routerLink="/pricing" class="btn btn-primary btn-sm full-width"><span class="material-icons-round">add_circle</span> Nạp tiền / Mua gói</a>
+                  <button class="btn btn-secondary btn-sm full-width" (click)="showTransactions.set(true)"><span class="material-icons-round">history</span> Lịch sử Giao dịch</button>
+                </div>
               </div>
-              <button class="btn btn-secondary btn-sm" title="Lịch sử giao dịch" (click)="showTransactions.set(true)">
-                <span class="material-icons-round" style="font-size:16px">history</span>
-              </button>
-              <a routerLink="/pricing" class="btn btn-secondary btn-sm" title="Nạp thêm tiền">
-                <span class="material-icons-round" style="font-size:16px">add</span>
-              </a>
-              <button class="btn btn-primary" (click)="openNewForm()">
-                <span class="material-icons-round">add</span> Đăng việc mới
-              </button>
             </div>
-          </div>
 
-          <!-- Stats -->
-          <div class="stats-grid animate-fade-in-up" style="animation-delay:0.1s">
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#4F46E5,#7C3AED)">
-                <span class="material-icons-round">work</span>
-              </div>
-              <div>
-                <span class="stat-number">{{ employerJobs().length }}</span>
-                <span class="stat-label">Việc đã đăng</span>
-              </div>
-            </div>
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#10B981,#059669)">
-                <span class="material-icons-round">visibility</span>
-              </div>
-              <div>
-                <span class="stat-number">{{ totalViews() }}</span>
-                <span class="stat-label">Tổng lượt xem</span>
-              </div>
-            </div>
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#F59E0B,#F97316)">
-                <span class="material-icons-round">people</span>
-              </div>
-              <div>
-                <span class="stat-number">{{ totalApplications() }}</span>
-                <span class="stat-label">Tổng ứng viên</span>
+            <div class="sidebar-card glass-card p-5">
+              <div class="stats-mini">
+                <div class="stat-item">
+                  <span class="material-icons-round text-primary">work</span>
+                  <div>
+                    <span class="stat-value">{{ employerJobs().length }}</span>
+                    <span class="stat-label">Việc đã đăng</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <span class="material-icons-round text-success">visibility</span>
+                  <div>
+                    <span class="stat-value">{{ totalViews() }}</span>
+                    <span class="stat-label">Tổng lượt xem</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <span class="material-icons-round text-warning">people</span>
+                  <div>
+                    <span class="stat-value">{{ totalApplications() }}</span>
+                    <span class="stat-label">Tổng ứng viên</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#3B82F6,#2563EB)">
-                <span class="material-icons-round">verified</span>
-              </div>
-              <div>
-                <span class="stat-number">{{ auth.currentUser()?.ekycStatus === 'verified' ? 'Đã' : 'Chưa' }}</span>
-                <span class="stat-label">Xác thực</span>
-              </div>
-            </div>
-          </div>
+          </aside>
+
+          <!-- MAIN PANEL -->
+          <main class="dashboard-main">
 
           <!-- Post / Edit Job Form -->
           @if (showPostForm()) {
@@ -122,122 +105,258 @@ import { API_BASE_URL } from '../../config/api.config';
                 </div>
               }
 
-              <form (ngSubmit)="onSubmitForm()">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">Tiêu đề công việc *</label>
-                    <input type="text" class="form-input" placeholder="VD: Frontend Developer Intern"
-                           [(ngModel)]="formData.title" name="title" required>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Loại hình</label>
-                    <select class="form-select" [(ngModel)]="formData.type" name="type">
-                      <option>Thực tập</option>
-                      <option>Part-time</option>
-                      <option>Freelance</option>
-                      <option>Full-time</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">Địa điểm</label>
-                    <input type="text" class="form-input" placeholder="VD: TP. Hồ Chí Minh"
-                           [(ngModel)]="formData.location" name="location">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Danh mục công việc</label>
-                    <select class="form-select" [(ngModel)]="formData.category" name="category">
-                      <option value="">-- Chọn danh mục --</option>
-                      <option>Marketing & Content</option>
-                      <option>IT & Công nghệ</option>
-                      <option>Hành chính & Nhân sự (Admin/HR)</option>
-                      <option>Kinh doanh & Bán hàng</option>
-                      <option>Sự kiện & Giải trí</option>
-                      <option>Khác</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-group" style="grid-column: 1 / -1">
-                  <label class="form-label">Mô tả công việc <span class="required">*</span></label>
-                  <textarea class="form-input" rows="4" [(ngModel)]="formData.description" name="description" placeholder="Mô tả chi tiết công việc..." required></textarea>
-                </div>
-                <!-- Escrow Budget & HeadCount Input -->
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">Số lượng tuyển <span class="required">*</span></label>
-                    <input type="number" class="form-input" [(ngModel)]="formData.headCount" name="headCount" placeholder="VD: 2" min="1" max="100" required>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Tổng ngân sách (VND) <span class="required">*</span></label>
-                    <input type="number" class="form-input" [(ngModel)]="formData.budget" name="budget" placeholder="VD: 300000" min="50000" required>
-                  </div>
-                </div>
-                <div class="form-group" style="grid-column: 1 / -1">
-                  <p class="text-caption" style="margin-top:-10px; font-size: 13px; color: var(--text-secondary)">Hệ thống sẽ giữ khoản tiền trung gian này và thêm 10% phí nền tảng để đảm bảo quyền lợi 2 bên.</p>
+              <form (ngSubmit)="onSubmitForm()" class="compact-form" style="display: flex; flex-direction: column; gap: 24px;">
+                
+                <!-- Basic Info Section -->
+                <div class="form-section" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 24px;">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                    <span class="material-icons-round" style="color: var(--primary-light)">info</span> Thông tin cơ bản
+                  </h3>
                   
-                  @if (formData.budget && formData.budget > 0) {
-                    <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px; font-size:var(--font-size-sm); background:rgba(255,255,255,0.03); padding:12px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.05)">
-                      <div class="d-flex justify-between">
-                        <span>Lương mỗi người (Budget / Số lượng):</span> <strong style="color:var(--success)">{{ getRounded(formData.budget / (formData.headCount || 1)).toLocaleString('vi-VN') }}đ</strong>
+                  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Tiêu đề công việc <span style="color: #EF4444">*</span></label>
+                      <input type="text" class="form-input" placeholder="VD: Frontend Developer Intern" [(ngModel)]="formData.title" name="title" required>
+                      @if (formErrors['title']) { <span class="error-text">{{ formErrors['title'] }}</span> }
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Danh mục <span style="color: #EF4444">*</span></label>
+                      <select class="form-select" [(ngModel)]="formData.category" name="category">
+                        <option value="">-- Chọn danh mục --</option>
+                        <option>Marketing & Content</option>
+                        <option>IT & Công nghệ</option>
+                        <option>Hành chính & Nhân sự (Admin/HR)</option>
+                        <option>Kinh doanh & Bán hàng</option>
+                        <option>Sự kiện & Giải trí</option>
+                        <option>Khác</option>
+                      </select>
+                      @if (formErrors['category']) { <span class="error-text">{{ formErrors['category'] }}</span> }
+                    </div>
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Loại hình</label>
+                      <select class="form-select" [(ngModel)]="formData.type" name="type">
+                        <option>Thực tập</option>
+                        <option>Part-time</option>
+                        <option>Freelance</option>
+                        <option>Full-time</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Số lượng tuyển <span style="color: #EF4444">*</span></label>
+                      <input type="number" class="form-input" [(ngModel)]="formData.headCount" name="headCount" placeholder="VD: 2" min="1" max="100" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Địa điểm</label>
+                      <input type="text" class="form-input" placeholder="VD: TP. Hồ Chí Minh" [(ngModel)]="formData.location" name="location">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Budget & Timeline Section -->
+                <div class="form-section" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 24px;">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                    <span class="material-icons-round" style="color: var(--warning)">payments</span> Ngân sách & Hạn nộp
+                  </h3>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                      <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Tổng ngân sách (VND) <span style="color: #EF4444">*</span></label>
+                        <input type="number" class="form-input" [(ngModel)]="formData.budget" name="budget" placeholder="VD: 300000" min="50000" required>
+                        @if (formErrors['budget']) { <span class="error-text">{{ formErrors['budget'] }}</span> }
                       </div>
-                      <div class="d-flex justify-between">
-                        <span>Tổng ngân sách trả ứng viên:</span> <strong>{{ getRounded(formData.budget).toLocaleString('vi-VN') }}đ</strong>
-                      </div>
-                      <div class="d-flex justify-between">
-                        <span>Phí nền tảng (10%):</span> <strong style="color:var(--warning)">{{ getRounded(formData.budget * 0.1).toLocaleString('vi-VN') }}đ</strong>
-                      </div>
-                      <div class="d-flex justify-between" style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.1)">
-                        <span>Tổng cần thanh toán (Escrow):</span> <strong style="color:var(--primary-light); font-size:var(--font-size-lg)">{{ (getRounded(formData.budget) + getRounded(formData.budget * 0.1)).toLocaleString('vi-VN') }}đ</strong>
+                      <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Hạn nộp hồ sơ <span style="color: #EF4444">*</span></label>
+                        <input type="date" class="form-input" [(ngModel)]="formData.deadline" name="deadline">
+                        @if (formErrors['deadline']) { <span class="error-text">{{ formErrors['deadline'] }}</span> }
                       </div>
                     </div>
-                  }
-                </div>
-                <div class="form-group" style="grid-column: 1 / -1">
-                  <label class="form-label">Yêu cầu công việc (cách nhau bằng dấu phẩy)</label>
-                  <textarea class="form-input" [(ngModel)]="formData.requirementsStr" name="requirementsStr" rows="2" placeholder="VD: Sinh viên năm 3-4, Có laptop cá nhân, Tiếng Anh giao tiếp cơ bản"></textarea>
-                </div>
-                <div class="form-group" style="grid-column: 1 / -1">
-                  <label class="form-label">Quyền lợi (cách nhau bằng dấu phẩy)</label>
-                  <textarea class="form-input" [(ngModel)]="formData.benefitsStr" name="benefitsStr" rows="2" placeholder="VD: Hỗ trợ dấu mộc thực tập, Phụ cấp ăn trưa, Môi trường năng động"></textarea>
-                </div>
-                <div class="form-group" style="grid-column: 1 / -1">
-                  <label class="form-label">Tags (cách nhau bằng dấu phẩy)</label>
-                  <input type="text" class="form-input" [(ngModel)]="formData.tagsStr" name="tags" placeholder="VD: Sinh viên, Tiếng Anh, Chăm chỉ">
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">Hạn nộp hồ sơ</label>
-                    <input type="date" class="form-input"
-                           [(ngModel)]="formData.deadline" name="deadline">
-                  </div>
-                  <div class="form-group checkbox-group">
-                    <label class="checkbox-label">
-                      <input type="checkbox" [(ngModel)]="formData.isRemote" name="isRemote">
-                      <span>Có thể làm Remote</span>
-                    </label>
-                    <label class="checkbox-label">
-                      <input type="checkbox" [(ngModel)]="formData.isUrgent" name="isUrgent" (change)="onUrgentChange($event)">
-                      <span>🔥 Tuyển gấp</span>
-                    </label>
+                    
+                    <div class="form-group" style="margin: 0; display: flex; flex-direction: column;">
+                      <label class="form-label" style="display: flex; justify-content: space-between;">
+                        Chi tiết chi phí
+                        <span style="font-size: 12px; font-weight: normal; color: var(--text-secondary);">Phí nền tảng: 10%</span>
+                      </label>
+                      @if (formData.budget && formData.budget > 0) {
+                        <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 16px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+                          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.95rem;">
+                            <span>Lương / người:</span>
+                            <strong style="color: var(--success);">{{ getRounded(formData.budget / (formData.headCount || 1)).toLocaleString('vi-VN') }}đ</strong>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; margin-bottom: 12px; color: var(--text-secondary); font-size: 0.95rem;">
+                            <span>Phí nền tảng (10%):</span>
+                            <strong style="color: var(--warning);">{{ getRounded(formData.budget * 0.1).toLocaleString('vi-VN') }}đ</strong>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px dashed rgba(16, 185, 129, 0.3); align-items: center;">
+                            <span style="font-weight: 500; color: var(--text-primary);">Tổng thanh toán:</span>
+                            <strong style="color: var(--primary-light); font-size: 1.25rem;">{{ (getRounded(formData.budget) + getRounded(formData.budget * 0.1)).toLocaleString('vi-VN') }}đ</strong>
+                          </div>
+                        </div>
+                      } @else {
+                        <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px; flex-grow: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-style: italic;">
+                          Nhập ngân sách để xem chi tiết
+                        </div>
+                      }
+                    </div>
                   </div>
                 </div>
-                <div class="form-actions">
-                  <button type="button" class="btn btn-secondary" (click)="closeForm()">Hủy</button>
-                  <button type="submit" class="btn btn-primary">
+
+                <!-- Description Section -->
+                <div class="form-section" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 24px;">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                    <span class="material-icons-round" style="color: var(--success)">description</span> Mô tả & Yêu cầu
+                  </h3>
+                  
+                  <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="form-label">Mô tả công việc <span style="color: #EF4444">*</span></label>
+                    <textarea class="form-input" rows="4" [(ngModel)]="formData.description" name="description" placeholder="Mô tả chi tiết công việc..." required></textarea>
+                    @if (formErrors['description']) { <span class="error-text">{{ formErrors['description'] }}</span> }
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Yêu cầu công việc</label>
+                      <textarea class="form-input" [(ngModel)]="formData.requirementsStr" name="requirementsStr" rows="2" placeholder="Cách nhau bằng dấu phẩy"></textarea>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Quyền lợi</label>
+                      <textarea class="form-input" [(ngModel)]="formData.benefitsStr" name="benefitsStr" rows="2" placeholder="Cách nhau bằng dấu phẩy"></textarea>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Tags</label>
+                      <textarea class="form-input" [(ngModel)]="formData.tagsStr" name="tags" rows="2" placeholder="Cách nhau bằng dấu phẩy"></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Extra Options Section -->
+                <div class="form-section" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 16px 24px;">
+                  <div style="display: flex; align-items: center; justify-content: flex-start; gap: 40px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <label class="toggle-switch"><input type="checkbox" [(ngModel)]="formData.isRemote" name="isRemote"><span class="toggle-slider"></span></label>
+                      <span style="font-weight: 500; color: var(--text-primary);">Làm việc từ xa (Remote)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <label class="toggle-switch"><input type="checkbox" [(ngModel)]="formData.isUrgent" name="isUrgent" (change)="onUrgentChange($event)"><span class="toggle-slider"></span></label>
+                      <span style="font-weight: 500; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-icons-round" style="color: var(--warning); font-size: 18px;">local_fire_department</span> Tuyển gấp (Urgent)
+                      </span>
+                      @if (formErrors['isUrgent']) { <span class="error-text" style="margin: 0;">{{ formErrors['isUrgent'] }}</span> }
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 8px;">
+                  <button type="button" class="btn btn-secondary" (click)="closeForm()" style="min-width: 120px;">Hủy</button>
+                  <button type="submit" class="btn btn-primary" style="min-width: 160px; font-weight: 600;">
                     <span class="material-icons-round">{{ editingJobId() ? 'save' : 'publish' }}</span>
                     {{ editingJobId() ? 'Lưu thay đổi' : 'Đăng tuyển' }}
                   </button>
                 </div>
               </form>
             </div>
-          }
+
+            @if (showFreeTierConfirm()) {
+              <div class="modal-overlay animate-fade-in">
+                <div class="modal-content glass-card p-6" style="width: 100%; max-width: 500px; text-align: center;">
+                  <span class="material-icons-round text-warning" style="font-size: 48px; margin-bottom: 16px;">campaign</span>
+                  <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; color: var(--text-primary);">Xác nhận đăng tin</h3>
+                  <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px; text-align: left;">
+                    <p style="margin-bottom: 8px; color: var(--text-secondary);">Bạn đang sử dụng <strong style="color:var(--text-primary)">Lượt đăng tin thông thường</strong>:</p>
+                    <ul style="padding-left: 20px; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">
+                      <li>Phí đăng bài: <strong style="color:var(--warning)">2,000đ / bài</strong>.</li>
+                      <li>Tính năng tuyển gấp: <strong style="color:#EF4444">Không hỗ trợ</strong>.</li>
+                    </ul>
+                    <div style="padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px dashed rgba(16, 185, 129, 0.3);">
+                      <p style="color: #34D399; font-size: 0.85rem; font-weight: 500; margin: 0;">
+                        💡 <strong>Đề xuất:</strong> Nâng cấp Gói dịch vụ (chỉ từ 19,000đ/tháng) để MIỄN PHÍ hoàn toàn phí đăng tin, mở khóa Tuyển gấp và nhiều tính năng khác!
+                      </p>
+                    </div>
+                  </div>
+                  <div class="d-flex gap-3 justify-center">
+                    <button class="btn btn-secondary" (click)="showFreeTierConfirm.set(false)">Quay lại</button>
+                    <button class="btn btn-primary" (click)="executePostJob()">Tiếp tục đăng (-2,000đ)</button>
+                  </div>
+                  <div style="margin-top: 16px;">
+                    <a (click)="openPackagesModal()" style="color: var(--primary-light); font-size: 0.9rem; text-decoration: underline; cursor: pointer;">
+                      Xem các gói dịch vụ
+                    </a>
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (showPackagesModal()) {
+              <div class="modal-overlay animate-fade-in">
+                <div class="modal-content glass-card p-6" style="width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h3 style="font-size: 1.5rem; font-weight: 700;">Nâng cấp Gói Dịch Vụ</h3>
+                    <button class="btn btn-secondary btn-sm" (click)="showPackagesModal.set(false)" style="padding: 4px; border-radius: 50%;">
+                      <span class="material-icons-round">close</span>
+                    </button>
+                  </div>
+                  
+                  <div style="margin-bottom: 24px; padding: 16px; background: rgba(79, 70, 229, 0.1); border-radius: 12px; border: 1px solid rgba(79, 70, 229, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <div>
+                        <span style="color: var(--text-secondary); display: block;">Số dư ví hiện tại:</span>
+                        <strong style="font-size: 1.2rem; color: var(--text-primary);">{{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ</strong>
+                      </div>
+                      <button class="btn btn-success btn-sm" (click)="testDeposit()" [disabled]="isProcessingPackage()">
+                        <span class="material-icons-round">add_circle</span> Nạp 500k (Test)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                    @for (pkg of packages(); track pkg.id) {
+                      <div style="padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); text-align: center; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 8px;">{{ pkg.name }}</h4>
+                        <div style="margin-bottom: 12px;">
+                          <span style="font-size: 1.5rem; font-weight: 800; color: var(--primary-light);">{{ pkg.price.toLocaleString('vi-VN') }}đ</span>
+                          <span style="font-size: 0.85rem; color: var(--text-muted);">/ {{ pkg.duration }}</span>
+                        </div>
+                        <ul style="list-style: none; padding: 0; margin: 0 0 16px 0; text-align: left; font-size: 0.85rem; color: var(--text-secondary); flex-grow: 1;">
+                          <li style="margin-bottom: 4px; display: flex; gap: 4px;"><span class="material-icons-round" style="font-size: 14px; color: var(--success);">check</span> Đăng không giới hạn tin</li>
+                          @if (pkg.id >= 2) { <li style="margin-bottom: 4px; display: flex; gap: 4px;"><span class="material-icons-round" style="font-size: 14px; color: var(--success);">check</span> Ưu tiên hiển thị top</li> }
+                        </ul>
+                        <button class="btn full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)" [disabled]="isProcessingPackage()">
+                          Mua gói
+                        </button>
+                      </div>
+                    }
+                  </div>
+                  <div style="margin-top: 24px; text-align: center;">
+                    <button class="btn btn-secondary" (click)="showPackagesModal.set(false); showFreeTierConfirm.set(true)">Quay lại xác nhận đăng tin</button>
+                  </div>
+                </div>
+              </div>
+            }
+          } @else {
 
           <!-- Jobs list -->
           <div class="jobs-section animate-fade-in-up" style="animation-delay:0.2s">
-            <h2>Việc đã đăng</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+              <h2 style="margin: 0;">Việc đã đăng</h2>
+              <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                <div style="position: relative; flex: 1; max-width: 400px;">
+                  <span class="material-icons-round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 18px;">search</span>
+                  <input type="text" class="form-input" style="padding-left: 36px; height: 42px; background: rgba(255,255,255,0.05); width: 100%;" placeholder="Tìm kiếm công việc..." [ngModel]="searchKeyword()" (ngModelChange)="searchKeyword.set($event); currentPage.set(1)">
+                </div>
+                <select class="form-select" [ngModel]="sortOrder()" (ngModelChange)="sortOrder.set($event); currentPage.set(1)" style="min-width: 150px; background-color: rgba(255,255,255,0.05); height: 42px; color: var(--text-primary); width: auto;">
+                  <option value="newest" style="background-color: #0F172A; color: #F8FAFC;">Mới nhất</option>
+                  <option value="oldest" style="background-color: #0F172A; color: #F8FAFC;">Cũ nhất</option>
+                </select>
+                <button class="btn btn-primary" style="height: 42px;" (click)="openNewForm()">
+                  <span class="material-icons-round">add</span> Đăng việc mới
+                </button>
+              </div>
+            </div>
             <div class="jobs-table">
-              @for (job of employerJobs(); track job.id) {
+              @for (job of filteredAndPagedJobs(); track job.id) {
                 <div class="job-row glass-card" [class.job-expired]="!jobService.isJobEditable(job)" style="display: flex; flex-direction: column; align-items: stretch; gap: 12px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
                     <div class="job-info">
@@ -263,7 +382,7 @@ import { API_BASE_URL } from '../../config/api.config';
                         <span class="material-icons-round">visibility</span> {{ job.views }}
                       </span>
                       <span class="stat-mini">
-                        <span class="material-icons-round">people</span> {{ job.applications }}/{{ job.headCount || 1 }}
+                        <span class="material-icons-round">people</span> {{ job.acceptedCount || 0 }}/{{ job.headCount || 1 }}
                       </span>
                       @if (jobService.isJobEditable(job) && job.status === 'open') {
                         <button class="btn btn-secondary btn-sm" (click)="onEditJob(job)">
@@ -271,14 +390,12 @@ import { API_BASE_URL } from '../../config/api.config';
                         </button>
                       }
                       
-                      @if (job.status === 'open') {
-                        <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
-                          <span class="material-icons-round" style="font-size:16px">group</span> Ứng viên ({{ job.applications || 0 }})
-                        </button>
-                      } @else if (job.status === 'in_progress') {
+                      @if (job.status === 'open' || job.status === 'in_progress') {
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px">
-                          <span class="badge badge-warning">Đang thực hiện</span>
-                          <div style="display:flex; gap:6px">
+                          <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content: flex-end;">
+                            <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
+                              <span class="material-icons-round" style="font-size:16px">group</span> Ứng viên ({{ job.applications || 0 }})
+                            </button>
                             <button class="btn btn-secondary btn-sm" (click)="generateCheckInOtp(job)" style="gap:4px">
                               <span class="material-icons-round" style="font-size:14px">login</span> OTP Check-in
                             </button>
@@ -286,6 +403,9 @@ import { API_BASE_URL } from '../../config/api.config';
                               <span class="material-icons-round" style="font-size:14px">logout</span> OTP Check-out
                             </button>
                           </div>
+                          @if (job.status === 'in_progress') {
+                            <span class="badge badge-warning" style="align-self: flex-end;">Đang thực hiện</span>
+                          }
                           @if (job.checkInTime) {
                             <span style="font-size: 11px; color: var(--success); font-weight: 500;">
                               ✓ Check-in: {{ job.checkInTime | date:'HH:mm dd/MM/yyyy' }}
@@ -361,7 +481,28 @@ import { API_BASE_URL } from '../../config/api.config';
                 </div>
               }
             </div>
+            
+            <div class="pagination-controls" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;">
+              <button class="btn btn-secondary btn-sm" [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
+                <span class="material-icons-round">chevron_left</span> Trang trước
+              </button>
+              
+              @for (page of getPagesArray(); track page) {
+                <button class="btn btn-sm" 
+                        [class.btn-primary]="currentPage() === page" 
+                        [class.btn-secondary]="currentPage() !== page" 
+                        (click)="goToPage(page)"
+                        style="min-width: 36px;">
+                  {{ page }}
+                </button>
+              }
+              
+              <button class="btn btn-secondary btn-sm" [disabled]="currentPage() === totalPages()" (click)="goToPage(currentPage() + 1)">
+                Trang sau <span class="material-icons-round">chevron_right</span>
+              </button>
+            </div>
           </div>
+          }
 
           <!-- Applicants Modal -->
           @if (selectedJobForApplicants()) {
@@ -595,6 +736,7 @@ import { API_BASE_URL } from '../../config/api.config';
             </div>
           }
 
+          </main>
           <!-- Transactions Modal -->
           @if (showTransactions()) {
             <div class="modal-overlay animate-fade-in">
@@ -643,6 +785,49 @@ import { API_BASE_URL } from '../../config/api.config';
       min-height: 100vh;
       background-color: var(--bg-primary);
     }
+    
+    /* Layout styles moved to styles.css */    .profile-card {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: white; font-size: 24px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .profile-header h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; color: var(--text-primary); }
+    .role-badge { font-size: 0.75rem; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px; color: var(--text-secondary); }
+    
+    .wallet-info {
+      background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .wallet-info .label { font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+    .wallet-info .balance { font-size: 1.75rem; color: var(--primary-light); font-weight: 800; display: block; margin-bottom: 8px; }
+    .package-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--success); background: rgba(16,185,129,0.1); padding: 4px 8px; border-radius: 6px; margin-bottom: 16px; }
+    .wallet-actions { display: flex; flex-direction: column; gap: 8px; }
+    
+    .stats-mini { display: flex; flex-direction: column; gap: 16px; }
+    .stat-item { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .stat-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .stat-item .material-icons-round { font-size: 28px; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.05); }
+    .stat-item .text-primary { color: var(--primary-light); }
+    .stat-item .text-success { color: var(--success); }
+    .stat-item .text-warning { color: var(--warning); }
+    .stat-value { display: block; font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+    .stat-label { font-size: 0.8rem; color: var(--text-secondary); }
+    
+    /* Media queries moved to styles.css */
 
     .auth-required {
       text-align: center;
@@ -660,63 +845,6 @@ import { API_BASE_URL } from '../../config/api.config';
     }
 
     .auth-required p { color: var(--text-secondary); font-size: 1rem; line-height: 1.6; }
-
-    .dashboard-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--space-10);
-      padding: var(--space-8);
-      background: linear-gradient(180deg, #1E293B 0%, #151E2D 100%);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    }
-
-    .dashboard-header h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: var(--space-2);
-      letter-spacing: -0.5px;
-      color: #FFFFFF;
-    }
-
-    .gradient-text {
-      color: var(--primary-light);
-      background: none;
-      -webkit-text-fill-color: unset;
-      font-weight: 600;
-    }
-
-    .dashboard-header p {
-      color: var(--text-secondary);
-      font-size: 1rem;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: var(--space-6);
-      margin-bottom: var(--space-10);
-    }
-
-    .stat-card {
-      display: flex;
-      align-items: center;
-      gap: var(--space-5);
-      padding: var(--space-6);
-      background: #1E293B;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 12px;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.2);
-      border-color: rgba(255, 255, 255, 0.1);
-    }
 
     .stat-icon {
       width: 48px;
@@ -785,32 +913,92 @@ import { API_BASE_URL } from '../../config/api.config';
       margin-bottom: var(--space-4);
     }
 
-    .checkbox-group {
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-6);
+      margin-bottom: var(--space-4);
+    }
+
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+      margin-bottom: var(--space-4);
+    }
+
+    .form-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-6);
+      margin-bottom: var(--space-4);
+    }
+
+    /* Make responsive for smaller screens */
+    @media (max-width: 1200px) {
+      .form-grid-3, .form-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .form-grid-2, .form-grid-3, .form-grid-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .error-text { color: #EF4444; font-size: 0.8rem; margin-top: 4px; display: block; }
+
+    .toggle-group {
       display: flex;
       flex-direction: column;
-      gap: var(--space-3);
-      justify-content: center;
+      gap: var(--space-4);
       background: #0F172A;
-      padding: 16px;
-      border-radius: 8px;
+      padding: var(--space-5);
+      border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.04);
     }
 
-    .checkbox-label {
+    .toggle-row {
       display: flex;
       align-items: center;
-      gap: var(--space-3);
-      font-size: 0.9rem;
-      color: var(--text-primary);
-      cursor: pointer;
-      font-weight: 500;
+      justify-content: space-between;
     }
 
-    .checkbox-label input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: var(--primary-light);
+    .toggle-label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
+    
+    .toggle-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .toggle-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 24px;
+    }
+    .toggle-slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background-color: white; transition: .4s; border-radius: 50%;
+    }
+    input:checked + .toggle-slider { background-color: var(--primary-light); }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
 
     .form-actions {
       display: flex;
@@ -1042,6 +1230,10 @@ export class EmployerDashboardComponent implements OnInit {
   postMessage = signal('');
   editingJobId = signal<number | null>(null);
 
+  showPackagesModal = signal(false);
+  packages = signal<any[]>([]);
+  isProcessingPackage = signal(false);
+
   userToAssign = signal<number | null>(null);
   jobToApprove = signal<Job | null>(null);
   jobToDispute = signal<Job | null>(null);
@@ -1146,6 +1338,8 @@ export class EmployerDashboardComponent implements OnInit {
   ];
 
   formData = this.getEmptyForm();
+  formErrors: Record<string, string> = {};
+  showFreeTierConfirm = signal(false);
 
   employerJobs = computed(() => {
     const user = this.auth.currentUser();
@@ -1154,6 +1348,55 @@ export class EmployerDashboardComponent implements OnInit {
     }
     return [];
   });
+  
+  currentPage = signal(1);
+  pageSize = signal(5);
+  sortOrder = signal<'newest' | 'oldest'>('newest');
+  searchKeyword = signal('');
+
+  filteredJobs = computed(() => {
+    let jobs = [...this.employerJobs()];
+    const kw = this.searchKeyword().toLowerCase().trim();
+    if (kw) {
+      jobs = jobs.filter(j => j.title.toLowerCase().includes(kw));
+    }
+    if (this.sortOrder() === 'newest') {
+      // Mới nhất ở dưới cùng (Ascending)
+      jobs.sort((a, b) => {
+        const timeA = new Date(a.postedDate || 0).getTime();
+        const timeB = new Date(b.postedDate || 0).getTime();
+        if (timeA !== timeB) return timeA - timeB;
+        return Number(a.id) - Number(b.id);
+      });
+    } else {
+      // Cũ nhất ở dưới cùng (Descending)
+      jobs.sort((a, b) => {
+        const timeA = new Date(a.postedDate || 0).getTime();
+        const timeB = new Date(b.postedDate || 0).getTime();
+        if (timeA !== timeB) return timeB - timeA;
+        return Number(b.id) - Number(a.id);
+      });
+    }
+    return jobs;
+  });
+
+  filteredAndPagedJobs = computed(() => {
+    const jobs = this.filteredJobs();
+    const startIndex = (this.currentPage() - 1) * this.pageSize();
+    return jobs.slice(startIndex, startIndex + this.pageSize());
+  });
+  
+  totalPages = computed(() => Math.ceil(this.filteredJobs().length / this.pageSize()) || 1);
+  
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
+    }
+  }
+
+  getPagesArray(): number[] {
+    return Array.from({ length: this.totalPages() }, (_, i) => i + 1);
+  }
   
   totalViews = computed(() => this.employerJobs().reduce((sum, j) => sum + j.views, 0));
   totalApplications = computed(() => this.employerJobs().reduce((sum, j) => sum + j.applications, 0));
@@ -1170,6 +1413,69 @@ export class EmployerDashboardComponent implements OnInit {
       error: (err) => console.error('Failed to refresh wallet balance:', err)
     });
     this.jobService.fetchJobs();
+    this.loadPackages();
+  }
+
+  loadPackages() {
+    this.http.get<any[]>(`${API_BASE_URL}/subscription/packages`).subscribe({
+      next: (data) => {
+        const mapped = data.map(p => ({
+          ...p,
+          duration: `${p.durationMonths} tháng`
+        }));
+        this.packages.set(mapped);
+      },
+      error: (err) => {
+        console.error('Failed to load packages:', err);
+      }
+    });
+  }
+
+  openPackagesModal() {
+    this.showFreeTierConfirm.set(false);
+    this.showPackagesModal.set(true);
+  }
+
+  buyPackage(pkg: any) {
+    const user = this.auth.currentUser();
+    if (!user) return;
+
+    if ((user.balance || 0) < pkg.price) {
+      this.toast.error('Số dư ví không đủ để mua gói này. Vui lòng nạp thêm tiền!');
+      return;
+    }
+
+    if (confirm(`Xác nhận mua ${pkg.name} với giá ${pkg.price.toLocaleString('vi-VN')}đ?`)) {
+      this.isProcessingPackage.set(true);
+      this.http.post(`${API_BASE_URL}/subscription/subscribe/${pkg.id}`, {}).subscribe({
+        next: (res: any) => {
+          this.isProcessingPackage.set(false);
+          this.toast.success(res.message || 'Đăng ký gói dịch vụ thành công!');
+          this.auth.fetchProfile().subscribe();
+          this.auth.fetchBalance().subscribe();
+          this.showPackagesModal.set(false);
+        },
+        error: (err) => {
+          this.isProcessingPackage.set(false);
+          this.toast.error(err.error?.message || 'Có lỗi xảy ra khi đăng ký gói.');
+        }
+      });
+    }
+  }
+
+  testDeposit() {
+    this.isProcessingPackage.set(true);
+    this.http.post(`${API_BASE_URL}/wallet/deposit`, { amount: 500000 }).subscribe({
+      next: () => {
+        this.toast.success('Nạp 500.000đ thành công (Test)');
+        this.auth.fetchBalance().subscribe();
+        this.isProcessingPackage.set(false);
+      },
+      error: (err) => {
+        this.toast.error(err.error?.message || 'Nạp tiền thất bại');
+        this.isProcessingPackage.set(false);
+      }
+    });
   }
 
   private getEmptyForm() {
@@ -1240,23 +1546,65 @@ export class EmployerDashboardComponent implements OnInit {
     if (!user) return;
     const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
     if (this.formData.isUrgent && !hasActivePackage) {
-      this.formData.isUrgent = false;
-      this.toast.warning('Chức năng "Tuyển gấp" yêu cầu tài khoản phải đăng ký gói dịch vụ.');
+      setTimeout(() => this.formData.isUrgent = false, 0);
+      this.toast.warning('Tính năng Tuyển gấp chỉ dành cho tài khoản VIP. Mời bạn nâng cấp gói dịch vụ!');
+      this.openPackagesModal();
     }
   }
 
   onSubmitForm() {
-    if (!this.formData.title) return;
+    this.formErrors = {};
+    let hasError = false;
+
+    if (!this.formData.title) { this.formErrors['title'] = 'Vui lòng nhập tiêu đề.'; hasError = true; }
+    if (!this.formData.category) { this.formErrors['category'] = 'Vui lòng chọn danh mục.'; hasError = true; }
+    if (!this.formData.description) { this.formErrors['description'] = 'Vui lòng nhập mô tả công việc.'; hasError = true; }
+    if (!this.formData.deadline) { this.formErrors['deadline'] = 'Vui lòng chọn hạn nộp hồ sơ.'; hasError = true; }
+    
+    if (this.formData.deadline) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const deadlineDate = new Date(this.formData.deadline);
+      if (deadlineDate < today) {
+        this.formErrors['deadline'] = 'Hạn nộp hồ sơ không được ở trong quá khứ.';
+        hasError = true;
+      }
+    }
+
+    const budget = this.formData.budget || 0;
+    if (budget < 50000) {
+      this.formErrors['budget'] = 'Ngân sách tối thiểu là 50.000đ.';
+      hasError = true;
+    }
+
+    if (hasError) {
+      this.toast.error('Vui lòng kiểm tra lại các trường thông tin.');
+      return;
+    }
+
     const user = this.auth.currentUser();
     if (!user) return;
 
     const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
     if (this.formData.isUrgent && !hasActivePackage) {
-      this.postSuccess.set(false);
-      this.postMessage.set('Chức năng tuyển gấp chỉ dành cho nhà tuyển dụng có gói dịch vụ đang hoạt động. Vui lòng mua gói dịch vụ để sử dụng.');
+      this.formErrors['isUrgent'] = 'Vui lòng mua gói dịch vụ để đăng tin tuyển gấp!';
       this.toast.error('Vui lòng mua gói dịch vụ để đăng tin tuyển gấp!');
       return;
     }
+
+    if (!this.editingJobId() && !hasActivePackage) {
+      // Show free tier confirmation modal instead of directly submitting
+      this.showFreeTierConfirm.set(true);
+      return;
+    }
+
+    this.executePostJob();
+  }
+
+  executePostJob() {
+    this.showFreeTierConfirm.set(false);
+    const user = this.auth.currentUser();
+    if (!user) return;
 
     const tags = this.formData.tagsStr.split(',').map(t => t.trim()).filter(Boolean);
     const requirements = this.formData.requirementsStr.split(',').map(r => r.trim()).filter(Boolean);
@@ -1278,6 +1626,7 @@ export class EmployerDashboardComponent implements OnInit {
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
+        headCount: this.formData.headCount || 1,
       } as any).subscribe({
         next: (result) => {
           this.postSuccess.set(result.success);
@@ -1306,12 +1655,6 @@ export class EmployerDashboardComponent implements OnInit {
       }
 
       const budget = this.formData.budget || 0;
-      if (budget < 50000) {
-        this.postSuccess.set(false);
-        this.postMessage.set('Ngân sách tối thiểu là 50.000đ.');
-        this.toast.error('Ngân sách tối thiểu là 50.000đ.');
-        return;
-      }
 
       // Payment check
       const commission = Math.round(budget * 0.1);

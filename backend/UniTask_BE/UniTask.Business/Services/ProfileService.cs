@@ -118,7 +118,9 @@ namespace UniTask.Business.Services
                     } : null,
                     businessLicenseUrl = profile.BusinessLicenseUrl,
                     isBusinessLicenseVerified = profile.IsBusinessLicenseVerified,
-                    activePackage = activeSubscription?.Package?.Name,
+                    activePackage = activeSubscription != null 
+                        ? $"Gói {Math.Round((activeSubscription.EndDate - activeSubscription.StartDate).TotalDays / 30.4368)} tháng"
+                        : null,
                     packageExpiry = activeSubscription?.EndDate.ToString("yyyy-MM-dd")
                 };
             }

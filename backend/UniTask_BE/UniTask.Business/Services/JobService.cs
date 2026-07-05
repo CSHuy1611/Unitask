@@ -25,6 +25,9 @@ namespace UniTask.Business.Services
             var query = _context.Jobs
                 .Include(j => j.Company)
                 .Include(j => j.Tags)
+                .Include(j => j.Requirements)
+                .Include(j => j.Benefits)
+                .Include(j => j.Applications)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(filter.StudentId))
@@ -77,20 +80,24 @@ namespace UniTask.Business.Services
             return jobs.Select(MapToDto);
         }
 
-        public async Task<JobDto?> GetJobByIdAsync(int id)
+        public async Task<JobDto?> GetJobByIdAsync(int id, string? currentUserId = null)
         {
             var job = await _context.Jobs
                 .Include(j => j.Company)
-                .Include(j => j.Tags)
                 .Include(j => j.Requirements)
                 .Include(j => j.Benefits)
+                .Include(j => j.Tags)
+                .Include(j => j.Applications)
                 .FirstOrDefaultAsync(j => j.Id == id);
 
             if (job == null) return null;
 
-            // Increment views
-            job.Views++;
-            await _context.SaveChangesAsync();
+            // Increment views only if the requester is not the employer who posted the job
+            if (string.IsNullOrEmpty(currentUserId) || job.EmployerId != currentUserId)
+            {
+                job.Views++;
+                await _context.SaveChangesAsync();
+            }
 
             return MapToDto(job);
         }
@@ -229,6 +236,7 @@ namespace UniTask.Business.Services
             job.Deadline = dto.Deadline;
             job.IsUrgent = dto.IsUrgent;
             job.IsRemote = dto.IsRemote;
+            job.HeadCount = dto.HeadCount;
 
             // Update collections
             _context.JobTags.RemoveRange(job.Tags);
@@ -468,6 +476,7 @@ namespace UniTask.Business.Services
                 Deadline = j.Deadline,
                 Views = j.Views,
                 ApplicationsCount = j.ApplicationsCount,
+                AcceptedCount = j.Applications?.Count(a => a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed) ?? 0,
                 IsUrgent = j.IsUrgent,
                 IsRemote = j.IsRemote,
                 Status = j.Status,
@@ -504,7 +513,7 @@ namespace UniTask.Business.Services
         public async Task<string?> GenerateCheckInOtpAsync(int jobId, string employerId)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.EmployerId == employerId);
-            if (job == null || job.Status != JobStatus.InProgress) return null;
+            if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return null;
 
             var otp = new Random().Next(100000, 999999).ToString();
             
@@ -522,7 +531,7 @@ namespace UniTask.Business.Services
         public async Task<string?> GenerateCheckOutOtpAsync(int jobId, string employerId)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.EmployerId == employerId);
-            if (job == null || job.Status != JobStatus.InProgress) return null;
+            if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return null;
 
             var otp = new Random().Next(100000, 999999).ToString();
             var apps = await _context.Applications.Where(a => a.JobId == jobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed)).ToListAsync();
@@ -539,7 +548,7 @@ namespace UniTask.Business.Services
         public async Task<bool> StudentCheckInAsync(int jobId, string studentId, string otp)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
-            if (job == null || job.Status != JobStatus.InProgress) return false;
+            if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return false;
 
             var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
             if (app == null) return false;
@@ -549,6 +558,10 @@ namespace UniTask.Business.Services
             app.CheckInTime = DateTime.UtcNow;
             app.CheckInOtp = null; // Clear OTP after use
             app.CheckInOtpExpiredAt = null;
+            
+            if (job.Status == JobStatus.Open) {
+                job.Status = JobStatus.InProgress;
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -557,7 +570,7 @@ namespace UniTask.Business.Services
         public async Task<bool> StudentCheckOutAsync(int jobId, string studentId, string otp)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
-            if (job == null || job.Status != JobStatus.InProgress) return false;
+            if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return false;
 
             var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
             if (app == null) return false;

@@ -28,7 +28,8 @@ namespace UniTask.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetJobById(int id)
         {
-            var job = await _jobService.GetJobByIdAsync(id);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var job = await _jobService.GetJobByIdAsync(id, currentUserId);
             if (job == null) return NotFound();
             return Ok(job);
         }

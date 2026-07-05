@@ -51,7 +51,7 @@ export class JobService {
   }
 
   fetchJobs() {
-    this.http.get<any[]>(`${API_BASE_URL}/job`).pipe(
+    this.http.get<any[]>(`${API_BASE_URL}/job?PageSize=1000`).pipe(
       map(dtos => dtos.map(dto => this.mapDtoToJob(dto)))
     ).subscribe({
       next: (jobs) => {
@@ -79,7 +79,8 @@ export class JobService {
       companyLogo: dto.companyLogoUrl || 'UT',
       location: dto.location || '',
       type: dto.type || 'Part-time',
-      salary: dto.salaryText || '',
+      category: dto.category || '',
+      salary: dto.salaryText || dto.salary || (dto.budget ? Math.round(dto.budget / (dto.headCount || 1)).toLocaleString('vi-VN') + 'đ' : ''),
       salaryRange: dto.salaryRange || [0, 0],
       description: dto.description || '',
       requirements: Array.isArray(dto.requirements) ? dto.requirements : (typeof dto.requirements === 'string' ? dto.requirements.split(/\r?\n|\\n/) : []),
@@ -89,6 +90,7 @@ export class JobService {
       deadline: dto.deadline ? dto.deadline.split('T')[0] : '',
       views: dto.views || 0,
       applications: dto.applicationsCount || 0,
+      acceptedCount: dto.acceptedCount || 0,
       isUrgent: dto.isUrgent || false,
       isRemote: dto.isRemote || false,
       budget: dto.budget || 0,
@@ -143,6 +145,7 @@ export class JobService {
     const payload = {
       title: job.title,
       type: job.type,
+      category: job.category || '',
       location: job.location,
       salaryText: job.salary,
       budget: job.budget,
@@ -153,7 +156,8 @@ export class JobService {
       benefits: Array.isArray(job.benefits) ? job.benefits : [],
       tags: Array.isArray(job.tags) ? job.tags : [],
       isRemote: job.isRemote,
-      isUrgent: job.isUrgent
+      isUrgent: job.isUrgent,
+      headCount: job.headCount
     };
 
     return this.http.post<any>(`${API_BASE_URL}/job`, payload).pipe(
@@ -173,6 +177,7 @@ export class JobService {
     const payload = {
       title: data.title,
       type: data.type,
+      category: data.category || '',
       location: data.location,
       salaryText: data.salary,
       budget: data.budget,
@@ -183,7 +188,8 @@ export class JobService {
       benefits: Array.isArray(data.benefits) ? data.benefits : [],
       tags: Array.isArray(data.tags) ? data.tags : [],
       isRemote: data.isRemote,
-      isUrgent: data.isUrgent
+      isUrgent: data.isUrgent,
+      headCount: data.headCount
     };
 
     return this.http.put<any>(`${API_BASE_URL}/job/${id}`, payload).pipe(
