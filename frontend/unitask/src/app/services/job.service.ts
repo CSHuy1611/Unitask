@@ -217,7 +217,14 @@ export class JobService {
   }
 
   getJobApplications(jobId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${API_BASE_URL}/application/job/${jobId}`);
+    return this.http.get<any[]>(`${API_BASE_URL}/application/job/${jobId}`).pipe(
+      map(apps => apps.map(app => {
+        let mappedStatus = app.status;
+        if (app.status === 2) mappedStatus = 1;
+        else if (app.status === 3) mappedStatus = 2;
+        return { ...app, status: mappedStatus };
+      }))
+    );
   }
 
   getMyApplications(): Observable<any[]> {
@@ -225,7 +232,7 @@ export class JobService {
   }
 
   assignJob(applicationId: number): Observable<{ success: boolean; message: string }> {
-    return this.http.put<any>(`${API_BASE_URL}/application/${applicationId}/status`, { status: 1 }).pipe(
+    return this.http.put<any>(`${API_BASE_URL}/application/${applicationId}/status`, { status: 2 }).pipe(
       tap(() => this.fetchJobs()),
       map(() => ({ success: true, message: 'Đã giao việc thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Không thể giao việc.' }))

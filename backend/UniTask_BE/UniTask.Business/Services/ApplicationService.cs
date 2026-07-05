@@ -198,7 +198,9 @@ namespace UniTask.Business.Services
                 StudentGpa = a.StudentProfile?.GPA,
                 StudentReliabilityScore = a.StudentProfile?.ReliabilityScore ?? 100,
                 Status = a.Status,
-                AppliedDate = a.AppliedDate
+                AppliedDate = a.AppliedDate,
+                CheckInTime = a.CheckInTime,
+                CheckOutTime = a.CheckOutTime
             };
         }
     }

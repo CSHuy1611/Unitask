@@ -25,5 +25,7 @@ namespace UniTask.Business.DTOs.Application
 
         public ApplicationStatus Status { get; set; }
         public DateTime AppliedDate { get; set; }
+        public DateTime? CheckInTime { get; set; }
+        public DateTime? CheckOutTime { get; set; }
     }
 }

@@ -408,7 +408,7 @@ namespace UniTask.Business.Services
         public async Task<bool> StudentDisputeAsync(int jobId, string studentId, JobDisputeCreateDto dto)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
-            if (job == null || job.Status != DataAcesss.Entities.Enums.JobStatus.InProgress)
+            if (job == null || (job.Status != DataAcesss.Entities.Enums.JobStatus.InProgress && job.Status != DataAcesss.Entities.Enums.JobStatus.PendingConfirmation))
                 return false;
 
             var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId);

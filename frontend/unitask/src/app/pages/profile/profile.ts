@@ -555,55 +555,62 @@ import Tesseract from 'tesseract.js';
                 <div class="working-section glass-card animate-fade-in-up" style="animation-delay:0.18s">
                   <h3><span class="material-icons-round">work</span> Công việc của tôi</h3>
                   @if (workingJobs().length) {
-                    <div class="applied-list">
+                    <div class="job-list">
                       @for (job of workingJobs(); track job.id) {
-                        <div class="applied-item" style="flex-direction: column; align-items: stretch; gap: 12px">
-                          <div style="display:flex; justify-content:space-between; align-items:flex-start">
-                            <div class="applied-info">
+                        <div class="job-card">
+                          <div class="job-card-header">
+                            <div>
                               <a [routerLink]="['/jobs', job.id]" style="text-decoration:none; color:inherit">
-                                <strong style="font-size:16px">{{ job.title }}</strong>
+                                <div class="job-title">{{ job.title }}</div>
                               </a>
-                              <span>{{ job.company }} • 💰 {{ job.budget?.toLocaleString('vi-VN') }}đ</span>
+                              <div class="job-meta">
+                                <span><i class="material-icons-round" style="font-size:14px">business</i> {{ job.company }}</span>
+                                <span style="color:var(--success)"><i class="material-icons-round" style="font-size:14px">payments</i> {{ job.budget?.toLocaleString('vi-VN') }}đ</span>
+                              </div>
                             </div>
                             @if (job.status === 'in_progress') {
                               <span class="badge badge-warning">Đang thực hiện</span>
                             } @else if (job.status === 'pending_confirmation') {
                               <span class="badge badge-primary">Chờ NTD nghiệm thu</span>
                             } @else if (job.status === 'completed') {
-                              <span class="badge badge-success">Đã hoàn thành</span>
+                              <span class="badge badge-success" style="display: flex; align-items: center; gap: 4px;"><i class="material-icons-round" style="font-size:14px">paid</i> Đã nhận lương</span>
                             } @else if (job.status === 'disputed') {
-                              <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Tranh chấp</span>
+                              <span class="badge badge-danger">Tranh chấp</span>
                             }
                           </div>
+
                           @if (job.status === 'in_progress') {
-                            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; flex-wrap: wrap;">
-                              @if (!job.checkInTime) {
-                                <button type="button" class="btn btn-primary btn-sm" (click)="openCheckInModal(job)" style="background: var(--primary-light)">
-                                  <span class="material-icons-round" style="font-size:16px">login</span> Check-in OTP
-                                </button>
-                              } @else if (!job.checkOutTime) {
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                  <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
-                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in
+                            <div class="job-actions">
+                              <div>
+                                @if (job.checkInTime && !job.checkOutTime) {
+                                  <span style="font-size: 12px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 4px;">
+                                    <i class="material-icons-round" style="font-size:14px">check_circle</i> Đã check-in
                                   </span>
-                                  <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(job)">
-                                    <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
+                                } @else if (job.checkOutTime) {
+                                  <span style="font-size: 12px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 4px;">
+                                    <i class="material-icons-round" style="font-size:14px">done_all</i> Đã check-out (Chờ duyệt)
+                                  </span>
+                                }
+                              </div>
+                              <div class="job-actions-right">
+                                @if (!job.checkInTime) {
+                                  <button type="button" class="btn btn-primary btn-sm" (click)="openCheckInModal(job)">
+                                    <i class="material-icons-round" style="font-size:16px">login</i> Check-in OTP
                                   </button>
-                                </div>
-                              } @else {
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                  <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
-                                    <span class="material-icons-round" style="font-size:14px">done_all</span> Đã check-out (Chờ duyệt)
-                                  </span>
-                                </div>
-                              }
-                              <button type="button" class="btn btn-danger btn-sm" (click)="openReportModal(job)" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-                                <span class="material-icons-round" style="font-size:16px">report_problem</span> Khiếu nại
-                              </button>
+                                } @else if (!job.checkOutTime) {
+                                  <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(job)">
+                                    <i class="material-icons-round" style="font-size:16px">logout</i> Check-out OTP
+                                  </button>
+                                }
+                                <button type="button" class="btn btn-danger btn-sm" (click)="openReportModal(job)" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                  <i class="material-icons-round" style="font-size:16px">report_problem</i> Khiếu nại
+                                </button>
+                              </div>
                             </div>
                           }
+
                           @if (job.status === 'disputed') {
-                            <div class="dispute-box" style="margin-top: 8px; padding: 16px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: var(--radius-lg);">
+                            <div class="dispute-box" style="margin-top: 12px; padding: 16px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: var(--radius-lg);">
                               <div style="margin-bottom: 12px; font-size: 13px;">
                                 <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px;">
                                   <span class="material-icons-round" style="font-size: 18px;">warning</span> Nhà tuyển dụng từ chối thanh toán:
@@ -672,27 +679,83 @@ import Tesseract from 'tesseract.js';
                 <div class="history-section glass-card animate-fade-in-up" style="animation-delay:0.19s">
                   <h3><span class="material-icons-round">history_edu</span> Lịch sử công việc</h3>
                   @if (completedJobsHistory().length) {
-                    <div class="applied-list">
+                    <div class="job-list">
                       @for (job of completedJobsHistory(); track job.id) {
-                        <div class="applied-item" style="flex-direction: column; align-items: stretch; gap: 8px">
-                          <div style="display:flex; justify-content:space-between; align-items:flex-start">
-                            <div class="applied-info">
+                        <div class="job-card">
+                          <div class="job-card-header">
+                            <div>
                               <a [routerLink]="['/jobs', job.id]" style="text-decoration:none; color:inherit">
-                                <strong style="font-size:16px">{{ job.title }}</strong>
+                                <div class="job-title">{{ job.title }}</div>
                               </a>
-                              <span>{{ job.company }} • 💰 {{ job.budget?.toLocaleString('vi-VN') }}đ</span>
+                              <div class="job-meta">
+                                <span><i class="material-icons-round" style="font-size:14px">business</i> {{ job.company }}</span>
+                                <span style="color:var(--success)"><i class="material-icons-round" style="font-size:14px">payments</i> {{ job.budget?.toLocaleString('vi-VN') }}đ</span>
+                              </div>
                             </div>
                             @if (job.status === 'completed') {
-                              <span class="badge badge-success">Đã hoàn thành</span>
+                              <span class="badge badge-success" style="display: flex; align-items: center; gap: 4px;"><i class="material-icons-round" style="font-size:14px">paid</i> Đã nhận lương</span>
+                            } @else if (job.status === 'pending_confirmation') {
+                              <span class="badge badge-primary" style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3);">Chờ NTD nghiệm thu</span>
+                            } @else if (job.status === 'disputed') {
+                              <span class="badge badge-danger">Đang tranh chấp</span>
                             } @else if (job.status === 'closed') {
                               <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Chưa hoàn thành</span>
                             }
                           </div>
+
                           @if (job.status === 'completed') {
-                            <div style="text-align: right; margin-top: 8px;">
+                            <div class="job-actions" style="justify-content: flex-end;">
                               <button type="button" class="btn btn-primary btn-sm" (click)="openReviewModal(job)">
-                                <span class="material-icons-round" style="font-size:16px">star</span> Đánh giá nhà tuyển dụng
+                                <i class="material-icons-round" style="font-size:16px">star</i> Đánh giá nhà tuyển dụng
                               </button>
+                            </div>
+                          }
+
+                          @if (job.status === 'disputed') {
+                            <div class="dispute-box" style="margin-top: 12px; padding: 16px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: var(--radius-lg);">
+                              <div style="margin-bottom: 12px; font-size: 13px;">
+                                <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px;">
+                                  <span class="material-icons-round" style="font-size: 18px;">warning</span> Nhà tuyển dụng từ chối thanh toán:
+                                </strong>
+                                <p style="margin: 6px 0; color: var(--text-secondary);"><strong>Lý do:</strong> {{ job.disputeReason || 'Không có lý do chi tiết' }}</p>
+                                @if (job.employerEvidenceText) {
+                                  <p style="margin: 6px 0; color: var(--text-secondary);"><strong>Mô tả của NTD:</strong> {{ job.employerEvidenceText }}</p>
+                                }
+                                @if (job.employerEvidenceUrl) {
+                                  <a [href]="job.employerEvidenceUrl" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 500;">Xem bằng chứng từ NTD</a>
+                                }
+                              </div>
+
+                              @if (!job.studentEvidenceText) {
+                                <div style="margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px;">
+                                  <strong style="font-size: 13px; color: var(--text-primary); display: block; margin-bottom: 8px;">Cung cấp bằng chứng bảo vệ quyền lợi của bạn:</strong>
+                                  <div class="form-group" style="margin-bottom: 8px;">
+                                    <textarea class="form-textarea" rows="2" style="font-size: 13px; padding: 8px;"
+                                              placeholder="Nhập mô tả bằng chứng của bạn (VD: tôi đã làm xong đúng hạn, hình ảnh chat...)"
+                                              [(ngModel)]="studentEvidenceTexts[job.id]" name="studentEvText-{{job.id}}"></textarea>
+                                  </div>
+                                  <div class="form-group" style="margin-bottom: 12px;">
+                                    <input type="text" class="form-input" style="font-size: 13px; padding: 8px;"
+                                           placeholder="Link hình ảnh/video bằng chứng (nếu có)"
+                                           [(ngModel)]="studentEvidenceUrls[job.id]" name="studentEvUrl-{{job.id}}">
+                                  </div>
+                                  <div style="text-align: right;">
+                                    <button class="btn btn-primary btn-sm" (click)="submitEvidence(job.id)">
+                                      <span class="material-icons-round" style="font-size: 16px;">send</span> Gửi bằng chứng
+                                    </button>
+                                  </div>
+                                </div>
+                              } @else {
+                                <div style="margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; font-size: 13px;">
+                                  <strong style="color: var(--success); display: flex; align-items: center; gap: 4px;">
+                                    <span class="material-icons-round" style="font-size: 18px;">check_circle</span> Bằng chứng bạn đã nộp:
+                                  </strong>
+                                  <p style="margin: 6px 0; color: var(--text-secondary);">{{ job.studentEvidenceText }}</p>
+                                  @if (job.studentEvidenceUrl) {
+                                    <a [href]="job.studentEvidenceUrl" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 500;">Link bằng chứng đã gửi</a>
+                                  }
+                                </div>
+                              }
                             </div>
                           }
                         </div>
@@ -712,14 +775,27 @@ import Tesseract from 'tesseract.js';
                 <div class="applied-section glass-card animate-fade-in-up" style="animation-delay:0.2s">
                   <h3><span class="material-icons-round">history</span> Lịch sử ứng tuyển</h3>
                   @if (appliedJobs().length) {
-                    <div class="applied-list">
+                    <div class="job-list">
                       @for (job of appliedJobs(); track job.id) {
-                        <a [routerLink]="['/jobs', job.id]" class="applied-item">
-                          <div class="applied-info">
-                            <strong>{{ job.title }}</strong>
-                            <span>{{ job.company }} • {{ job.location }}</span>
+                        <a [routerLink]="['/jobs', job.id]" class="job-card">
+                          <div class="job-card-header">
+                            <div>
+                              <div class="job-title">{{ job.title }}</div>
+                              <div class="job-meta">
+                                <span><i class="material-icons-round" style="font-size:14px">business</i> {{ job.company }}</span>
+                                <span><i class="material-icons-round" style="font-size:14px">location_on</i> {{ job.location || 'Từ xa' }}</span>
+                              </div>
+                            </div>
+                            @if (job.myAppStatus === 0 || job.myAppStatus === 'Applied') {
+                              <span class="badge badge-success">Đã nộp</span>
+                            } @else if (job.myAppStatus === 1 || job.myAppStatus === 'Interviewing') {
+                              <span class="badge badge-warning">Đang phỏng vấn</span>
+                            } @else if (job.myAppStatus === 3 || job.myAppStatus === 'Rejected') {
+                              <span class="badge badge-danger">Bị từ chối</span>
+                            } @else {
+                              <span class="badge badge-success">Đã nộp</span>
+                            }
                           </div>
-                          <span class="badge badge-success">Đã nộp</span>
                         </a>
                       }
                     </div>
@@ -1359,44 +1435,87 @@ import Tesseract from 'tesseract.js';
 
     .full-width { width: 100%; }
 
-    .applied-list {
+    .job-list {
       display: flex;
       flex-direction: column;
-      gap: var(--space-3);
+      gap: var(--space-4);
     }
 
-    .applied-item {
+    .job-card {
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-5);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-xl);
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .job-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 4px; height: 100%;
+      background: var(--primary-light);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .job-card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      background: rgba(99, 102, 241, 0.05);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.2);
+    }
+
+    .job-card:hover::before {
+      opacity: 1;
+    }
+
+    .job-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--space-3);
+    }
+
+    .job-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: var(--space-1);
+    }
+
+    .job-meta {
+      display: flex;
+      gap: var(--space-3);
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      align-items: center;
+    }
+
+    .job-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .job-actions {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: var(--space-4);
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      text-decoration: none;
-      color: inherit;
-      transition: all var(--transition-fast);
+      margin-top: var(--space-4);
+      padding-top: var(--space-3);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .applied-item:hover {
-      border-color: var(--primary-light);
-      color: inherit;
-    }
-
-    .applied-info {
+    .job-actions-right {
       display: flex;
-      flex-direction: column;
-      gap: var(--space-1);
-    }
-
-    .applied-info strong {
-      font-size: var(--font-size-sm);
-      color: var(--text-primary);
-    }
-
-    .applied-info span {
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
+      gap: var(--space-2);
+      align-items: center;
     }
 
     .empty-applied {
@@ -1532,7 +1651,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   selectedJobToReport = signal<Job | null>(null);
   reportReason = signal('');
   reportEvidenceUrl = signal('');
-
+  reportEvidenceText = signal('');
+  
   showCheckInModal = signal(false);
   showCheckOutModal = signal(false);
   showReviewModal = signal(false);
@@ -1576,23 +1696,34 @@ export class ProfileComponent implements OnInit, OnDestroy {
         (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
         acceptedJobIds.includes(j.id)) &&
       (j.status === 'in_progress' || j.status === 'pending_confirmation' || j.status === 'disputed')
-    );
+    ).map(j => {
+      const myApp = this.myApplications().find(app => app.jobId === j.id);
+      return {
+        ...j,
+        checkInTime: myApp?.checkInTime,
+        checkOutTime: myApp?.checkOutTime
+      };
+    });
   });
 
   completedJobsHistory = computed(() => {
     const user = this.auth.currentUser();
     if (!user || user.role !== 'student') return [];
 
-    const acceptedJobIds = this.myApplications()
-      .filter(app => app.status === 2 || app.status === 'Accepted' || app.status === 'accepted')
+    const completedAppJobIds = this.myApplications()
+      .filter(app => app.status === 5 || app.status === 'Completed' || app.status === 'completed')
       .map(app => app.jobId);
 
     return this.jobService.getAllJobs().filter(j =>
-      (j.selectedStudentId === user.id ||
-        (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
-        acceptedJobIds.includes(j.id)) &&
-      (j.status === 'completed' || j.status === 'closed')
-    );
+      completedAppJobIds.includes(j.id)
+    ).map(j => {
+      const myApp = this.myApplications().find(app => app.jobId === j.id);
+      return {
+        ...j,
+        checkInTime: myApp?.checkInTime,
+        checkOutTime: myApp?.checkOutTime
+      };
+    });
   });
 
   appliedJobs = computed(() => {
@@ -1604,11 +1735,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
       ...this.completedJobsHistory().map(j => j.id)
     ];
 
-    const appliedJobIds = this.myApplications()
-      .filter(app => !excludedJobIds.includes(app.jobId))
-      .map(app => app.jobId);
+    const appliedApps = this.myApplications()
+      .filter(app => !excludedJobIds.includes(app.jobId));
+      
+    const appliedJobIds = appliedApps.map(app => app.jobId);
 
-    return this.jobService.getAllJobs().filter(j => appliedJobIds.includes(j.id));
+    return this.jobService.getAllJobs().filter(j =>
+      appliedJobIds.includes(j.id)
+    ).map(j => {
+      const myApp = appliedApps.find(app => app.jobId === j.id);
+      return {
+        ...j,
+        myAppStatus: myApp?.status
+      };
+    });
   });
 
   editForm = {
@@ -1777,6 +1917,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   openReportModal(job: Job) {
     this.selectedJobToReport.set(job);
     this.reportReason.set('');
+    this.reportEvidenceText.set('');
     this.reportEvidenceUrl.set('');
   }
 
@@ -1784,9 +1925,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const job = this.selectedJobToReport();
     const reason = this.reportReason();
     const url = this.reportEvidenceUrl();
+    const text = this.reportEvidenceText();
     if (!job || !reason) return;
     
-    this.jobService.studentDispute(job.id, reason, url).subscribe({
+    this.jobService.studentDispute(job.id, reason, url, text).subscribe({
       next: (res) => {
         if (res.success) {
           this.toast.success('Đã gửi khiếu nại thành công. Ban quản trị sẽ liên hệ để giải quyết.');
