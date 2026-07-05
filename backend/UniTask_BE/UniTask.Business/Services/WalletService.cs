@@ -63,31 +63,7 @@ namespace UniTask.Business.Services
             };
         }
 
-        public async Task<bool> DepositAsync(string userId, decimal amount)
-        {
-            var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId);
-            if (wallet == null) return false;
 
-            var roundedAmount = Math.Round(amount, 0);
-            wallet.Balance += roundedAmount;
-
-            var transaction = new Transaction
-            {
-                WalletId = wallet.Id,
-                Amount = roundedAmount,
-                Type = TransactionType.Deposit,
-                Description = "Nạp tiền vào tài khoản",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Transactions.Add(transaction);
-            await _context.SaveChangesAsync();
-            
-            // Broadcast real-time event to Admin Dashboard
-            await _hubContext.Clients.All.SendAsync("TransactionOccurred");
-            
-            return true;
-        }
 
         public async Task<bool> WithdrawAsync(string userId, WithdrawRequestDto dto)
         {

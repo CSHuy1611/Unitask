@@ -32,6 +32,15 @@ namespace UniTask.DataAcesss.Entities
         /// </summary>
         public int? RelatedJobId { get; set; }
 
+        [MaxLength(100)]
+        public string? CounterAccountBankName { get; set; }
+
+        [MaxLength(100)]
+        public string? CounterAccountName { get; set; }
+
+        [MaxLength(50)]
+        public string? CounterAccountNumber { get; set; }
+
         [ForeignKey(nameof(RelatedJobId))]
         public Job? RelatedJob { get; set; }
 

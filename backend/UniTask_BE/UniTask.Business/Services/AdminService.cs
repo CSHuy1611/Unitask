@@ -937,5 +937,39 @@ namespace UniTask.Business.Services
             workbook.SaveAs(stream);
             return stream.ToArray();
         }
+
+        public async Task<object> GetPayosDepositsAsync(int page = 1, int pageSize = 10)
+        {
+            var rawQuery = _context.Transactions
+                .Include(t => t.Wallet)
+                    .ThenInclude(w => w.User)
+                .Where(t => t.Type == TransactionType.Deposit && !t.Description.Contains("[PAYOS_PENDING]"))
+                .OrderByDescending(t => t.CreatedAt);
+
+            var totalCount = await rawQuery.CountAsync();
+
+            var items = await rawQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(t => new
+                {
+                    id = t.Id,
+                    amount = t.Amount,
+                    createdAt = t.CreatedAt,
+                    userFullName = t.Wallet.User.FullName,
+                    userEmail = t.Wallet.User.Email,
+                    counterAccountBankName = t.CounterAccountBankName,
+                    counterAccountName = t.CounterAccountName,
+                    counterAccountNumber = t.CounterAccountNumber
+                })
+                .ToListAsync();
+
+            return new
+            {
+                items = items,
+                totalCount = totalCount,
+                hasMore = page * pageSize < totalCount
+            };
+        }
     }
 }
