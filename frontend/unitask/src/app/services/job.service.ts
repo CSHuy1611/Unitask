@@ -110,8 +110,8 @@ export class JobService {
       studentEvidenceText: dto.studentEvidenceText,
       studentEvidenceUrl: dto.studentEvidenceUrl,
       disputedDate: dto.disputedDate ? dto.disputedDate.split('T')[0] : undefined,
-      checkInTime: dto.checkInTime,
-      checkOutTime: dto.checkOutTime
+      checkOutTime: dto.checkOutTime,
+      isCompanyPremium: dto.isCompanyPremium || false
     };
   }
 

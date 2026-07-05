@@ -28,9 +28,16 @@ import { API_BASE_URL } from '../../config/api.config';
           <aside class="dashboard-sidebar animate-fade-in-up">
             <div class="sidebar-card glass-card profile-card">
               <div class="profile-header">
-                <div class="avatar">{{ auth.currentUser()?.fullName?.charAt(0) || 'E' }}</div>
+                <div class="avatar" [class.premium-avatar-glow]="isPremiumEmployer()">{{ auth.currentUser()?.fullName?.charAt(0) || 'E' }}</div>
                 <div>
-                  <h3>{{ auth.currentUser()?.fullName }}</h3>
+                  <h3 style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    {{ auth.currentUser()?.fullName }}
+                    @if (isPremiumEmployer()) {
+                      <span class="premium-badge" title="Tài khoản Premium">
+                        <span class="material-icons-round" style="font-size: 16px;">workspace_premium</span>
+                      </span>
+                    }
+                  </h3>
                   <span class="role-badge">Nhà tuyển dụng</span>
                 </div>
               </div>
@@ -361,7 +368,15 @@ import { API_BASE_URL } from '../../config/api.config';
                   <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
                     <div class="job-info">
                       <div class="job-title-row">
-                        <a [routerLink]="['/jobs', job.id]" class="job-title-link">{{ job.title }}</a>
+                        <a [routerLink]="['/jobs', job.id]" class="job-title-link" style="display: flex; align-items: center; gap: 6px;">
+                          {{ job.title }}
+                          @if (job.isCompanyPremium) {
+                            <span class="premium-badge" title="Tin tuyển dụng Premium" style="padding: 2px 6px;">
+                              <span class="material-icons-round" style="font-size: 14px; margin-right: 2px;">workspace_premium</span>
+                              <span style="font-size: 10px; font-weight: bold; text-transform: uppercase;">Premium</span>
+                            </span>
+                          }
+                        </a>
                         @if (!jobService.isJobEditable(job)) {
                           <span class="badge badge-danger">Hết hạn</span>
                         } @else if (job.isUrgent) {
@@ -804,6 +819,7 @@ import { API_BASE_URL } from '../../config/api.config';
       background: linear-gradient(135deg, var(--primary), var(--primary-light));
       color: white; font-size: 24px; font-weight: 800;
       display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease;
     }
 
     .profile-header h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; color: var(--text-primary); }
@@ -1340,6 +1356,17 @@ export class EmployerDashboardComponent implements OnInit {
   formData = this.getEmptyForm();
   formErrors: Record<string, string> = {};
   showFreeTierConfirm = signal(false);
+
+  isPremiumEmployer(): boolean {
+    const pkg = this.auth.currentUser()?.activePackage;
+    if (!pkg) return false;
+    if (pkg.includes('VIP') || pkg.includes('Premium')) return true;
+    const match = pkg.match(/\d+/);
+    if (match) {
+      return parseInt(match[0], 10) >= 12;
+    }
+    return false;
+  }
 
   employerJobs = computed(() => {
     const user = this.auth.currentUser();

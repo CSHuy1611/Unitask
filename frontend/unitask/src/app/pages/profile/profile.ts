@@ -29,9 +29,9 @@ import Tesseract from 'tesseract.js';
               <div class="sidebar-card glass-card profile-card">
                 <div class="profile-avatar-wrapper">
                 @if (auth.currentUser()?.avatarUrl) {
-                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" />
+                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" [class.premium-avatar-glow]="isPremiumEmployer()" />
                 } @else {
-                  <div class="profile-avatar">
+                  <div class="profile-avatar" [class.premium-avatar-glow]="isPremiumEmployer()">
                     {{ auth.currentUser()?.avatar }}
                   </div>
                 }
@@ -1676,6 +1676,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
         error: (err) => console.error('Failed to load student applications:', err)
       });
     }
+  }
+
+  isPremiumEmployer(): boolean {
+    if (!this.auth.isEmployer()) return false;
+    const pkg = this.auth.currentUser()?.activePackage;
+    if (!pkg) return false;
+    if (pkg.includes('VIP') || pkg.includes('Premium')) return true;
+    const match = pkg.match(/\d+/);
+    if (match) {
+      return parseInt(match[0], 10) >= 12;
+    }
+    return false;
   }
 
   toggleEditMode() {

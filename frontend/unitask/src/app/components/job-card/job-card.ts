@@ -10,13 +10,20 @@ import { ToastService } from '../../services/toast.service';
   standalone: true,
   imports: [RouterLink],
   template: `
-    <a [routerLink]="['/jobs', job().id]" class="job-card glass-card">
+    <a [routerLink]="['/jobs', job().id]" class="job-card glass-card" [class.premium-card]="job().isCompanyPremium">
       <div class="card-header">
-        <div class="company-logo" [style.background]="getLogoGradient()">
+        <div class="company-logo" [class.premium-avatar-glow]="job().isCompanyPremium" [style.background]="getLogoGradient()">
           {{ job().companyLogo }}
         </div>
         <div class="card-meta">
-          <span class="company-name">{{ job().company }}</span>
+          <span class="company-name">
+            {{ job().company }}
+            @if (job().isCompanyPremium) {
+              <span class="premium-badge" title="Nhà tuyển dụng Premium">
+                <span class="material-icons-round" style="font-size: 14px;">workspace_premium</span>
+              </span>
+            }
+          </span>
           <span class="posted-date">{{ getTimeAgo() }}</span>
         </div>
         @if (job().isUrgent) {
@@ -80,6 +87,16 @@ import { ToastService } from '../../services/toast.service';
       text-decoration: none;
       color: inherit;
       cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .job-card.premium-card {
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1);
+    }
+
+    .job-card.premium-card:hover {
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.2);
     }
 
     .job-card:hover { color: inherit; }

@@ -77,7 +77,15 @@ namespace UniTask.Business.Services
             var skip = (filter.Page - 1) * filter.PageSize;
             var jobs = await query.Skip(skip).Take(filter.PageSize).ToListAsync();
 
-            return jobs.Select(MapToDto);
+            var employerIds = jobs.Select(j => j.EmployerId).Distinct().ToList();
+            var premiumEmployers = await _context.Subscriptions
+                .Include(s => s.Package)
+                .Where(s => employerIds.Contains(s.UserId) && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12)
+                .Select(s => s.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            return jobs.Select(j => MapToDto(j, premiumEmployers.Contains(j.EmployerId)));
         }
 
         public async Task<JobDto?> GetJobByIdAsync(int id, string? currentUserId = null)
@@ -99,7 +107,9 @@ namespace UniTask.Business.Services
                 await _context.SaveChangesAsync();
             }
 
-            return MapToDto(job);
+            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == job.EmployerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
+
+            return MapToDto(job, isPremium);
         }
 
         public async Task<JobDto?> CreateJobAsync(string employerId, JobCreateDto dto)
@@ -212,7 +222,8 @@ namespace UniTask.Business.Services
             // Broadcast real-time event to Admin Dashboard
             await _hubContext.Clients.All.SendAsync("JobCreated");
 
-            return MapToDto(job);
+            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
+            return MapToDto(job, isPremium);
         }
 
         public async Task<bool> UpdateJobAsync(int id, string employerId, JobUpdateDto dto)
@@ -425,7 +436,7 @@ namespace UniTask.Business.Services
             return true;
         }
 
-        private static JobDto MapToDto(Job j)
+        private static JobDto MapToDto(Job j, bool isCompanyPremium = false)
         {
             var salaryRange = new List<decimal>();
             if (!string.IsNullOrEmpty(j.SalaryText) && j.SalaryText.Contains("-"))
@@ -483,6 +494,7 @@ namespace UniTask.Business.Services
                 CompanySize = j.Company?.Size,
                 CompanyLocation = j.Company?.Location,
                 CompanyWebsite = j.Company?.Website,
+                IsCompanyPremium = isCompanyPremium,
                 Tags = j.Tags?.Select(t => t.TagName).ToList() ?? new List<string>(),
                 Requirements = j.Requirements?.Select(r => r.Content).ToList() ?? new List<string>(),
                 Benefits = j.Benefits?.Select(b => b.Content).ToList() ?? new List<string>()
