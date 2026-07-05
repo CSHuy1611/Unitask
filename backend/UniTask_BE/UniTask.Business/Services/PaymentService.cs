@@ -121,7 +121,7 @@ namespace UniTask.Business.Services
                         pendingTx.Wallet.Balance += roundedAmount;
 
                         // Save metadata from PayOS webhook
-                        pendingTx.CounterAccountBankName = data.CounterAccountBankName;
+                        pendingTx.CounterAccountBankName = !string.IsNullOrEmpty(data.CounterAccountBankName) ? data.CounterAccountBankName : data.CounterAccountBankId;
                         pendingTx.CounterAccountName = data.CounterAccountName;
                         pendingTx.CounterAccountNumber = data.CounterAccountNumber;
 
