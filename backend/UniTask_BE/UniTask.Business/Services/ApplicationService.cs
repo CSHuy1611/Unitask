@@ -210,6 +210,7 @@ namespace UniTask.Business.Services
         public async Task<bool> StudentCheckOutAsync(int applicationId, string studentId, string otp)
         {
             var application = await _context.Applications
+                .Include(a => a.Job)
                 .Include(a => a.StudentProfile)
                 .FirstOrDefaultAsync(a => a.Id == applicationId);
 
@@ -221,7 +222,7 @@ namespace UniTask.Business.Services
             application.CheckOutTime = DateTime.UtcNow;
             application.CheckOutOtp = null; // Clear OTP
             
-            // We do not change status here, Employer has to Approve it.
+            application.Job.Status = JobStatus.PendingConfirmation;
             
             await _context.SaveChangesAsync();
             return true;
