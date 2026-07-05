@@ -362,34 +362,60 @@ namespace UniTask.Business.Services
             var pendingWithdrawals = await _context.Transactions
                 .Include(t => t.Wallet)
                 .ThenInclude(w => w.User)
-                .Where(t => t.Type == TransactionType.Withdrawal && t.Description != null && (t.Description.StartsWith("[Pending]") || (!t.Description.StartsWith("[Processing]") && !t.Description.StartsWith("[Completed]"))))
+                .Where(t => t.Type == TransactionType.Withdrawal && t.Description != null && (t.Description.StartsWith("[Pending]") || (!t.Description.StartsWith("[Processing]") && !t.Description.StartsWith("[Completed]") && !t.Description.StartsWith("[Rejected]"))))
                 .ToListAsync();
 
-            if (pendingWithdrawals.Any())
+            if (!pendingWithdrawals.Any())
             {
-                foreach (var tx in pendingWithdrawals)
-                {
-                    string desc = tx.Description ?? "";
-                    string cleanDesc = desc;
-                    if (desc.StartsWith("[Pending]"))
-                    {
-                        cleanDesc = desc.Substring("[Pending]".Length).Trim();
-                    }
-                    tx.Description = "[Processing] " + cleanDesc;
+                return true;
+            }
 
-                    // Send email to user
-                    if (tx.Wallet?.User?.Email != null)
+            // Group by WalletId and Bank Information to merge multiple requests into a single payout
+            var grouped = pendingWithdrawals
+                .GroupBy(t => 
+                {
+                    string bankInfo = "";
+                    if (t.Description != null && t.Description.Contains(" - Ngân hàng:"))
                     {
-                        var userSubject = "[UniTask] Yêu cầu rút tiền đang được chuyển khoản";
-                        var userBody = $@"
+                        bankInfo = t.Description.Substring(t.Description.IndexOf(" - Ngân hàng:"));
+                    }
+                    return t.WalletId.ToString() + bankInfo;
+                })
+                .ToList();
+
+            foreach (var group in grouped)
+            {
+                var mainTx = group.OrderBy(t => t.CreatedAt).First();
+                var mergeTxList = group.Where(t => t.Id != mainTx.Id).ToList();
+
+                // Merge amounts into the first (main) transaction
+                foreach (var tx in mergeTxList)
+                {
+                    mainTx.Amount += tx.Amount; // tx.Amount is negative
+                    _context.Transactions.Remove(tx);
+                }
+
+                string desc = mainTx.Description ?? "";
+                string cleanDesc = desc;
+                if (desc.StartsWith("[Pending]"))
+                {
+                    cleanDesc = desc.Substring("[Pending]".Length).Trim();
+                }
+                mainTx.Description = "[Processing] " + cleanDesc;
+
+                // Send email to user for the grouped payout
+                if (mainTx.Wallet?.User?.Email != null)
+                {
+                    var userSubject = "[UniTask] Yêu cầu rút tiền đang được chuyển khoản";
+                    var userBody = $@"
 <div style=""font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;"">
     <div style=""text-align: center; margin-bottom: 20px;"">
         <h2 style=""color: #d97706; margin: 0;"">Đang Xử Lý Chuyển Khoản</h2>
         <p style=""color: #6b7280; font-size: 14px;"">UniTask Matching Platform</p>
     </div>
     <div style=""background-color: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px;"">
-        <p style=""color: #1f2937; margin-bottom: 15px;"">Chào {tx.Wallet.User.FullName},</p>
-        <p style=""color: #1f2937; margin-bottom: 15px;"">Yêu cầu rút <strong>{Math.Abs(tx.Amount).ToString("N0")} VND</strong> của bạn đã được quản trị viên duyệt và đang trong quá trình chuyển tiền đến ngân hàng.</p>
+        <p style=""color: #1f2937; margin-bottom: 15px;"">Chào {mainTx.Wallet.User.FullName},</p>
+        <p style=""color: #1f2937; margin-bottom: 15px;"">Yêu cầu rút <strong>{Math.Abs(mainTx.Amount).ToString("N0")} VND</strong> của bạn đã được quản trị viên duyệt và đang trong quá trình chuyển tiền đến ngân hàng.</p>
         <p style=""color: #1f2937; margin-bottom: 15px;"">Giao dịch của bạn đã chuyển sang trạng thái <strong>[Đang xử lý]</strong>. Tiền sẽ về tài khoản của bạn trong vòng tối đa 24 giờ tới.</p>
         <p style=""color: #1f2937;"">Vui lòng kiên nhẫn kiểm tra tài khoản ngân hàng. Cảm ơn bạn!</p>
     </div>
@@ -398,19 +424,18 @@ namespace UniTask.Business.Services
         Đây là email tự động từ hệ thống UniTask. Vui lòng không phản hồi email này.
     </div>
 </div>";
-                        try
-                        {
-                            await _emailService.SendEmailAsync(tx.Wallet.User.Email, userSubject, userBody);
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Console.WriteLine($"[Email Error] {ex.Message}");
-                        }
+                    try
+                    {
+                        await _emailService.SendEmailAsync(mainTx.Wallet.User.Email, userSubject, userBody);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Console.WriteLine($"[Email Error] {ex.Message}");
                     }
                 }
-
-                await _context.SaveChangesAsync();
             }
+
+            await _context.SaveChangesAsync();
             return true;
         }
 
