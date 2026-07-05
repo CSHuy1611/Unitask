@@ -19,6 +19,7 @@ namespace UniTask.Business.DTOs.Job
         public DateTime? Deadline { get; set; }
         public int Views { get; set; }
         public int ApplicationsCount { get; set; }
+        public int AcceptedCount { get; set; }
         public bool IsUrgent { get; set; }
         public bool IsRemote { get; set; }
         public JobStatus Status { get; set; }

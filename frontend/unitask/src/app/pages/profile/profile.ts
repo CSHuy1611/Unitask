@@ -14,20 +14,20 @@ import Tesseract from 'tesseract.js';
   standalone: true,
   imports: [RouterLink, FormsModule, CommonModule],
   template: `
-    <section class="profile-page">
-      <div class="container">
+    <section class="dashboard-page layout-sidebar">
+      <div class="container layout-container">
         @if (!auth.isLoggedIn()) {
-          <div class="auth-required glass-card animate-fade-in-up">
+          <div class="auth-required glass-card animate-fade-in-up" style="width: 100%;">
             <span class="material-icons-round" style="font-size:64px;color:var(--primary-light)">person_off</span>
             <h2>Vui lòng đăng nhập</h2>
             <p>Bạn cần đăng nhập để xem hồ sơ cá nhân.</p>
             <a routerLink="/login" class="btn btn-primary btn-lg">Đăng nhập</a>
           </div>
         } @else {
-          <div class="profile-grid">
             <!-- Profile card -->
-            <div class="profile-card glass-card animate-fade-in-up">
-              <div class="profile-avatar-wrapper">
+            <aside class="dashboard-sidebar animate-fade-in-up">
+              <div class="sidebar-card glass-card profile-card">
+                <div class="profile-avatar-wrapper">
                 @if (auth.currentUser()?.avatarUrl) {
                   <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" />
                 } @else {
@@ -143,10 +143,11 @@ import Tesseract from 'tesseract.js';
                 <span class="material-icons-round" style="font-size:18px">edit</span>
                 {{ isEditing() ? 'Đóng chỉnh sửa' : 'Chỉnh sửa hồ sơ' }}
               </button>
-            </div>
+              </div>
+            </aside>
 
             <!-- Right Column -->
-            <div class="profile-content">
+            <main class="dashboard-main animate-fade-in-up">
               <!-- Edit Profile Form -->
               @if (isEditing()) {
                 <div class="edit-section glass-card animate-fade-in-up">
@@ -725,8 +726,7 @@ import Tesseract from 'tesseract.js';
                   }
                 </div>
               }
-            </div>
-          </div>
+            </main>
         }
       </div>
 
@@ -937,34 +937,8 @@ import Tesseract from 'tesseract.js';
     </section>
   `,
   styles: [`
-    .profile-page {
-      padding: calc(80px + var(--space-8)) 0 var(--space-16);
-    }
-
-    .auth-required {
-      text-align: center;
-      padding: var(--space-16);
-      max-width: 500px;
-      margin: var(--space-10) auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--space-4);
-    }
-
-    .auth-required p { color: var(--text-secondary); }
-
-    .profile-grid {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: var(--space-6);
-      align-items: start;
-    }
-
     .profile-card {
       text-align: center;
-      position: sticky;
-      top: 80px;
     }
 
     .profile-avatar-wrapper {

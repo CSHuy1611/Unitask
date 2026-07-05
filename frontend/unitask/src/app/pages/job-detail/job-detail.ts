@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobService } from '../../services/job.service';
 import { AuthService } from '../../services/auth.service';
@@ -15,8 +16,8 @@ import { Job } from '../../models/job.model';
     @if (job()) {
       <section class="detail-page">
         <div class="container">
-          <a routerLink="/jobs" class="back-link animate-fade-in">
-            <span class="material-icons-round">arrow_back</span> Quay lại danh sách
+          <a (click)="goBack()" class="back-link animate-fade-in" style="cursor: pointer;">
+            <span class="material-icons-round">arrow_back</span> Quay lại
           </a>
 
           <div class="detail-grid">
@@ -224,7 +225,7 @@ import { Job } from '../../models/job.model';
           <div class="empty-state glass-card">
             <span class="material-icons-round" style="font-size:64px;color:var(--text-muted)">work_off</span>
             <h2>Không tìm thấy việc làm</h2>
-            <a routerLink="/jobs" class="btn btn-primary">Quay lại danh sách</a>
+            <a (click)="goBack()" class="btn btn-primary" style="cursor: pointer;">Quay lại</a>
           </div>
         </div>
       </section>
@@ -485,6 +486,7 @@ export class JobDetailComponent implements OnInit {
   private router = inject(Router);
   private toast = inject(ToastService);
   auth = inject(AuthService);
+  locationService = inject(Location);
 
   job = signal<Job | null>(null);
   applied = signal(false);
@@ -594,5 +596,13 @@ export class JobDetailComponent implements OnInit {
       },
       error: () => this.toast.error('Lỗi kết nối khi nộp bằng chứng.')
     });
+  }
+
+  goBack() {
+    if (window.history.length > 1) {
+      this.locationService.back();
+    } else {
+      this.router.navigate(['/jobs']);
+    }
   }
 }

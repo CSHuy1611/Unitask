@@ -131,11 +131,10 @@ namespace UniTask.Business.Services
                 }
 
                 application.Status = status;
-                application.Job.Status = JobStatus.InProgress;
 
-                // If now full, reject all other pending apps
-                if (currentAcceptedCount + 1 == application.Job.HeadCount)
+                if (currentAcceptedCount + 1 >= application.Job.HeadCount)
                 {
+                    application.Job.Status = JobStatus.InProgress;
                     var pendingApps = await _context.Applications
                         .Where(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Applied || a.Status == ApplicationStatus.Interviewing))
                         .ToListAsync();
