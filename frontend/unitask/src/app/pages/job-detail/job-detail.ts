@@ -177,6 +177,10 @@ import { Job } from '../../models/job.model';
                     <button class="btn btn-danger btn-lg full-width" disabled style="background:#EF4444; border-color:#EF4444; color:white">
                       <span class="material-icons-round">block</span> Tài khoản bị khóa
                     </button>
+                  } @else if (job()!.status !== 'open') {
+                    <button class="btn btn-secondary btn-lg full-width" disabled>
+                      <span class="material-icons-round">block</span> Đã tuyển đủ người
+                    </button>
                   } @else if (applied()) {
                     <button class="btn btn-secondary btn-lg full-width" disabled>
                       <span class="material-icons-round">check</span> Đã ứng tuyển
