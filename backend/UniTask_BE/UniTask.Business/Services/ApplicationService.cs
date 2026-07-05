@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
 using UniTask.Business.DTOs.Application;
 using UniTask.Business.Interfaces;
 using UniTask.DataAcesss;
@@ -10,10 +11,12 @@ namespace UniTask.Business.Services
     public class ApplicationService : IApplicationService
     {
         private readonly AppDbContext _context;
+        private readonly Microsoft.AspNetCore.SignalR.IHubContext<Hubs.DashboardHub> _hubContext;
 
-        public ApplicationService(AppDbContext context)
+        public ApplicationService(AppDbContext context, Microsoft.AspNetCore.SignalR.IHubContext<Hubs.DashboardHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task<ApplicationDto?> ApplyJobAsync(int jobId, string studentId, ApplicationCreateDto dto)
@@ -158,6 +161,7 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", application.JobId);
             return true;
         }
 
@@ -204,6 +208,7 @@ namespace UniTask.Business.Services
             application.CheckInOtp = null; // Clear OTP
             
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckInOccurred", application.JobId);
             return true;
         }
 
@@ -225,6 +230,7 @@ namespace UniTask.Business.Services
             application.Job.Status = JobStatus.PendingConfirmation;
             
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", application.JobId);
             return true;
         }
 
@@ -295,6 +301,7 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationApprovedOccurred", application.JobId);
             return true;
         }
 

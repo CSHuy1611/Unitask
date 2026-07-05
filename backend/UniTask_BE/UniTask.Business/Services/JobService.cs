@@ -264,6 +264,7 @@ namespace UniTask.Business.Services
             job.Benefits = dto.Benefits.Select(b => new JobBenefit { Content = b }).ToList();
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("JobCreated");
             return true;
         }
 
@@ -297,6 +298,7 @@ namespace UniTask.Business.Services
 
             _context.Jobs.Remove(job);
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("JobCreated");
             return true;
         }
 

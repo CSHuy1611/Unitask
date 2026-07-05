@@ -6,7 +6,10 @@ import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
 import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
+import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../config/api.config';
+import { SignalRService } from '../../services/signalr.service';
+import { Subscription } from 'rxjs';
 import Tesseract from 'tesseract.js';
 
 @Component({
@@ -1583,6 +1586,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private jobService = inject(JobService);
   private toast = inject(ToastService);
+  private signalRService = inject(SignalRService);
+
+  private subscriptions = new Subscription();
 
   isEditing = signal(false);
   editSuccess = signal(false);
@@ -1653,12 +1659,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user || user.role !== 'student') return [];
 
-    const completedAppJobIds = this.myApplications()
+    const historyAppJobIds = this.myApplications()
       .filter(app => app.status === 5 || app.status === 'Completed' || app.status === 'completed')
       .map(app => app.jobId);
 
     return this.jobService.getAllJobs().filter(j =>
-      completedAppJobIds.includes(j.id)
+      historyAppJobIds.includes(j.id) || 
+      (j.selectedStudentId === user.id && (j.status === 'completed' || j.status === 'disputed' || j.status === 'closed'))
     ).map(j => {
       const myApp = this.myApplications().find(app => app.jobId === j.id);
       return {
@@ -1740,6 +1747,57 @@ export class ProfileComponent implements OnInit, OnDestroy {
       if (this.auth.isStudent() && this.auth.currentUser()?.ekycStatus !== 'verified') {
         this.loadEkycLibraries();
       }
+
+      this.subscriptions.add(
+        this.signalRService.applicationApprovedOccurred$.subscribe(jobId => {
+          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
+          if (hasMyApplication) {
+            this.toast.success('Nhà tuyển dụng vừa Nghiệm thu thành công! Bạn đã nhận được lương vào Ví.');
+            this.refreshStudentApplications();
+            this.jobService.fetchJobs();
+            this.auth.fetchBalance().subscribe();
+          }
+        })
+      );
+
+      this.subscriptions.add(
+        this.signalRService.applicationCheckInOccurred$.subscribe(jobId => {
+          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
+          if (hasMyApplication) {
+            // Không hiện toast ở đây vì submitCheckIn() đã hiện rồi
+            this.refreshStudentApplications();
+            this.jobService.fetchJobs();
+          }
+        })
+      );
+
+      this.subscriptions.add(
+        this.signalRService.applicationCheckOutOccurred$.subscribe(jobId => {
+          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
+          if (hasMyApplication) {
+            // Không hiện toast ở đây vì submitCheckOut() đã hiện rồi
+            this.refreshStudentApplications();
+            this.jobService.fetchJobs();
+          }
+        })
+      );
+
+      this.subscriptions.add(
+        this.signalRService.applicationStatusChanged$.subscribe(jobId => {
+          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
+          if (hasMyApplication) {
+            this.refreshStudentApplications();
+            this.jobService.fetchJobs();
+          }
+        })
+      );
+
+      // Khi có job mới/cập nhật, load lại danh sách để appliedJobs/workingJobs cập nhật
+      this.subscriptions.add(
+        this.signalRService.jobCreated$.subscribe(() => {
+          this.jobService.fetchJobs();
+        })
+      );
     }
   }
 
@@ -2325,6 +2383,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopCamera();
+    this.subscriptions.unsubscribe();
   }
 
   ekycStepMessage = signal<string>('');

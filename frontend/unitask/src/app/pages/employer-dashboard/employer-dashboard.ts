@@ -8,6 +8,8 @@ import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
 import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../config/api.config';
+import { SignalRService } from '../../services/signalr.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-employer-dashboard',
