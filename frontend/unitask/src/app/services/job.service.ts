@@ -219,14 +219,7 @@ export class JobService {
   }
 
   getJobApplications(jobId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${API_BASE_URL}/application/job/${jobId}`).pipe(
-      map(apps => apps.map(app => {
-        let mappedStatus = app.status;
-        if (app.status === 2) mappedStatus = 1;
-        else if (app.status === 3) mappedStatus = 2;
-        return { ...app, status: mappedStatus };
-      }))
-    );
+    return this.http.get<any[]>(`${API_BASE_URL}/application/job/${jobId}`);
   }
 
   getMyApplications(): Observable<any[]> {
