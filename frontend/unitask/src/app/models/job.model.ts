@@ -42,4 +42,5 @@ export interface Job {
   disputedDate?: string;
   checkInTime?: string;
   checkOutTime?: string;
+  isAppliedByCurrentUser?: boolean;
 }

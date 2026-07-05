@@ -605,10 +605,6 @@ import Tesseract from 'tesseract.js';
                                   </button>
                                 </div>
                               }
-                              
-                              <button type="button" class="btn btn-danger btn-sm" (click)="openReportModal(job)" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-                                <span class="material-icons-round" style="font-size:16px">report_problem</span> Khiếu nại
-                              </button>
                             </div>
                           }
 
