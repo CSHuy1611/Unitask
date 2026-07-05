@@ -430,6 +430,9 @@ import { Subscription } from 'rxjs';
                         </div>
                       } @else {
                         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px">
+                          @if (job.status === 'open' && (job.applications || 0) >= (job.headCount || 1) && (job.acceptedCount || 0) < (job.headCount || 1)) {
+                            <span class="badge badge-warning" style="padding: 6px 12px; font-size: 13px; margin-right: 8px; background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3);">Đủ ứng viên - Cần duyệt</span>
+                          }
                           <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
                             <span class="material-icons-round" style="font-size:16px; margin-right:4px;">group</span> Danh sách sinh viên ({{ job.applications || 0 }}/{{ job.headCount || 1 }})
                           </button>
@@ -518,6 +521,21 @@ import { Subscription } from 'rxjs';
                     <span class="material-icons-round">close</span>
                   </button>
                 </div>
+
+                @if (selectedJobForApplicants()?.status === 'open') {
+                  @if ((selectedJobForApplicants()?.acceptedCount || 0) < (selectedJobForApplicants()?.headCount || 1)) {
+                    <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; color: #D97706; display: flex; align-items: flex-start; gap: 8px;">
+                      <span class="material-icons-round" style="font-size: 20px; margin-top: 2px;">warning</span>
+                      <div>
+                        <strong>Lưu ý:</strong> Công việc này cần tuyển <strong>{{ selectedJobForApplicants()?.headCount }}</strong> người. Bạn mới duyệt <strong>{{ selectedJobForApplicants()?.acceptedCount || 0 }}</strong> người.<br>
+                        Sinh viên chỉ có thể bắt đầu làm việc (Check-in) khi bạn đã giao việc cho <strong>ĐỦ</strong> số lượng yêu cầu.
+                        @if (jobApplications().length >= (selectedJobForApplicants()?.headCount || 1)) {
+                          <br><span style="color: var(--success); font-weight: 500;">Bạn đã có đủ số lượng ứng viên đăng ký. Hãy xem xét và giao việc ngay!</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                }
                 
                 <div class="applicants-list d-flex flex-col gap-4">
                   @for (app of jobApplications(); track app.id) {
