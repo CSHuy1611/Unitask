@@ -1789,9 +1789,12 @@ export class EmployerDashboardComponent implements OnInit {
     this.jobService.assignJob(applicationId).subscribe({
       next: (res) => {
         if (res.success) {
-          this.selectedJobForApplicants.set(null); // close modal
           this.userToAssign.set(null); // close confirm modal
           this.toast.success('Giao việc thành công!');
+          // Refresh the list instead of closing the modal
+          if (this.selectedJobForApplicants()) {
+            this.viewApplicants(this.selectedJobForApplicants()!);
+          }
         } else {
           this.toast.error(res.message || 'Có lỗi xảy ra khi giao việc');
         }
