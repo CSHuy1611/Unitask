@@ -77,6 +77,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     <th>Liên hệ</th>
                     <th>Trạng thái eKYC</th>
                     <th>Ngày tham gia</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -127,6 +128,13 @@ import { API_BASE_URL } from '../../config/api.config';
                         </span>
                       </td>
                       <td><span class="text-muted">{{ user.createdAt }}</span></td>
+                      <td>
+                        @if (user.ekycStatus !== 'verified') {
+                          <button class="btn btn-sm btn-primary" (click)="forceVerify(user.id)" style="font-size: 11px; padding: 4px 8px;">
+                            Ép XT (Test)
+                          </button>
+                        }
+                      </td>
                     </tr>
                   } @empty {
                     <tr>
@@ -478,5 +486,19 @@ export class AdminUsersComponent {
 
   loadMore() {
     this.loadUsers(this.currentPage() + 1);
+  }
+
+  forceVerify(userId: string) {
+    if (confirm('Bạn có chắc muốn ép xác thực người dùng này không?')) {
+      this.http.post<any>(`${API_BASE_URL}/admin/users/${userId}/force-verify`, {}).subscribe({
+        next: (res) => {
+          this.toast.success(res.message);
+          this.loadUsers(1);
+        },
+        error: (err) => {
+          this.toast.error('Không thể ép xác thực.');
+        }
+      });
+    }
   }
 }
