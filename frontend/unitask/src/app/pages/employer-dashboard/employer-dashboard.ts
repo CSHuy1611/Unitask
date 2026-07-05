@@ -568,6 +568,11 @@ import { API_BASE_URL } from '../../config/api.config';
                           <span class="badge badge-danger" style="padding: 6px 16px; border-radius: 8px; font-size: 0.9rem;">Đã bùng kèo</span>
                         } @else if (app.status === 7 || app.status === 'Disputed') {
                           <span class="badge badge-warning" style="background:rgba(239,68,68,0.15); color:#EF4444; padding: 6px 16px; border-radius: 8px; font-size: 0.9rem;">Đang tranh chấp</span>
+                        } @else if (app.status === 0 || app.status === 'Applied') {
+                          <span class="badge badge-secondary" style="background:rgba(255,255,255,0.05); color:var(--text-secondary); padding: 4px 16px; border-radius: 8px; font-weight: 600;">Chờ duyệt (Dự bị)</span>
+                          <button class="btn btn-primary btn-sm" (click)="userToAssign.set(app.id)" style="gap:6px; font-size:0.85rem; border-radius: 20px; padding: 6px 24px; margin-top: 4px;">
+                            <span class="material-icons-round" style="font-size:16px">person_add</span> Giao việc
+                          </button>
                         }
                       </div>
 

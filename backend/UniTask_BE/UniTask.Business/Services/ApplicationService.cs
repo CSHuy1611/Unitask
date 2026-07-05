@@ -64,21 +64,6 @@ namespace UniTask.Business.Services
                 AppliedDate = DateTime.UtcNow
             };
 
-            // Auto-assign logic
-            var currentAcceptedCount = await _context.Applications
-                .CountAsync(a => a.JobId == jobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed || a.Status == ApplicationStatus.Disputed || a.Status == ApplicationStatus.NoShow));
-
-            if (currentAcceptedCount < job.HeadCount)
-            {
-                application.Status = ApplicationStatus.Accepted;
-                currentAcceptedCount++;
-
-                if (currentAcceptedCount >= job.HeadCount)
-                {
-                    job.Status = JobStatus.InProgress;
-                }
-            }
-
             _context.Applications.Add(application);
 
             // Update Job ApplicationsCount
@@ -138,7 +123,7 @@ namespace UniTask.Business.Services
             {
                 // Count current accepted/completed apps
                 var currentAcceptedCount = await _context.Applications
-                    .CountAsync(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed));
+                    .CountAsync(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed || a.Status == ApplicationStatus.Interviewing));
 
                 if (currentAcceptedCount >= application.Job.HeadCount)
                 {
@@ -147,17 +132,11 @@ namespace UniTask.Business.Services
 
                 application.Status = status;
 
+                // We NO LONGER auto-reject other applied students. 
+                // They stay as 'Applied' (Waitlist) so the employer can pick them if someone drops out.
                 if (currentAcceptedCount + 1 >= application.Job.HeadCount)
                 {
                     application.Job.Status = JobStatus.InProgress;
-                    var pendingApps = await _context.Applications
-                        .Where(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Applied || a.Status == ApplicationStatus.Interviewing))
-                        .ToListAsync();
-
-                    foreach (var pendingApp in pendingApps)
-                    {
-                        pendingApp.Status = ApplicationStatus.Rejected;
-                    }
                 }
             }
             else
