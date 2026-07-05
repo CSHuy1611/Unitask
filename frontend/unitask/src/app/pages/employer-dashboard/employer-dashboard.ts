@@ -154,10 +154,12 @@ import { API_BASE_URL } from '../../config/api.config';
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Số lượng tuyển <span style="color: #EF4444">*</span></label>
                       <input type="number" class="form-input" [(ngModel)]="formData.headCount" name="headCount" placeholder="VD: 2" min="1" max="100" required>
+                      @if (formErrors['headCount']) { <span class="error-text">{{ formErrors['headCount'] }}</span> }
                     </div>
                     <div class="form-group" style="margin: 0;">
-                      <label class="form-label">Địa điểm</label>
-                      <input type="text" class="form-input" placeholder="VD: TP. Hồ Chí Minh" [(ngModel)]="formData.location" name="location">
+                      <label class="form-label">Địa điểm <span style="color: #EF4444">*</span></label>
+                      <input type="text" class="form-input" placeholder="VD: TP. Hồ Chí Minh" [(ngModel)]="formData.location" name="location" required>
+                      @if (formErrors['location']) { <span class="error-text">{{ formErrors['location'] }}</span> }
                     </div>
                   </div>
                 </div>
@@ -396,38 +398,44 @@ import { API_BASE_URL } from '../../config/api.config';
                       <span class="stat-mini">
                         <span class="material-icons-round">visibility</span> {{ job.views }}
                       </span>
-                      <span class="stat-mini">
-                        <span class="material-icons-round">people</span> {{ job.acceptedCount || 0 }}/{{ job.headCount || 1 }}
+                      <span class="stat-mini" title="Số sinh viên đã được giao việc">
+                        <span class="material-icons-round">person_check</span> Đã giao: {{ job.acceptedCount || 0 }}/{{ job.headCount || 1 }}
                       </span>
-                      @if (jobService.isJobEditable(job) && job.status === 'open') {
-                        <button class="btn btn-secondary btn-sm" (click)="onEditJob(job)">
-                          <span class="material-icons-round" style="font-size:16px">edit</span> Sửa
-                        </button>
-                      }
-                      
-                      @if (job.status === 'open' || job.status === 'in_progress') {
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px">
-                          <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content: flex-end;">
-                            <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
-                              <span class="material-icons-round" style="font-size:16px">group</span> Quản lý Sinh viên ({{ job.acceptedCount || 0 }}/{{ job.headCount || 1 }})
-                            </button>
-                          </div>
+                      @if (job.status !== 'open') {
+                        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px">
                           @if (job.status === 'in_progress') {
-                            <span class="badge badge-warning" style="align-self: flex-end;">Đang thực hiện</span>
+                            <span class="badge badge-warning" style="padding: 6px 12px; font-size: 13px;">Đang thực hiện</span>
+                          } @else if (job.status === 'pending_confirmation') {
+                            <span class="badge badge-info" style="padding: 6px 12px; font-size: 13px;">Chờ xác nhận</span>
+                          } @else if (job.status === 'completed') {
+                            <span class="badge badge-success" style="padding: 6px 12px; font-size: 13px;">✓ Đã hoàn thành</span>
+                          } @else if (job.status === 'disputed') {
+                            <span class="badge badge-warning" style="padding: 6px 12px; font-size: 13px; background: rgba(239,68,68,0.15); color: #EF4444;">Đang tranh chấp</span>
+                          } @else if (job.status === 'closed') {
+                            <span class="badge badge-secondary" style="padding: 6px 12px; font-size: 13px;">Đã đóng</span>
+                          }
+
+                          <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
+                            <span class="material-icons-round" style="font-size:16px; margin-right:4px;">group</span> Danh sách sinh viên ({{ job.applications || 0 }}/{{ job.headCount || 1 }})
+                          </button>
+
+                          @if (job.status === 'completed') {
+                            <button class="btn btn-secondary btn-sm" (click)="openReviewModal(job)">
+                              <span class="material-icons-round" style="font-size:16px; margin-right:4px;">rate_review</span> Đánh giá
+                            </button>
                           }
                         </div>
-                      } @else if (job.status === 'completed') {
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px">
-                          <span class="badge badge-success">Đã hoàn thành</span>
-                          <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)" style="gap:4px">
-                            <span class="material-icons-round" style="font-size:16px">group</span> Danh sách ứng viên
+                      } @else {
+                        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px">
+                          <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
+                            <span class="material-icons-round" style="font-size:16px; margin-right:4px;">group</span> Danh sách sinh viên ({{ job.applications || 0 }}/{{ job.headCount || 1 }})
                           </button>
-                          <button class="btn btn-secondary btn-sm" (click)="openReviewModal(job)" style="gap:4px">
-                            <span class="material-icons-round" style="font-size:16px">rate_review</span> Đánh giá sinh viên
-                          </button>
+                          @if (jobService.isJobEditable(job)) {
+                            <button class="btn btn-secondary btn-sm" (click)="onEditJob(job)">
+                              <span class="material-icons-round" style="font-size:16px; margin-right:4px;">edit</span> Sửa
+                            </button>
+                          }
                         </div>
-                      } @else if (job.status === 'closed') {
-                        <span class="badge badge-secondary">Đã đóng (Tranh chấp)</span>
                       }
                     </div>
                   </div>
@@ -500,9 +508,9 @@ import { API_BASE_URL } from '../../config/api.config';
           <!-- Applicants Modal -->
           @if (selectedJobForApplicants()) {
             <div class="modal-overlay animate-fade-in">
-              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 1000px; max-height: 85vh; overflow-y: auto;">
                 <div class="modal-header d-flex justify-between items-center mb-6">
-                  <h3 style="font-size:1.25rem; font-weight:700">Ứng viên: {{ selectedJobForApplicants()?.title }}</h3>
+                  <h3 style="font-size:1.5rem; font-weight:700">Danh sách ứng viên: {{ selectedJobForApplicants()?.title }}</h3>
                   <button class="btn btn-secondary icon-btn" (click)="selectedJobForApplicants.set(null)">
                     <span class="material-icons-round">close</span>
                   </button>
@@ -510,101 +518,236 @@ import { API_BASE_URL } from '../../config/api.config';
                 
                 <div class="applicants-list d-flex flex-col gap-4">
                   @for (app of jobApplications(); track app.id) {
-                    <div class="applicant-card p-4 rounded-lg d-flex flex-col gap-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; border-radius: 8px;">
-                      <div class="d-flex justify-between items-start" style="flex-wrap: wrap; gap: 12px; width: 100%;">
-                        <div class="d-flex items-center gap-3 w-full">
-                          <div class="avatar-sm" style="width:52px; height:52px; border-radius:50%; background:var(--primary-gradient); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:1.2rem; overflow:hidden; border: 2px solid var(--primary-light)">
-                            @if (app.studentAvatarUrl) {
-                              <img [src]="app.studentAvatarUrl" alt="Avatar" style="width:100%; height:100%; object-fit:cover" />
-                            } @else {
-                              {{ app.studentName ? app.studentName[0] : 'U' }}
+                    <div class="applicant-card p-5 rounded-lg" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center;">
+                      
+                      <!-- Left Column: Student Info & Academic -->
+                      <div style="flex: 1; min-width: 350px; display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <!-- Header: Avatar & Name -->
+                        <div class="d-flex items-center gap-4">
+                          <div style="position: relative;">
+                            <div style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, var(--primary), var(--primary-light)); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:1.75rem; overflow:hidden; border: 3px solid rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);">
+                              @if (app.studentAvatarUrl) {
+                                <img [src]="app.studentAvatarUrl" alt="Avatar" style="width:100%; height:100%; object-fit:cover" />
+                              } @else {
+                                {{ app.studentName ? app.studentName[0] : 'U' }}
+                              }
+                            </div>
+                            @if (app.studentEkycStatus === 'Verified' || app.studentEkycStatus === 'verified') {
+                              <div style="position: absolute; bottom: 0; right: -4px; background: var(--bg-card); border-radius: 50%; padding: 2px;">
+                                <span class="material-icons-round" style="font-size:22px; color:var(--success); background: white; border-radius: 50%;" title="Đã định danh eKYC">verified</span>
+                              </div>
                             }
                           </div>
                           <div style="flex: 1;">
-                            <div class="d-flex items-center gap-2">
-                              <strong style="color:var(--text-primary); font-size:1.15rem">{{ app.studentName }}</strong>
-                              @if (app.studentEkycStatus === 'Verified' || app.studentEkycStatus === 'verified') {
-                                <span class="material-icons-round" style="font-size:18px; color:var(--success)" title="Đã định danh eKYC">verified</span>
-                              }
+                            <h4 style="color:var(--text-primary); font-size:1.35rem; font-weight: 700; margin: 0 0 4px 0;">{{ app.studentName }}</h4>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size:0.95rem; color:var(--text-secondary);">
+                              <span class="material-icons-round" style="font-size:18px; color: var(--primary-light);">school</span>
+                              <span>{{ app.studentUniversity }}</span>
                             </div>
-                            <span style="font-size:0.9rem; color:var(--text-secondary); display:block; margin-top:2px;">
-                              🎓 {{ app.studentUniversity }}
-                            </span>
-                            <span style="font-size:0.85rem; color:var(--text-muted); display:block; margin-top:2px;">
-                              📚 Ngành: {{ app.studentMajor }} &bull; Năm thứ {{ app.studentYear }}
-                            </span>
                           </div>
-                          @if (app.studentCVUrl) {
-                            <a [href]="app.studentCVUrl" target="_blank" class="btn btn-secondary btn-sm" style="background: rgba(var(--primary-rgb), 0.15); color: var(--primary-light); border-color: var(--primary-light); font-size: 0.8rem; padding: 6px 10px;" title="Xem CV trên Cloudinary">
-                              <span class="material-icons-round" style="font-size:16px">insert_drive_file</span> Xem CV
-                            </a>
+                        </div>
+
+                        <!-- Info Grid: Major, Year, GPA -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+                          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Chuyên ngành</span>
+                            <span style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="app.studentMajor">{{ app.studentMajor || 'Chưa cập nhật' }}</span>
+                          </div>
+                          
+                          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Sinh viên</span>
+                            <span style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">Năm thứ {{ app.studentYear || '?' }}</span>
+                          </div>
+
+                          <div style="background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.15); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 0.8rem; color: rgba(245,158,11,0.8); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Điểm GPA</span>
+                            <div style="display: flex; align-items: baseline; gap: 4px;">
+                              <span style="font-size: 1.1rem; color: var(--warning); font-weight: 700;">{{ app.studentGpa ? app.studentGpa.toFixed(2) : '--' }}</span>
+                              <span style="font-size: 0.85rem; color: rgba(245,158,11,0.6);">/ 4.00</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Bio Blockquote -->
+                        @if (app.studentBio) {
+                          <div style="position: relative; padding: 16px 20px; background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.08), transparent); border-left: 4px solid var(--primary-light); border-radius: 0 8px 8px 0;">
+                            <span class="material-icons-round" style="position: absolute; top: -10px; left: 10px; font-size: 24px; color: var(--primary-light); opacity: 0.5; background: var(--bg-card); padding: 0 4px;">format_quote</span>
+                            <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; margin: 0; font-style: italic;">
+                              {{ app.studentBio }}
+                            </p>
+                          </div>
+                        }
+
+                        <!-- Skills Tags -->
+                        @if (app.studentSkills && app.studentSkills.length > 0) {
+                          <div class="d-flex gap-2 items-center" style="flex-wrap:wrap; margin-top: auto;">
+                            @for (skill of app.studentSkills; track skill) {
+                              <span style="font-size:0.85rem; background: rgba(255,255,255,0.08); color: var(--text-primary); padding: 6px 14px; border-radius: 20px; font-weight: 500; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                {{ skill }}
+                              </span>
+                            }
+                          </div>
+                        }
+
+                      </div>
+
+                      <!-- Right Column: Status & Actions -->
+                      <div style="width: 320px; min-width: 280px; display: flex; flex-direction: column; gap: 10px;">
+
+                        <!-- Status Badge (top) -->
+                        <div>
+                          @if (app.status == 2 || app.status === 'Accepted' || app.status === 'accepted') {
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 10px 16px;">
+                              <span class="material-icons-round" style="font-size: 20px; color: var(--warning);">work</span>
+                              <span style="font-size: 0.95rem; font-weight: 700; color: var(--warning);">Đang thực hiện</span>
+                            </div>
+                          } @else if (app.status == 5 || app.status === 'Completed' || app.status === 'completed') {
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 10px 16px;">
+                              <span class="material-icons-round" style="font-size: 20px; color: var(--success);">check_circle</span>
+                              <span style="font-size: 0.95rem; font-weight: 700; color: var(--success);">Đã nghiệm thu</span>
+                            </div>
+                          } @else if (app.status == 6 || app.status === 'NoShow' || app.status === 'noshow') {
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 10px 16px;">
+                              <span class="material-icons-round" style="font-size: 20px; color: #EF4444;">person_off</span>
+                              <span style="font-size: 0.95rem; font-weight: 700; color: #EF4444;">Đã bùng kèo</span>
+                            </div>
+                          } @else if (app.status == 7 || app.status === 'Disputed' || app.status === 'disputed') {
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 10px 16px;">
+                              <span class="material-icons-round" style="font-size: 20px; color: #EF4444;">gavel</span>
+                              <span style="font-size: 0.95rem; font-weight: 700; color: #EF4444;">Đang tranh chấp</span>
+                            </div>
+                          } @else if (app.status == 0 || app.status === 'Applied' || app.status === 'applied') {
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 16px;">
+                              <span class="material-icons-round" style="font-size: 20px; color: var(--text-secondary);">hourglass_empty</span>
+                              <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-secondary);">Chờ duyệt</span>
+                            </div>
+                          } @else if (app.status == 1 || app.status === 'Interviewing' || app.status === 'interviewing') {
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.25); border-radius: 10px; padding: 10px 16px;">
+                              <span class="material-icons-round" style="font-size: 20px; color: #3B82F6;">record_voice_over</span>
+                              <span style="font-size: 0.95rem; font-weight: 700; color: #3B82F6;">Đang phỏng vấn</span>
+                            </div>
+                          } @else if (app.status == 3 || app.status === 'Rejected' || app.status === 'rejected') {
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.15); border-radius: 10px; padding: 10px 16px;">
+                              <span class="material-icons-round" style="font-size: 20px; color: #EF4444;">do_not_disturb_alt</span>
+                              <span style="font-size: 0.95rem; font-weight: 700; color: #EF4444;">Đã từ chối</span>
+                            </div>
+                          } @else if (app.status == 4 || app.status === 'Cancelled' || app.status === 'cancelled') {
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(156,163,175,0.06); border: 1px solid rgba(156,163,175,0.2); border-radius: 10px; padding: 10px 16px;">
+                              <span class="material-icons-round" style="font-size: 20px; color: #9CA3AF;">block</span>
+                              <span style="font-size: 0.95rem; font-weight: 700; color: #9CA3AF;">Đã hủy</span>
+                            </div>
                           }
                         </div>
-                      </div>
-                      
-                      <!-- Status & Actions Centered -->
-                      <div class="d-flex flex-col items-center gap-3 w-full" style="margin-top: 8px;">
-                        @if (app.status === 2 || app.status === 'Accepted') {
-                          <span class="badge badge-warning" style="background:transparent; border:1px solid var(--warning); color:var(--warning); padding: 4px 16px; border-radius: 8px; font-weight: 600;">Đang thực hiện</span>
-                          <div class="d-flex flex-col items-center gap-2 w-full">
-                            <div class="d-flex justify-center gap-3 w-full" style="margin-bottom: 4px;">
-                              <button class="btn btn-secondary btn-sm" (click)="generateAppOtp(app, 'checkin')" style="gap:6px; font-size:0.85rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px;">
-                                <span class="material-icons-round" style="font-size:16px">login</span> OTP Check-in
+
+                        <!-- Check-in / Check-out Timeline (shown if exists) -->
+                        @if (app.checkInTime || app.checkOutTime) {
+                          <div style="background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.12); border-radius: 10px; padding: 12px 16px;">
+                            <div style="font-size: 0.8rem; color: rgba(16,185,129,0.7); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Lịch sử điểm danh</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                              <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 0.85rem; font-weight: 600;">
+                                  <span class="material-icons-round" style="font-size: 16px;">login</span>
+                                  <span>Check-in</span>
+                                </div>
+                                <span style="font-size: 0.9rem; color: var(--text-primary); font-weight: 500; padding-left: 2px;">
+                                  {{ app.checkInTime ? (app.checkInTime | date:'HH:mm') : '--:--' }}
+                                </span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted); padding-left: 2px;">
+                                  {{ app.checkInTime ? (app.checkInTime | date:'dd/MM/yyyy') : '' }}
+                                </span>
+                              </div>
+                              <div style="display: flex; flex-direction: column; gap: 4px; border-left: 1px solid rgba(16,185,129,0.1); padding-left: 10px;">
+                                <div style="display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 0.85rem; font-weight: 600;">
+                                  <span class="material-icons-round" style="font-size: 16px;">logout</span>
+                                  <span>Check-out</span>
+                                </div>
+                                <span style="font-size: 0.9rem; color: var(--text-primary); font-weight: 500; padding-left: 2px;">
+                                  {{ app.checkOutTime ? (app.checkOutTime | date:'HH:mm') : '--:--' }}
+                                </span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted); padding-left: 2px;">
+                                  {{ app.checkOutTime ? (app.checkOutTime | date:'dd/MM/yyyy') : '' }}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        }
+
+                        <!-- Action Buttons -->
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+
+                          <!-- View CV button (always show if exists) -->
+                          @if (app.studentCVUrl) {
+                            <a [href]="app.studentCVUrl" target="_blank"
+                               style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; background: rgba(var(--primary-rgb), 0.08); color: var(--primary-light); border: 1px solid rgba(var(--primary-rgb), 0.2); border-radius: 10px; font-size: 0.95rem; font-weight: 600; text-decoration: none; transition: all 0.2s; cursor: pointer;">
+                              <span class="material-icons-round" style="font-size: 18px;">description</span>
+                              Xem CV ứng viên
+                            </a>
+                          }
+
+                          <!-- Status-specific action buttons -->
+                          @if (app.status == 2 || app.status === 'Accepted' || app.status === 'accepted') {
+                            <!-- Check-in / Check-out side by side -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                              <button (click)="generateAppOtp(app, 'checkin')"
+                                      style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 12px 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: var(--text-primary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                <span class="material-icons-round" style="font-size: 22px; color: var(--success);">login</span>
+                                Check-in
                               </button>
-                              <button class="btn btn-secondary btn-sm" (click)="generateAppOtp(app, 'checkout')" style="gap:6px; font-size:0.85rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px;">
-                                <span class="material-icons-round" style="font-size:16px">logout</span> OTP Check-out
+                              <button (click)="generateAppOtp(app, 'checkout')"
+                                      style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 12px 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: var(--text-primary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                <span class="material-icons-round" style="font-size: 22px; color: var(--warning);">logout</span>
+                                Check-out
                               </button>
                             </div>
-                            <button class="btn btn-danger btn-sm" (click)="appToDispute.set(app)" style="gap:6px; font-size:0.85rem; background:transparent; color:#EF4444; border:1px solid #EF4444; border-radius: 20px; padding: 6px 20px;">
-                              <span class="material-icons-round" style="font-size:16px">gavel</span> Báo cáo vi phạm / Khiếu nại
+                            <!-- Approve -->
+                            <button (click)="appToApprove.set(app)"
+                                    style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background: white; color: #111; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                              <span class="material-icons-round" style="font-size: 20px;">verified</span>
+                              Nghiệm thu công việc
                             </button>
-                            <button class="btn btn-sm" (click)="appToApprove.set(app)" style="gap:6px; font-size:0.85rem; background: white; color: black; font-weight: 600; border-radius: 20px; padding: 6px 24px; border: none; margin-top: 4px;">
-                              <span class="material-icons-round" style="font-size:16px">check_circle</span> Nghiệm thu
+                            <!-- Report violation -->
+                            <button (click)="appToDispute.set(app)"
+                                    style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; background: transparent; color: #EF4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                              <span class="material-icons-round" style="font-size: 18px;">report_problem</span>
+                              Báo cáo vi phạm
                             </button>
-                          </div>
-                        } @else if (app.status === 5 || app.status === 'Completed') {
-                          <span class="badge badge-success" style="padding: 6px 16px; border-radius: 8px; font-size: 0.9rem;">Đã nghiệm thu</span>
-                        } @else if (app.status === 6 || app.status === 'NoShow') {
-                          <span class="badge badge-danger" style="padding: 6px 16px; border-radius: 8px; font-size: 0.9rem;">Đã bùng kèo</span>
-                        } @else if (app.status === 7 || app.status === 'Disputed') {
-                          <span class="badge badge-warning" style="background:rgba(239,68,68,0.15); color:#EF4444; padding: 6px 16px; border-radius: 8px; font-size: 0.9rem;">Đang tranh chấp</span>
-                        } @else if (app.status === 0 || app.status === 'Applied') {
-                          <span class="badge badge-secondary" style="background:rgba(255,255,255,0.05); color:var(--text-secondary); padding: 4px 16px; border-radius: 8px; font-weight: 600;">Chờ duyệt (Dự bị)</span>
-                          <button class="btn btn-primary btn-sm" (click)="userToAssign.set(app.id)" style="gap:6px; font-size:0.85rem; border-radius: 20px; padding: 6px 24px; margin-top: 4px;">
-                            <span class="material-icons-round" style="font-size:16px">person_add</span> Giao việc
-                          </button>
-                        }
-                      </div>
 
-                      <!-- Timeline for checkin/out -->
-                      @if ((app.checkInTime || app.checkOutTime) && app.status !== 6 && app.status !== 7) {
-                        <div style="display:flex; justify-content:center; gap: 24px; padding:8px 12px; background:rgba(16,185,129,0.05); border-radius:6px; font-size:0.85rem; width: 100%;">
-                          <div style="color:var(--success)">
-                            <strong>Check-in:</strong> {{ app.checkInTime ? (app.checkInTime | date:'HH:mm dd/MM') : 'Chưa' }}
-                          </div>
-                          <div style="color:var(--success)">
-                            <strong>Check-out:</strong> {{ app.checkOutTime ? (app.checkOutTime | date:'HH:mm dd/MM') : 'Chưa' }}
-                          </div>
+                          } @else if (app.status == 0 || app.status === 'Applied' || app.status === 'applied') {
+                            <!-- Assign job -->
+                            <button (click)="userToAssign.set(app.id)"
+                                    style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background: var(--primary-gradient); color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.35); transition: all 0.2s; width: 100%;">
+                              <span class="material-icons-round" style="font-size: 20px;">person_add</span>
+                              Giao việc cho ứng viên
+                            </button>
+
+                          } @else if (app.status == 1 || app.status === 'Interviewing' || app.status === 'interviewing') {
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 100px; background: rgba(59,130,246,0.05); border: 1px dashed rgba(59,130,246,0.25); border-radius: 10px; padding: 16px;">
+                              <span class="material-icons-round" style="font-size: 28px; color: rgba(59,130,246,0.6);">schedule</span>
+                              <span style="font-size: 0.9rem; color: #3B82F6; font-weight: 500; text-align: center;">Đang trong giai đoạn<br>phỏng vấn</span>
+                            </div>
+
+                          } @else if (app.status == 3 || app.status === 'Rejected' || app.status === 'rejected') {
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 100px; background: rgba(239,68,68,0.02); border: 1px dashed rgba(239,68,68,0.15); border-radius: 10px; padding: 16px;">
+                              <span class="material-icons-round" style="font-size: 28px; color: rgba(239,68,68,0.5);">do_not_disturb_alt</span>
+                              <span style="font-size: 0.9rem; color: #EF4444; font-weight: 500; text-align: center;">Hồ sơ không phù hợp</span>
+                              <span style="font-size: 0.8rem; color: var(--text-muted); text-align: center;">Hệ thống tự từ chối khi<br>công việc đủ ứng viên</span>
+                            </div>
+
+                          } @else if (app.status == 4 || app.status === 'Cancelled' || app.status === 'cancelled') {
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 100px; background: rgba(156,163,175,0.03); border: 1px dashed rgba(156,163,175,0.2); border-radius: 10px; padding: 16px;">
+                              <span class="material-icons-round" style="font-size: 28px; color: rgba(156,163,175,0.5);">block</span>
+                              <span style="font-size: 0.9rem; color: #9CA3AF; font-weight: 500; text-align: center;">Ứng viên đã tự hủy<br>ứng tuyển</span>
+                            </div>
+
+                          } @else if (app.status == 5 || app.status === 'Completed' || app.status === 'completed') {
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 80px; background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.15); border-radius: 10px; padding: 16px;">
+                              <span class="material-icons-round" style="font-size: 28px; color: var(--success);">task_alt</span>
+                              <span style="font-size: 0.9rem; color: var(--success); font-weight: 600; text-align: center;">Công việc hoàn thành</span>
+                            </div>
+                          }
+
                         </div>
-                      }
-
-                      <!-- Student Academics & Bio -->
-                      <div class="student-academic-details" style="padding: 12px 16px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border-left: 3px solid var(--primary-light); display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; width: 100%;">
-                          <span style="color:var(--text-secondary)">Điểm trung bình tích lũy GPA:</span>
-                          <strong style="color:var(--warning); font-size:1.1rem">{{ app.studentGpa ? app.studentGpa.toFixed(2) : 'Chưa cập nhật' }} / 4.00</strong>
-                        </div>
-                        @if (app.studentBio) {
-                          <div style="font-size:0.95rem; color:var(--text-secondary); line-height:1.5; font-style:italic;">
-                            "{{ app.studentBio }}"
-                          </div>
-                        }
-                      </div>
-
-                      <div class="d-flex gap-2 items-center" style="flex-wrap:wrap; width: 100%;">
-                        @for (skill of app.studentSkills; track skill) {
-                          <span class="badge badge-secondary" style="font-size:0.8rem; background: rgba(255,255,255,0.08); color: var(--text-secondary); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">{{ skill }}</span>
-                        }
                       </div>
                     </div>
                   } @empty {
@@ -1607,9 +1750,11 @@ export class EmployerDashboardComponent implements OnInit {
     let hasError = false;
 
     if (!this.formData.title) { this.formErrors['title'] = 'Vui lòng nhập tiêu đề.'; hasError = true; }
+    if (!this.formData.location) { this.formErrors['location'] = 'Vui lòng nhập địa điểm.'; hasError = true; }
     if (!this.formData.category) { this.formErrors['category'] = 'Vui lòng chọn danh mục.'; hasError = true; }
     if (!this.formData.description) { this.formErrors['description'] = 'Vui lòng nhập mô tả công việc.'; hasError = true; }
     if (!this.formData.deadline) { this.formErrors['deadline'] = 'Vui lòng chọn hạn nộp hồ sơ.'; hasError = true; }
+    if (!this.formData.headCount || this.formData.headCount < 1) { this.formErrors['headCount'] = 'Số lượng tuyển phải từ 1 trở lên.'; hasError = true; }
     
     if (this.formData.deadline) {
       const today = new Date();
@@ -1793,7 +1938,9 @@ export class EmployerDashboardComponent implements OnInit {
           this.toast.success('Giao việc thành công!');
           // Refresh the list instead of closing the modal
           if (this.selectedJobForApplicants()) {
-            this.viewApplicants(this.selectedJobForApplicants()!);
+            const currentJob = this.selectedJobForApplicants()!;
+            currentJob.acceptedCount = (currentJob.acceptedCount || 0) + 1; // Update UI immediately
+            this.viewApplicants(currentJob);
           }
         } else {
           this.toast.error(res.message || 'Có lỗi xảy ra khi giao việc');
