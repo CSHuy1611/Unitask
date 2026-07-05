@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -853,7 +854,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     {{ generatedOtp() }}
                   </span>
                 </div>
-                <button class="btn btn-primary" style="width:100%" (click)="generatedOtp.set(''); stopPolling()">Đóng</button>
+                <button class="btn btn-primary" style="width:100%" (click)="generatedOtp.set(''); stopOtpWaiting()">Đóng</button>
               </div>
             </div>
           }
@@ -1411,13 +1412,18 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   postMessage = signal('');
   editingJobId = signal<number | null>(null);
 
-  // Polling properties for OTP
-  pollingInterval: any = null;
-  pollingAppId: number | null = null;
-  pollingJobId: number | null = null;
+  // SignalR properties for OTP Real-time
+  private hubConnection?: HubConnection;
+  waitingOtpAppId: number | null = null;
+  waitingJobId: number | null = null;
 
   ngOnDestroy() {
-    this.stopPolling();
+    this.stopOtpWaiting();
+    if (this.hubConnection) {
+      this.hubConnection.stop()
+        .then(() => console.log('SignalR connection stopped.'))
+        .catch((err) => console.error('Error stopping SignalR:', err));
+    }
   }
 
   showPackagesModal = signal(false);
@@ -1607,7 +1613,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Refresh latest user profile, balance, and jobs list from DB
+    this.connectSignalR();
     this.auth.fetchProfile().subscribe({
       error: (err) => console.error('Failed to refresh employer profile:', err)
     });
@@ -1972,9 +1978,8 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
           this.otpType.set(type);
           this.generatedOtp.set(res.otp);
 
-          this.pollingAppId = app.id;
-          this.pollingJobId = app.jobId;
-          this.startPolling(type);
+          this.waitingOtpAppId = app.id;
+          this.waitingJobId = app.jobId;
         } else {
           this.toast.error(res.message || `Không thể tạo OTP ${type}.`);
         }
@@ -1983,35 +1988,47 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  startPolling(type: 'checkin' | 'checkout') {
-    if (this.pollingInterval) clearInterval(this.pollingInterval);
-    
-    this.pollingInterval = setInterval(() => {
-      if (!this.pollingJobId) return;
-      
-      this.jobService.getJobApplications(this.pollingJobId).subscribe(apps => {
-        const app = apps.find(a => a.id === this.pollingAppId);
-        if (app) {
-          if ((type === 'checkin' && app.checkInTime) || (type === 'checkout' && app.checkOutTime)) {
-            this.stopPolling();
-            this.generatedOtp.set('');
-            this.toast.success(`✅ Sinh viên đã ${type === 'checkin' ? 'Check-in' : 'Check-out'} thành công!`);
-            if (this.selectedJobForApplicants()) {
-              this.viewApplicants(this.selectedJobForApplicants()!);
-            }
-          }
-        }
-      });
-    }, 3000);
+  private connectSignalR() {
+    const hubUrl = API_BASE_URL.endsWith('/api')
+      ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) + '/hub/dashboard'
+      : '/hub/dashboard';
+
+    this.hubConnection = new HubConnectionBuilder()
+      .withUrl(hubUrl)
+      .withAutomaticReconnect()
+      .build();
+
+    this.hubConnection.on('CheckInSuccess', (appId: number) => {
+      console.log('[SignalR] CheckInSuccess received for appId:', appId);
+      if (this.waitingOtpAppId === appId && this.otpType() === 'checkin') {
+        this.handleOtpSuccess('checkin');
+      }
+    });
+
+    this.hubConnection.on('CheckOutSuccess', (appId: number) => {
+      console.log('[SignalR] CheckOutSuccess received for appId:', appId);
+      if (this.waitingOtpAppId === appId && this.otpType() === 'checkout') {
+        this.handleOtpSuccess('checkout');
+      }
+    });
+
+    this.hubConnection.start()
+      .then(() => console.log('Employer SignalR connection established successfully.'))
+      .catch((err) => console.error('Error starting SignalR connection:', err));
   }
 
-  stopPolling() {
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
+  handleOtpSuccess(type: 'checkin' | 'checkout') {
+    this.stopOtpWaiting();
+    this.generatedOtp.set('');
+    this.toast.success(`✅ Sinh viên đã ${type === 'checkin' ? 'Check-in' : 'Check-out'} thành công!`);
+    if (this.selectedJobForApplicants()) {
+      this.viewApplicants(this.selectedJobForApplicants()!);
     }
-    this.pollingAppId = null;
-    this.pollingJobId = null;
+  }
+
+  stopOtpWaiting() {
+    this.waitingOtpAppId = null;
+    this.waitingJobId = null;
   }
 
   approveApplicationCompletion(app: any) {

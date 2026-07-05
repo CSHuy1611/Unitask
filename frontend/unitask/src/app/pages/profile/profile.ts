@@ -28,11 +28,15 @@ import Tesseract from 'tesseract.js';
             <aside class="dashboard-sidebar animate-fade-in-up">
               <div class="sidebar-card glass-card profile-card">
                 <div class="profile-avatar-wrapper">
-                @if (auth.currentUser()?.avatarUrl) {
-                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" [class.premium-avatar-glow]="isPremiumEmployer()" />
+                @if (auth.currentUser()?.avatarUrl && auth.currentUser()?.avatarUrl !== 'null') {
+                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" [class.premium-avatar-glow]="isPremiumEmployer()"
+                       #avatarImg (error)="avatarImg.style.display='none'; fallbackAvatar.style.display='flex'" />
+                  <div #fallbackAvatar class="profile-avatar" [class.premium-avatar-glow]="isPremiumEmployer()" style="display:none">
+                    {{ auth.currentUser()?.fullName?.charAt(0) || 'U' }}
+                  </div>
                 } @else {
                   <div class="profile-avatar" [class.premium-avatar-glow]="isPremiumEmployer()">
-                    {{ auth.currentUser()?.avatar }}
+                    {{ auth.currentUser()?.fullName?.charAt(0) || 'U' }}
                   </div>
                 }
                 <button class="avatar-upload-btn" (click)="avatarInput.click()" [disabled]="avatarUploading()">
