@@ -173,9 +173,9 @@ import { API_BASE_URL } from '../../config/api.config';
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
                     <div style="display: flex; flex-direction: column; gap: 20px;">
                       <div class="form-group" style="margin: 0;">
-                        <label class="form-label">Tổng ngân sách (VND) <span style="color: #EF4444">*</span></label>
-                        <input type="number" class="form-input" [(ngModel)]="formData.budget" name="budget" placeholder="VD: 300000" min="50000" required>
-                        @if (formErrors['budget']) { <span class="error-text">{{ formErrors['budget'] }}</span> }
+                        <label class="form-label">Mức lương / người (VND) <span style="color: #EF4444">*</span></label>
+                        <input type="number" class="form-input" [(ngModel)]="formData.salaryPerPerson" name="salaryPerPerson" placeholder="VD: 150000" min="50000" required>
+                        @if (formErrors['salaryPerPerson']) { <span class="error-text">{{ formErrors['salaryPerPerson'] }}</span> }
                       </div>
                       <div class="form-group" style="margin: 0;">
                         <label class="form-label">Hạn nộp hồ sơ <span style="color: #EF4444">*</span></label>
@@ -189,24 +189,24 @@ import { API_BASE_URL } from '../../config/api.config';
                         Chi tiết chi phí
                         <span style="font-size: 12px; font-weight: normal; color: var(--text-secondary);">Phí nền tảng: 10%</span>
                       </label>
-                      @if (formData.budget && formData.budget > 0) {
+                      @if (formData.salaryPerPerson && formData.salaryPerPerson > 0) {
                         <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 16px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
                           <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.95rem;">
-                            <span>Lương / người:</span>
-                            <strong style="color: var(--success);">{{ getRounded(formData.budget / (formData.headCount || 1)).toLocaleString('vi-VN') }}đ</strong>
+                            <span>Tổng lương cho {{ formData.headCount || 1 }} người:</span>
+                            <strong style="color: var(--success);">{{ getRounded((formData.salaryPerPerson || 0) * (formData.headCount || 1)).toLocaleString('vi-VN') }}đ</strong>
                           </div>
                           <div style="display: flex; justify-content: space-between; margin-bottom: 12px; color: var(--text-secondary); font-size: 0.95rem;">
                             <span>Phí nền tảng (10%):</span>
-                            <strong style="color: var(--warning);">{{ getRounded(formData.budget * 0.1).toLocaleString('vi-VN') }}đ</strong>
+                            <strong style="color: var(--warning);">{{ getRounded((formData.salaryPerPerson || 0) * (formData.headCount || 1) * 0.1).toLocaleString('vi-VN') }}đ</strong>
                           </div>
                           <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px dashed rgba(16, 185, 129, 0.3); align-items: center;">
                             <span style="font-weight: 500; color: var(--text-primary);">Tổng thanh toán:</span>
-                            <strong style="color: var(--primary-light); font-size: 1.25rem;">{{ (getRounded(formData.budget) + getRounded(formData.budget * 0.1)).toLocaleString('vi-VN') }}đ</strong>
+                            <strong style="color: var(--primary-light); font-size: 1.25rem;">{{ (getRounded((formData.salaryPerPerson || 0) * (formData.headCount || 1)) + getRounded((formData.salaryPerPerson || 0) * (formData.headCount || 1) * 0.1)).toLocaleString('vi-VN') }}đ</strong>
                           </div>
                         </div>
                       } @else {
                         <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px; flex-grow: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-style: italic;">
-                          Nhập ngân sách để xem chi tiết
+                          Nhập mức lương / người để xem chi tiết
                         </div>
                       }
                     </div>
@@ -1678,6 +1678,7 @@ export class EmployerDashboardComponent implements OnInit {
       category: '',
       location: '',
       headCount: 1,
+      salaryPerPerson: null as number | null,
       budget: null as number | null,
       description: '',
       requirementsStr: '',
@@ -1721,6 +1722,7 @@ export class EmployerDashboardComponent implements OnInit {
       category: (job as any).category || '',
       location: job.location,
       headCount: job.headCount || 1,
+      salaryPerPerson: job.budget ? Math.round(job.budget / (job.headCount || 1)) : null,
       budget: job.budget || null,
       description: job.description,
       requirementsStr: (job.requirements || []).join(', '),
@@ -1766,11 +1768,12 @@ export class EmployerDashboardComponent implements OnInit {
       }
     }
 
-    const budget = this.formData.budget || 0;
-    if (budget < 50000) {
-      this.formErrors['budget'] = 'Ngân sách tối thiểu là 50.000đ.';
+    const salary = this.formData.salaryPerPerson || 0;
+    if (salary < 50000) {
+      this.formErrors['salaryPerPerson'] = 'Mức lương / người tối thiểu là 50.000đ.';
       hasError = true;
     }
+    this.formData.budget = salary * (this.formData.headCount || 1);
 
     if (hasError) {
       this.toast.error('Vui lòng kiểm tra lại các trường thông tin.');
@@ -1812,7 +1815,7 @@ export class EmployerDashboardComponent implements OnInit {
         location: this.formData.location,
         type: this.formData.type,
         category: this.formData.category,
-        salary: this.formData.budget ? `${this.formData.budget.toLocaleString('vi-VN')}đ` : 'Thỏa thuận',
+        salary: this.formData.salaryPerPerson ? `${this.formData.salaryPerPerson.toLocaleString('vi-VN')}đ/người` : 'Thỏa thuận',
         budget: this.formData.budget || 0,
         description: this.formData.description,
         requirements,
@@ -1884,7 +1887,7 @@ export class EmployerDashboardComponent implements OnInit {
         location: this.formData.location,
         type: this.formData.type,
         category: this.formData.category,
-        salary: this.formData.budget ? `${this.formData.budget.toLocaleString('vi-VN')}đ` : 'Thỏa thuận',
+        salary: this.formData.salaryPerPerson ? `${this.formData.salaryPerPerson.toLocaleString('vi-VN')}đ/người` : 'Thỏa thuận',
         headCount: this.formData.headCount || 1,
         budget: budget,
         commission: commission,
