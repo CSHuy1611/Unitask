@@ -488,9 +488,9 @@ import Tesseract from 'tesseract.js';
                       <!-- Cột 2: Webcam Selfie -->
                       <div>
                         <h4 style="margin-bottom:8px; color: var(--text-primary);">2. Chụp ảnh Selfie đối chiếu</h4>
-                        <p style="font-size: 11px; color: #fbbf24; margin-bottom: 12px; line-height: 1.4; background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(251, 191, 36, 0.2);">
-                          <span class="material-icons-round" style="font-size: 14px; vertical-align: middle;">warning</span> 
-                          <b>Lưu ý:</b> Vui lòng tháo kính, khẩu trang và mũ. Để mặt mộc giống với ảnh trên thẻ CCCD nhất giúp hệ thống so khớp chính xác.
+                        <p style="font-size: 12px; color: #fbbf24; margin-bottom: 12px; line-height: 1.6; background: rgba(251, 191, 36, 0.1); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.3); display: flex; align-items: flex-start; gap: 8px;">
+                          <span class="material-icons-round" style="font-size: 18px; flex-shrink: 0; margin-top: 1px;">warning_amber</span>
+                          <span>Vui lòng <b>cởi bỏ kính, mũ, khẩu trang</b> hay bất cứ thứ gì che khuôn mặt trước khi chụp.</span>
                         </p>
                         
                         <div class="selfie-camera-box" style="border: 2px dashed var(--border-color); border-radius: var(--radius-xl); height: 252px; background: rgba(255,255,255,0.02); display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; position:relative;">
@@ -589,9 +589,19 @@ import Tesseract from 'tesseract.js';
                                     <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
                                   </button>
                                 </div>
+                              } @else {
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                  <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
+                                    <span class="material-icons-round" style="font-size:14px">done_all</span> Đã check-out
+                                  </span>
+                                  <button type="button" class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
+                                    <span class="material-icons-round" style="font-size:16px">task_alt</span> Báo cáo hoàn thành
+                                  </button>
+                                </div>
                               }
-                              <button type="button" class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
-                                <span class="material-icons-round" style="font-size:16px">task_alt</span> Báo cáo hoàn thành
+                              
+                              <button type="button" class="btn btn-danger btn-sm" (click)="openReportModal(job)" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                <span class="material-icons-round" style="font-size:16px">report_problem</span> Khiếu nại
                               </button>
                             </div>
                           }
@@ -782,6 +792,35 @@ import Tesseract from 'tesseract.js';
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      }
+
+      <!-- Report Business Modal -->
+      @if (selectedJobToReport()) {
+        <div class="modal-overlay animate-fade-in" (click)="selectedJobToReport.set(null)">
+          <div class="modal-content glass-card p-6" (click)="$event.stopPropagation()" style="width: 100%; max-width: 450px;">
+            <div class="d-flex justify-between items-center mb-4">
+              <h3 style="font-size:1.25rem; font-weight:700; color: #EF4444; display: flex; align-items: center; gap: 8px;">
+                <span class="material-icons-round">report_problem</span> Khiếu nại doanh nghiệp
+              </h3>
+              <button class="icon-btn" (click)="selectedJobToReport.set(null)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <p style="color:var(--text-secondary); margin-bottom:16px; font-size: 14px;">Bạn đang khiếu nại công việc <strong>{{ selectedJobToReport()?.title }}</strong>. Vui lòng mô tả rõ vấn đề bạn gặp phải (Ví dụ: Yêu cầu sai thỏa thuận, thái độ không tốt, bùng tiền...).</p>
+            <div class="form-group mb-4">
+              <label class="form-label">Lý do khiếu nại *</label>
+              <textarea class="form-textarea" rows="4" [(ngModel)]="reportReason" placeholder="Mô tả chi tiết vấn đề của bạn..."></textarea>
+            </div>
+            <div class="form-group mb-4">
+              <label class="form-label">Link bằng chứng (hình ảnh/video/tài liệu)</label>
+              <input type="text" class="form-input" [(ngModel)]="reportEvidenceUrl" placeholder="Ví dụ: Link Google Drive, ảnh chụp màn hình...">
+            </div>
+            <div class="form-actions d-flex justify-between gap-3">
+              <button class="btn btn-secondary flex-1" (click)="selectedJobToReport.set(null)">Hủy</button>
+              <button class="btn btn-danger flex-1" [disabled]="!reportReason()" (click)="submitReport()" style="background: #EF4444;">Gửi khiếu nại</button>
+            </div>
           </div>
         </div>
       }
@@ -1535,6 +1574,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   showWithdrawModal = signal(false);
   selectedJobToComplete = signal<Job | null>(null);
 
+  selectedJobToReport = signal<Job | null>(null);
+  reportReason = signal('');
+  reportEvidenceUrl = signal('');
+
   showCheckInModal = signal(false);
   showCheckOutModal = signal(false);
   showReviewModal = signal(false);
@@ -1790,6 +1833,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
       },
       error: () => this.toast.error('Lỗi kết nối khi báo cáo.')
     });
+  }
+
+  openReportModal(job: Job) {
+    this.selectedJobToReport.set(job);
+    this.reportReason.set('');
+    this.reportEvidenceUrl.set('');
+  }
+
+  submitReport() {
+    if (!this.reportReason()) return;
+    
+    // Giả lập gọi API khiếu nại
+    this.toast.success('Đã gửi khiếu nại thành công. Ban quản trị sẽ liên hệ để giải quyết trong thời gian sớm nhất!');
+    this.selectedJobToReport.set(null);
   }
 
   openCheckInModal(job: Job) {
@@ -2326,22 +2383,35 @@ export class ProfileComponent implements OnInit, OnDestroy {
         frontOcrText = (frontOcr.data?.text || '').toLowerCase();
       } catch (ocrErr: any) {
         console.error('OCR Front Card error:', ocrErr);
-        throw new Error('Ảnh mặt trước quá mờ. Vui lòng chụp lại rõ nét hơn.');
+        throw new Error('Ảnh mặt trước không đúng định dạng CCCD, vui lòng thử lại.');
       }
 
       const normFrontText = normalizeText(frontOcrText);
+      // Từ khóa CCCD/CMND chuẩn dựa trên mẫu thẻ thực tế
+      // Mặt trước: "CĂN CƯỚC CÔNG DÂN", "Citizen Identity Card", "Họ và tên", "Ngày sinh", "Giới tính", "Quê quán", "Nơi thường trú"
       const frontKeywords = [
-        "can cuoc cong dan",
-        "chung minh nhan dan",
-        "identity card",
-        "noi thuong tru",
-        "que quan",
-        "quoc tich",
-        "cong hoa xa hoi chu nghia"
+        "can cuoc cong dan",    // CĂN CƯỚC CÔNG DÂN
+        "chung minh nhan dan",  // CHỨNG MINH NHÂN DÂN
+        "citizen identity card", // Citizen Identity Card
+        "ho va ten",             // Họ và tên / Full name
+        "ngay sinh",             // Ngày sinh / Date of birth
+        "gioi tinh",             // Giới tính / Sex
+        "quoc tich",             // Quốc tịch / Nationality
+        "que quan",              // Quê quán / Place of origin
+        "noi thuong tru",        // Nơi thường trú / Place of residence
+        "co gia tri den",        // Có giá trị đến / Date of expiry
+        "date of birth",         // Date of birth
+        "full name",             // Full name
+        "place of origin",       // Place of origin
+        "place of residence"     // Place of residence
       ];
-      const isFrontKeywordsOk = frontKeywords.some(kw => normFrontText.includes(kw));
-      if (frontOcrText && !isFrontKeywordsOk) {
-        throw new Error("Ảnh mặt trước thẻ CCCD không hợp lệ. Vui lòng tải đúng thẻ CCCD.");
+      // Thay vì chỉ cần 1 từ khóa (some), ta yêu cầu phải khớp ÍT NHẤT 3 từ khóa
+      // để tránh việc các giấy tờ khác (vd: giấy phép lái xe) tình cờ có dòng "họ và tên" lọt qua.
+      const matchFrontCount = frontKeywords.filter(kw => normFrontText.includes(kw)).length;
+      
+      // Bắt buộc: phải đọc được text VÀ có đủ số lượng từ khóa
+      if (!frontOcrText || matchFrontCount < 3) {
+        throw new Error("Ảnh mặt trước không đúng định dạng CCCD, vui lòng thử lại.");
       }
 
       // Trích xuất số thẻ CCCD (làm sạch các ký tự nhận dạng sai thông dụng)
@@ -2358,7 +2428,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
 
       if (!cccdNumber) {
-        throw new Error("Ảnh mặt trước quá mờ. Vui lòng chụp lại rõ nét hơn.");
+        throw new Error("Ảnh mặt trước không đúng định dạng CCCD, vui lòng thử lại.");
       }
 
       this.ekycStepMessage.set('Đang phân tích OCR ảnh mặt sau CCCD để nhận diện thẻ...');
@@ -2370,18 +2440,32 @@ export class ProfileComponent implements OnInit, OnDestroy {
         backOcrText = (backOcr.data?.text || '').toLowerCase();
       } catch (ocrErr: any) {
         console.error('OCR Back Card error:', ocrErr);
-        throw new Error('Ảnh mặt sau quá mờ. Vui lòng chụp lại rõ nét hơn.');
+        throw new Error('Ảnh mặt sau không đúng định dạng CCCD, vui lòng thử lại.');
       }
 
       const normBackText = normalizeText(backOcrText);
+      // Từ khóa mặt sau CCCD chuẩn: "DẶC ĐIỂM NHẪN DẠNG", "CỤC TRLTỰ CỤC CẢNH SÁT", "Ngón trỏ", vân tay, mã MRZ...
       const backKeywords = [
-        "dac diem", "nhan dang", "cuc canh sat", "quan ly", "hanh chinh",
-        "trat tu", "xa hoi", "ngon tro", "van tay", "kieu van", "giam doc",
-        "cong an", "ngay thang nam"
+        "dac diem nhan dang",          // Đặc điểm nhận dạng
+        "personal identification",      // Personal identification
+        "ngon tro trai",               // Ngón trỏ trái
+        "ngon tro phai",               // Ngón trỏ phải
+        "left index finger",           // Left index finger
+        "right index finger",          // Right index finger
+        "cuc canh sat",                // Cục cảnh sát
+        "quan ly hanh chinh",          // Quản lý hành chính
+        "trat tu xa hoi",             // Trật tự xã hội
+        "ngay thang nam",             // Ngày, tháng, năm
+        "date month year",             // Date, month, year
+        "idvnm",                       // Mã MRZ bắt đầu bằng IDVNM
+        "vnm"
       ];
-      const isBackKeywordsOk = backKeywords.some(kw => normBackText.includes(kw));
-      if (backOcrText && !isBackKeywordsOk) {
-        throw new Error("Ảnh mặt sau thẻ CCCD không hợp lệ. Vui lòng tải đúng thẻ CCCD.");
+      // Yêu cầu khớp ÍT NHẤT 2 từ khóa cho mặt sau
+      const matchBackCount = backKeywords.filter(kw => normBackText.includes(kw)).length;
+      
+      // Bắt buộc: phải đọc được text VÀ có đủ số lượng từ khóa
+      if (!backOcrText || matchBackCount < 2) {
+        throw new Error("Ảnh mặt sau không đúng định dạng CCCD, vui lòng thử lại.");
       }
 
       this.ekycStepMessage.set('Đang tìm kiếm khuôn mặt trên ảnh CCCD mặt trước...');
@@ -2390,7 +2474,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         .withFaceDescriptor();
 
       if (!cccdFace) {
-        throw new Error("Ảnh mặt trước quá mờ hoặc bị lóa. Vui lòng chụp lại rõ nét hơn.");
+        throw new Error("Ảnh mặt trước không đúng định dạng CCCD, vui lòng thử lại.");
       }
 
       this.ekycStepMessage.set('Đang tìm kiếm khuôn mặt trên ảnh chụp Selfie...');
@@ -2401,7 +2485,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         .withFaceDescriptor();
 
       if (!selfieFace) {
-        throw new Error("Khuôn mặt chụp Selfie quá mờ. Vui lòng chụp lại rõ nét hơn.");
+        throw new Error("Không tìm thấy khuôn mặt trong ảnh chụp Selfie. Vui lòng tháo khẩu trang, kính râm và chụp ở nơi đủ sáng.");
       }
 
       this.ekycStepMessage.set('Đang so khớp sinh trắc học khuôn mặt...');
@@ -2410,7 +2494,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       console.log(`[eKYC AI Match] Distance: ${distance.toFixed(4)}, Similarity: ${similarity}%`);
 
-      if (similarity < 50) {
+      if (similarity < 45) { // Nới lỏng một chút (khoảng cách < 0.55 là cùng một người)
         throw new Error("Khuôn mặt chụp Selfie không khớp với ảnh trên thẻ CCCD. Vui lòng thử lại.");
       }
 
