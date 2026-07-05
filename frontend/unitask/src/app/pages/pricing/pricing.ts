@@ -49,9 +49,11 @@ import { API_BASE_URL } from '../../config/api.config';
                 }
               </div>
             </div>
-            <button class="btn btn-primary" (click)="openDepositModal()">
-              <span class="material-icons-round">add_circle</span> Nạp thêm
-            </button>
+            <div style="display:flex; gap: 12px; align-items: center;">
+              <button class="btn btn-primary" (click)="openDepositModal()">
+                <span class="material-icons-round">add_circle</span> Nạp thêm
+              </button>
+            </div>
           </div>
 
           <div class="packages-grid animate-fade-in-up" style="animation-delay:0.15s">
@@ -72,7 +74,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     <li><span class="material-icons-round" style="color:var(--success)">check</span> Ưu tiên hiển thị top</li>
                   }
                   @if (pkg.id >= 3) {
-                    <li><span class="material-icons-round" style="color:var(--success)">check</span> Tick xanh uy tín</li>
+                    <li><span class="material-icons-round" style="color:var(--warning)">workspace_premium</span> Huy hiệu Doanh nghiệp Premium</li>
                   }
                 </ul>
                 <button class="btn btn-lg full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)">
@@ -445,6 +447,8 @@ export class PricingComponent implements OnInit {
     this.paymentSuccess.set(false);
     this.showPaymentModal.set(true);
   }
+
+
 
   buyPackage(pkg: any) {
     const user = this.auth.currentUser();

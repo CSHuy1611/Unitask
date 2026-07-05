@@ -171,6 +171,43 @@ input, select, textarea {
   padding: var(--space-20) 0;
 }
 
+/* ========================================
+   Sidebar Layout System
+   ======================================== */
+.layout-container {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  max-width: 100%;
+  padding: 0 32px;
+}
+
+.dashboard-page {
+  padding: calc(80px + var(--space-8)) 0 var(--space-16);
+}
+
+.dashboard-sidebar {
+  flex: 0 0 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 100px;
+}
+
+.dashboard-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 992px) {
+  .layout-container { flex-direction: column; }
+  .dashboard-sidebar { flex: none; width: 100%; position: static; }
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -426,6 +463,48 @@ input, select, textarea {
 
 .animate-slide-in-left {
   animation: slideInLeft 0.5s ease forwards;
+}
+
+/* Premium Badge */
+.premium-badge {
+  color: #F59E0B;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 12px;
+  padding: 2px;
+  margin-left: 6px;
+  position: relative;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.premium-badge::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.8), transparent);
+  animation: premiumShine 3s infinite;
+}
+
+@keyframes premiumShine {
+  0% { left: -100%; }
+  20% { left: 200%; }
+  100% { left: 200%; }
+}
+
+/* Premium Avatar Glow */
+.premium-avatar-glow {
+  border: 3px solid #F59E0B;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.6), inset 0 0 10px rgba(245, 158, 11, 0.4);
+  animation: goldPulse 2s infinite alternate;
+  position: relative;
+}
+
+@keyframes goldPulse {
+  0% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.5), inset 0 0 5px rgba(245, 158, 11, 0.3); border-color: rgba(245, 158, 11, 0.8); }
+  100% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.9), inset 0 0 15px rgba(245, 158, 11, 0.6); border-color: #FBBF24; }
 }
 
 /* Responsive */

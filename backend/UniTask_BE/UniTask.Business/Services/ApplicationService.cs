@@ -1,26 +1,35 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
 using UniTask.Business.DTOs.Application;
 using UniTask.Business.Interfaces;
 using UniTask.DataAcesss;
 using UniTask.DataAcesss.Entities;
 using UniTask.DataAcesss.Entities.Enums;
+using Microsoft.AspNetCore.SignalR;
+using UniTask.Business.Hubs;
 
 namespace UniTask.Business.Services
 {
     public class ApplicationService : IApplicationService
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<DashboardHub> _hubContext;
 
-        public ApplicationService(AppDbContext context)
+        public ApplicationService(AppDbContext context, IHubContext<DashboardHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task<ApplicationDto?> ApplyJobAsync(int jobId, string studentId, ApplicationCreateDto dto)
         {
             var job = await _context.Jobs.FindAsync(jobId);
-            if (job == null || job.Status != JobStatus.Open)
-                return null; // Cannot apply to closed or non-existent jobs
+            if (job == null) return null;
+
+            if (job.Status != JobStatus.Open)
+            {
+                throw new System.InvalidOperationException("Công việc này đã đóng đăng ký hoặc đã tuyển đủ người.");
+            }
 
             var profile = await _context.StudentProfiles.FirstOrDefaultAsync(p => p.UserId == studentId);
             if (profile == null) return null;
@@ -70,6 +79,7 @@ namespace UniTask.Business.Services
             job.ApplicationsCount++;
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("JobApplicationAdded", jobId);
 
             // Load relations for mapping
             await _context.Entry(application).Reference(a => a.Job).LoadAsync();
@@ -123,7 +133,7 @@ namespace UniTask.Business.Services
             {
                 // Count current accepted/completed apps
                 var currentAcceptedCount = await _context.Applications
-                    .CountAsync(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed));
+                    .CountAsync(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed || a.Status == ApplicationStatus.Interviewing));
 
                 if (currentAcceptedCount >= application.Job.HeadCount)
                 {
@@ -131,19 +141,12 @@ namespace UniTask.Business.Services
                 }
 
                 application.Status = status;
-                application.Job.Status = JobStatus.InProgress;
 
-                // If now full, reject all other pending apps
-                if (currentAcceptedCount + 1 == application.Job.HeadCount)
+                // We NO LONGER auto-reject other applied students. 
+                // They stay as 'Applied' (Waitlist) so the employer can pick them if someone drops out.
+                if (currentAcceptedCount + 1 >= application.Job.HeadCount)
                 {
-                    var pendingApps = await _context.Applications
-                        .Where(a => a.JobId == application.JobId && a.Id != applicationId && (a.Status == ApplicationStatus.Applied || a.Status == ApplicationStatus.Interviewing))
-                        .ToListAsync();
-
-                    foreach (var pendingApp in pendingApps)
-                    {
-                        pendingApp.Status = ApplicationStatus.Rejected;
-                    }
+                    application.Job.Status = JobStatus.InProgress;
                 }
             }
             else
@@ -165,6 +168,153 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", application.JobId);
+            return true;
+        }
+
+        public async Task<string?> GenerateOtpAsync(int applicationId, string employerId, string otpType)
+        {
+            var application = await _context.Applications
+                .Include(a => a.Job)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.Job.EmployerId != employerId) return null;
+            if (application.Status != ApplicationStatus.Accepted && application.Status != ApplicationStatus.Completed) return null;
+
+            var random = new Random();
+            var otp = random.Next(100000, 999999).ToString();
+            var expiry = DateTime.UtcNow.AddMinutes(5);
+
+            if (otpType == "checkin")
+            {
+                application.CheckInOtp = otp;
+                application.CheckInOtpExpiredAt = expiry;
+            }
+            else if (otpType == "checkout")
+            {
+                application.CheckOutOtp = otp;
+                application.CheckOutOtpExpiredAt = expiry;
+            }
+
+            await _context.SaveChangesAsync();
+            return otp;
+        }
+
+        public async Task<bool> StudentCheckInAsync(int applicationId, string studentId, string otp)
+        {
+            var application = await _context.Applications
+                .Include(a => a.StudentProfile)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.StudentProfile.UserId != studentId) return false;
+            
+            if (application.CheckInOtp != otp || application.CheckInOtpExpiredAt < DateTime.UtcNow)
+                return false;
+
+            application.CheckInTime = DateTime.UtcNow;
+            application.CheckInOtp = null; // Clear OTP
+            
+            await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckInOccurred", application.JobId);
+            
+            // Notify employer via SignalR
+            await _hubContext.Clients.All.SendAsync("CheckInSuccess", application.Id);
+            return true;
+        }
+
+        public async Task<bool> StudentCheckOutAsync(int applicationId, string studentId, string otp)
+        {
+            var application = await _context.Applications
+                .Include(a => a.Job)
+                .Include(a => a.StudentProfile)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.StudentProfile.UserId != studentId) return false;
+            
+            if (application.CheckOutOtp != otp || application.CheckOutOtpExpiredAt < DateTime.UtcNow)
+                return false;
+
+            application.CheckOutTime = DateTime.UtcNow;
+            application.CheckOutOtp = null; // Clear OTP
+            
+            application.Job.Status = JobStatus.PendingConfirmation;
+            
+            await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", application.JobId);
+
+            // Notify employer via SignalR
+            await _hubContext.Clients.All.SendAsync("CheckOutSuccess", application.Id);
+            return true;
+        }
+
+        public async Task<bool> ReportNoShowAsync(int applicationId, string employerId, string reason, string evidenceUrl)
+        {
+            var application = await _context.Applications
+                .Include(a => a.Job)
+                .Include(a => a.StudentProfile)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.Job.EmployerId != employerId) return false;
+            
+            application.Status = ApplicationStatus.Disputed;
+            application.DisputeReason = reason;
+            application.EmployerEvidenceUrl = evidenceUrl;
+            application.DisputedDate = DateTime.UtcNow;
+
+            // Notice: We NO LONGER penalize the student immediately.
+            // The penalty and NoShow marking will be done by an Admin
+            // during the dispute resolution process if the employer's claim is valid.
+            
+            // Escrow budget remains frozen.
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ApproveCompletionAsync(int applicationId, string employerId)
+        {
+            var application = await _context.Applications
+                .Include(a => a.Job)
+                .Include(a => a.StudentProfile)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.Job.EmployerId != employerId) return false;
+            if (application.Status == ApplicationStatus.Completed && application.EscrowReleaseDate != null) return false;
+            
+            application.Status = ApplicationStatus.Completed;
+            application.EscrowReleaseDate = DateTime.UtcNow;
+
+            var salaryPerPerson = Math.Round(application.Job.Budget / (application.Job.HeadCount > 0 ? application.Job.HeadCount : 1), 0);
+            
+            var studentId = application.StudentProfile?.UserId;
+            if (studentId != null)
+            {
+                var studentWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == studentId);
+                if (studentWallet != null)
+                {
+                    studentWallet.Balance += salaryPerPerson;
+                    _context.Transactions.Add(new DataAcesss.Entities.Transaction
+                    {
+                        WalletId = studentWallet.Id,
+                        Amount = salaryPerPerson,
+                        Type = DataAcesss.Entities.Enums.TransactionType.EscrowRelease,
+                        Description = $"Nhận tiền công từ công việc: {application.Job.Title}",
+                        RelatedJobId = application.JobId,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            var allApps = await _context.Applications
+                .Where(a => a.JobId == application.JobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed))
+                .ToListAsync();
+                
+            if (allApps.All(a => a.Status == ApplicationStatus.Completed))
+            {
+                application.Job.Status = DataAcesss.Entities.Enums.JobStatus.Completed;
+            }
+
+            await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationApprovedOccurred", application.JobId);
             return true;
         }
 
@@ -199,7 +349,15 @@ namespace UniTask.Business.Services
                 StudentGpa = a.StudentProfile?.GPA,
                 StudentReliabilityScore = a.StudentProfile?.ReliabilityScore ?? 100,
                 Status = a.Status,
-                AppliedDate = a.AppliedDate
+                AppliedDate = a.AppliedDate,
+                CheckInTime = a.CheckInTime,
+                CheckOutTime = a.CheckOutTime,
+                DisputeReason = a.DisputeReason,
+                EmployerEvidenceText = a.EmployerEvidenceText,
+                EmployerEvidenceUrl = a.EmployerEvidenceUrl,
+                StudentEvidenceText = a.StudentEvidenceText,
+                StudentEvidenceUrl = a.StudentEvidenceUrl,
+                DisputedDate = a.DisputedDate
             };
         }
     }

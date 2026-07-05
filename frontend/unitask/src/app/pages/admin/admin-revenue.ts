@@ -1,6 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
@@ -10,65 +9,47 @@ import { API_BASE_URL } from '../../config/api.config';
 @Component({
   selector: 'app-admin-revenue',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe],
   template: `
-    <section class="admin-page">
-      <div class="container">
-        @if (!auth.isAdmin()) {
-          <div class="auth-required glass-card animate-fade-in-up">
-            <span class="material-icons-round" style="font-size:64px;color:#EF4444">admin_panel_settings</span>
-            <h2>Truy cập bị từ chối</h2>
-            <p>Chỉ tài khoản Admin mới có quyền truy cập khu vực này.</p>
-            <a routerLink="/login" class="btn btn-primary btn-lg">Đăng nhập Admin</a>
-          </div>
-        } @else {
-          <!-- Admin Nav -->
-          <div class="admin-nav animate-fade-in-up">
-            <a routerLink="/admin/dashboard" class="admin-tab">
-              <span class="material-icons-round">dashboard</span> Dashboard
-            </a>
-            <a routerLink="/admin/users" class="admin-tab">
-              <span class="material-icons-round">people</span> Quản lý User
-            </a>
-            <a routerLink="/admin/withdrawals" class="admin-tab">
-              <span class="material-icons-round">account_balance_wallet</span> Duyệt rút tiền
-            </a>
-            <a routerLink="/admin/disputes" class="admin-tab">
-              <span class="material-icons-round">gavel</span> Giải quyết tranh chấp
-            </a>
-            <a routerLink="/admin/revenue" class="admin-tab active">
-              <span class="material-icons-round">receipt_long</span> Doanh thu & Dòng tiền
-            </a>
-          </div>
-
+    <div class="admin-page-content">
           <div class="dashboard-header animate-fade-in-up">
             <h1>Báo cáo <span class="gradient-text">Doanh Thu & Dòng Tiền</span></h1>
             <p>Kiểm tra chi tiết giao dịch và xuất báo cáo Excel</p>
           </div>
 
-          <!-- Export Actions -->
-          <div class="filter-actions glass-card animate-fade-in-up" style="animation-delay:0.1s; margin-bottom: var(--space-6); display: flex; gap: var(--space-4); align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group custom-input-group" style="margin-bottom: 0;">
-              <label><span class="material-icons-round" style="font-size: 16px;">calendar_today</span> Từ ngày</label>
-              <input type="date" class="form-control custom-input" [(ngModel)]="startDate" />
-            </div>
-            <div class="form-group custom-input-group" style="margin-bottom: 0;">
-              <label><span class="material-icons-round" style="font-size: 16px;">event</span> Đến ngày</label>
-              <input type="date" class="form-control custom-input" [(ngModel)]="endDate" />
-            </div>
-            <button class="btn btn-primary" style="height: 42px; display: flex; align-items: center; gap: 8px;" (click)="exportExcel()" [disabled]="isExporting()">
-              <span class="material-icons-round">file_download</span> 
-              {{ isExporting() ? 'Đang xuất...' : 'Xuất Báo Cáo Excel' }}
-            </button>
-            <div style="flex: 1"></div>
-            <div class="form-group custom-input-group" style="margin-bottom: 0; min-width: 250px;">
-              <label><span class="material-icons-round" style="font-size: 16px;">filter_list</span> Lọc theo loại</label>
-              <select class="form-control custom-input" [(ngModel)]="filterType" (change)="loadTransactions(1)">
-                <option value="All">Tất cả giao dịch</option>
-                <option value="CashIn">Dòng tiền Nạp (Deposit)</option>
-                <option value="CashOut">Dòng tiền Rút (Withdrawal)</option>
-                <option value="Revenue">Doanh thu (Hoa hồng & Gói dịch vụ)</option>
-              </select>
+          <!-- Export Actions & Filters -->
+          <div class="filter-actions glass-card animate-fade-in-up" style="animation-delay:0.1s; margin-bottom: var(--space-6);">
+            <div class="filters-grid">
+              <div class="form-group custom-input-group">
+                <label><span class="material-icons-round">calendar_today</span> Từ ngày</label>
+                <div class="input-with-icon">
+                  <input type="date" class="form-control custom-input" [(ngModel)]="startDate" />
+                </div>
+              </div>
+              
+              <div class="form-group custom-input-group">
+                <label><span class="material-icons-round">event</span> Đến ngày</label>
+                <div class="input-with-icon">
+                  <input type="date" class="form-control custom-input" [(ngModel)]="endDate" />
+                </div>
+              </div>
+
+              <div class="form-group custom-input-group" style="flex: 1.5; min-width: 250px;">
+                <label><span class="material-icons-round">filter_list</span> Lọc theo loại</label>
+                <select class="form-control custom-input" [(ngModel)]="filterType" (ngModelChange)="loadTransactions(1)">
+                  <option value="All">Tất cả giao dịch</option>
+                  <option value="CashIn">Dòng tiền Nạp (Deposit)</option>
+                  <option value="CashOut">Dòng tiền Rút (Withdrawal)</option>
+                  <option value="Revenue">Doanh thu (Hoa hồng & Gói dịch vụ)</option>
+                </select>
+              </div>
+              
+              <div class="export-action">
+                <button class="btn btn-primary export-btn" (click)="exportExcel()" [disabled]="isExporting()">
+                  <span class="material-icons-round">file_download</span> 
+                  {{ isExporting() ? 'Đang xuất...' : 'Xuất Excel' }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -110,7 +91,7 @@ import { API_BASE_URL } from '../../config/api.config';
                           <strong>{{ formatCurrency(item.amount) }}</strong>
                         </td>
                         <td style="max-width: 300px;">
-                          <div class="truncate-text" [title]="item.description">{{ item.description || '-' }}</div>
+                          <div style="white-space: normal; word-break: break-word; line-height: 1.4;">{{ item.description || '-' }}</div>
                         </td>
                       </tr>
                     }
@@ -133,15 +114,11 @@ import { API_BASE_URL } from '../../config/api.config';
             }
           </div>
 
-        }
-      </div>
-    </section>
+    </div>
   `,
   styles: [`
-    .admin-page {
-      padding: 100px 0 var(--space-12);
-      min-height: calc(100vh - 80px);
-      background-color: var(--bg-main);
+    .admin-page-content {
+      width: 100%;
     }
 
     .glass-card {
@@ -153,41 +130,156 @@ import { API_BASE_URL } from '../../config/api.config';
       box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
     }
 
-    .admin-nav {
-      display: flex;
-      gap: var(--space-2);
+    .dashboard-header {
       margin-bottom: var(--space-8);
-      background: var(--bg-glass);
-      padding: var(--space-2);
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--border-light);
-      width: fit-content;
     }
 
-    .admin-tab {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-3) var(--space-5);
+    .dashboard-header h1 {
+      font-size: var(--font-size-3xl);
+      margin-bottom: var(--space-2);
+    }
+
+    .dashboard-header p {
+      color: var(--text-muted);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      background: rgba(15, 23, 42, 0.4);
       border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .data-table th, .data-table td {
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .data-table th {
+      color: var(--text-muted);
       font-size: var(--font-size-sm);
       font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tbody tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .status-badge.deposit { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+    .status-badge.withdrawal { background: rgba(245, 158, 11, 0.15); color: #F59E0B; }
+    .status-badge.commission { background: rgba(99, 102, 241, 0.15); color: #6366F1; }
+    .status-badge.subscription { background: rgba(139, 92, 246, 0.15); color: #8B5CF6; }
+    .status-badge.default { background: rgba(100, 116, 139, 0.15); color: #94A3B8; }
+
+    .text-success { color: #10B981; }
+    .text-danger { color: #EF4444; }
+
+    .truncate-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: var(--space-4);
+      margin-top: var(--space-6);
+    }
+
+    .page-info {
+      font-weight: 600;
       color: var(--text-secondary);
-      text-decoration: none;
-      transition: all var(--transition-fast);
     }
 
-    .admin-tab:hover {
+    .custom-input-group {
+      margin-bottom: 0;
+      width: 100%;
+    }
+
+    .custom-input-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .custom-input-group label .material-icons-round {
+      font-size: 16px;
+      color: var(--primary-light);
+    }
+
+    .custom-input {
+      background: rgba(15, 23, 42, 0.6) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: var(--text-primary) !important;
+      border-radius: var(--radius-md) !important;
+      padding: 10px 16px !important;
+      height: 44px !important;
+      font-size: 0.95rem !important;
+      transition: all 0.3s ease !important;
+      width: 100%;
+    }
+
+    .custom-input:focus {
+      border-color: var(--primary-light) !important;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+      outline: none !important;
+      background: rgba(15, 23, 42, 0.8) !important;
+    }
+
+    /* Fix Date Picker Icon in Dark Mode */
+    .custom-input::-webkit-calendar-picker-indicator {
+      filter: invert(1) opacity(0.7);
+      cursor: pointer;
+    }
+    
+    .custom-input::-webkit-calendar-picker-indicator:hover {
+      filter: invert(1) opacity(1);
+    }
+
+    .custom-input option {
+      background: #1e293b;
       color: var(--text-primary);
-      background: rgba(79, 70, 229, 0.08);
+      padding: var(--space-6);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
     }
 
-    .admin-tab.active {
-      background: var(--primary);
-      color: white;
-    }
+    
 
-    .admin-tab .material-icons-round { font-size: 18px; }
+    
+
+    
+
+    
+
+    
 
     .dashboard-header {
       margin-bottom: var(--space-8);
@@ -273,14 +365,24 @@ import { API_BASE_URL } from '../../config/api.config';
       color: var(--text-secondary);
     }
 
+    .custom-input-group {
+      margin-bottom: 0;
+      width: 100%;
+    }
+
     .custom-input-group label {
       display: flex;
       align-items: center;
       gap: 6px;
-      color: var(--text-muted);
+      color: var(--text-secondary);
       font-weight: 600;
-      font-size: var(--font-size-sm);
-      margin-bottom: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .custom-input-group label .material-icons-round {
+      font-size: 16px;
+      color: var(--primary-light);
     }
 
     .custom-input {
@@ -289,19 +391,90 @@ import { API_BASE_URL } from '../../config/api.config';
       color: var(--text-primary) !important;
       border-radius: var(--radius-md) !important;
       padding: 10px 16px !important;
-      height: 42px !important;
+      height: 44px !important;
+      font-size: 0.95rem !important;
       transition: all 0.3s ease !important;
+      width: 100%;
     }
 
     .custom-input:focus {
-      border-color: var(--primary-color) !important;
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2) !important;
+      border-color: var(--primary-light) !important;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
       outline: none !important;
+      background: rgba(15, 23, 42, 0.8) !important;
+    }
+
+    /* Fix Date Picker Icon in Dark Mode */
+    .custom-input::-webkit-calendar-picker-indicator {
+      filter: invert(1) opacity(0.7);
+      cursor: pointer;
+    }
+    
+    .custom-input::-webkit-calendar-picker-indicator:hover {
+      filter: invert(1) opacity(1);
     }
 
     .custom-input option {
       background: #1e293b;
       color: var(--text-primary);
+    }
+
+    .filters-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      align-items: flex-end;
+    }
+
+    .filters-grid .custom-input-group {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .export-action {
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .export-btn {
+      height: 44px;
+      padding: 0 var(--space-6);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      background: var(--primary-gradient);
+      color: white;
+      border: none;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .export-btn:hover:not(:disabled) {
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .export-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 768px) {
+      .filters-grid {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .export-action {
+        width: 100%;
+      }
+      .export-btn {
+        width: 100%;
+        justify-content: center;
+      }
     }
   `]
 })

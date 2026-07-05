@@ -25,5 +25,15 @@ namespace UniTask.Business.DTOs.Application
 
         public ApplicationStatus Status { get; set; }
         public DateTime AppliedDate { get; set; }
+
+        public DateTime? CheckInTime { get; set; }
+        public DateTime? CheckOutTime { get; set; }
+        
+        public string? DisputeReason { get; set; }
+        public string? EmployerEvidenceText { get; set; }
+        public string? EmployerEvidenceUrl { get; set; }
+        public string? StudentEvidenceText { get; set; }
+        public string? StudentEvidenceUrl { get; set; }
+        public DateTime? DisputedDate { get; set; }
     }
 }

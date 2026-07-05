@@ -6,6 +6,7 @@ export interface Job {
   companyLogo: string;
   location: string;
   type: string;
+  category?: string;
   salary: string;
   salaryRange: number[];
   description: string;
@@ -16,6 +17,7 @@ export interface Job {
   deadline: string;
   views: number;
   applications: number;
+  acceptedCount?: number;
   isUrgent?: boolean;
   isRemote?: boolean;
   
@@ -31,6 +33,7 @@ export interface Job {
   companySize?: string;
   companyLocation?: string;
   companyWebsite?: string;
+  isCompanyPremium?: boolean;
   disputeReason?: string;
   employerEvidenceText?: string;
   employerEvidenceUrl?: string;
@@ -39,4 +42,5 @@ export interface Job {
   disputedDate?: string;
   checkInTime?: string;
   checkOutTime?: string;
+  isAppliedByCurrentUser?: boolean;
 }

@@ -19,6 +19,7 @@ namespace UniTask.Business.DTOs.Job
         public DateTime? Deadline { get; set; }
         public int Views { get; set; }
         public int ApplicationsCount { get; set; }
+        public int AcceptedCount { get; set; }
         public bool IsUrgent { get; set; }
         public bool IsRemote { get; set; }
         public JobStatus Status { get; set; }
@@ -51,9 +52,12 @@ namespace UniTask.Business.DTOs.Job
         public string? CompanySize { get; set; }
         public string? CompanyLocation { get; set; }
         public string? CompanyWebsite { get; set; }
+        public bool IsCompanyPremium { get; set; }
 
         public List<string> Tags { get; set; } = new();
         public List<string> Requirements { get; set; } = new();
         public List<string> Benefits { get; set; } = new();
+        
+        public bool IsAppliedByCurrentUser { get; set; }
     }
 }

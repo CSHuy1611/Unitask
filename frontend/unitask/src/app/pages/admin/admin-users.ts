@@ -1,6 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
@@ -9,37 +8,9 @@ import { API_BASE_URL } from '../../config/api.config';
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [FormsModule],
   template: `
-    <section class="admin-page">
-      <div class="container">
-        @if (!auth.isAdmin()) {
-          <div class="auth-required glass-card animate-fade-in-up">
-            <span class="material-icons-round" style="font-size:64px;color:#EF4444">admin_panel_settings</span>
-            <h2>Truy cập bị từ chối</h2>
-            <p>Chỉ tài khoản Admin mới có quyền truy cập khu vực này.</p>
-            <a routerLink="/login" class="btn btn-primary btn-lg">Đăng nhập Admin</a>
-          </div>
-        } @else {
-          <!-- Admin Nav -->
-          <div class="admin-nav animate-fade-in-up">
-            <a routerLink="/admin/dashboard" class="admin-tab">
-              <span class="material-icons-round">dashboard</span> Dashboard
-            </a>
-            <a routerLink="/admin/users" class="admin-tab active">
-              <span class="material-icons-round">people</span> Quản lý User
-            </a>
-            <a routerLink="/admin/withdrawals" class="admin-tab">
-              <span class="material-icons-round">account_balance_wallet</span> Duyệt rút tiền
-            </a>
-            <a routerLink="/admin/disputes" class="admin-tab">
-              <span class="material-icons-round">gavel</span> Giải quyết tranh chấp
-            </a>
-            <a routerLink="/admin/revenue" class="admin-tab">
-              <span class="material-icons-round">receipt_long</span> Doanh thu & Dòng tiền
-            </a>
-          </div>
-
+    <div class="admin-page-content">
           <div class="dashboard-header animate-fade-in-up" style="animation-delay:0.1s">
             <div class="header-left">
               <h1>Quản lý <span class="gradient-text">Người dùng & eKYC</span></h1>
@@ -77,6 +48,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     <th>Liên hệ</th>
                     <th>Trạng thái eKYC</th>
                     <th>Ngày tham gia</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -127,6 +99,13 @@ import { API_BASE_URL } from '../../config/api.config';
                         </span>
                       </td>
                       <td><span class="text-muted">{{ user.createdAt }}</span></td>
+                      <td>
+                        @if (user.ekycStatus !== 'verified') {
+                          <button class="btn btn-sm btn-primary" (click)="forceVerify(user.id)" style="font-size: 11px; padding: 4px 8px;">
+                            Ép XT (Test)
+                          </button>
+                        }
+                      </td>
                     </tr>
                   } @empty {
                     <tr>
@@ -151,63 +130,129 @@ import { API_BASE_URL } from '../../config/api.config';
               </div>
             }
           </div>
-        }
-      </div>
-    </section>
+    </div>
   `,
   styles: [`
-    .admin-page {
-      padding: calc(80px + var(--space-8)) 0 var(--space-16);
+    .admin-page-content {
+      width: 100%;
     }
 
-    .auth-required {
-      text-align: center;
-      padding: var(--space-16);
-      max-width: 500px;
-      margin: var(--space-10) auto;
+    .dashboard-header {
       display: flex;
-      flex-direction: column;
-      align-items: center;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: var(--space-6);
+    }
+
+    .header-left h1 {
+      font-size: var(--font-size-3xl);
+      font-weight: 800;
+      margin-bottom: var(--space-2);
+    }
+
+    .gradient-text {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-left p { color: var(--text-secondary); }
+
+    .header-actions {
+      display: flex;
       gap: var(--space-4);
     }
 
-    .auth-required p { color: var(--text-secondary); }
-
-    .admin-nav {
-      display: flex;
-      gap: var(--space-2);
-      margin-bottom: var(--space-8);
-      background: var(--bg-glass);
-      padding: var(--space-2);
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--border-light);
-      width: fit-content;
-    }
-
-    .admin-tab {
+    .filter-group {
       display: flex;
       align-items: center;
       gap: var(--space-2);
-      padding: var(--space-3) var(--space-5);
+      background: var(--bg-secondary);
+      padding: var(--space-1) var(--space-2);
       border-radius: var(--radius-lg);
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: all var(--transition-fast);
+      border: 1px solid var(--border-color);
     }
 
-    .admin-tab:hover {
+    .filter-group .material-icons-round {
+      font-size: 18px;
+      color: var(--text-muted);
+      margin-left: var(--space-2);
+    }
+
+    .form-select {
+      background: transparent;
+      border: none;
+      padding: var(--space-2);
+      padding-right: var(--space-6);
       color: var(--text-primary);
-      background: rgba(79, 70, 229, 0.08);
+      font-size: var(--font-size-sm);
+      width: auto;
+      min-width: 150px;
     }
 
-    .admin-tab.active {
-      background: var(--primary);
+    .form-select:focus {
+      outline: none;
+      box-shadow: none;
+      border-color: transparent;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-lg);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 800px;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: var(--space-4) var(--space-5);
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-light);
+      background: rgba(0,0,0,0.2);
+    }
+
+    .data-table td {
+      padding: var(--space-3) var(--space-5);
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-light);
+      vertical-align: middle;
+    }
+
+    .data-table tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .avatar-sm {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
       color: white;
     }
-
-    .admin-tab .material-icons-round { font-size: 18px; }
 
     .dashboard-header {
       display: flex;
@@ -478,5 +523,19 @@ export class AdminUsersComponent {
 
   loadMore() {
     this.loadUsers(this.currentPage() + 1);
+  }
+
+  forceVerify(userId: string) {
+    if (confirm('Bạn có chắc muốn ép xác thực người dùng này không?')) {
+      this.http.post<any>(`${API_BASE_URL}/admin/users/${userId}/force-verify`, {}).subscribe({
+        next: (res) => {
+          this.toast.success(res.message);
+          this.loadUsers(1);
+        },
+        error: (err) => {
+          this.toast.error('Không thể ép xác thực.');
+        }
+      });
+    }
   }
 }

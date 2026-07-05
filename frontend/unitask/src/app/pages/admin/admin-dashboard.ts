@@ -1,6 +1,5 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
@@ -11,37 +10,9 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [FormsModule],
   template: `
-    <section class="admin-page">
-      <div class="container">
-        @if (!auth.isAdmin()) {
-          <div class="auth-required glass-card animate-fade-in-up">
-            <span class="material-icons-round" style="font-size:64px;color:#EF4444">admin_panel_settings</span>
-            <h2>Truy cập bị từ chối</h2>
-            <p>Chỉ tài khoản Admin mới có quyền truy cập khu vực này.</p>
-            <a routerLink="/login" class="btn btn-primary btn-lg">Đăng nhập Admin</a>
-          </div>
-        } @else {
-          <!-- Admin Nav -->
-          <div class="admin-nav animate-fade-in-up">
-            <a routerLink="/admin/dashboard" class="admin-tab active">
-              <span class="material-icons-round">dashboard</span> Dashboard
-            </a>
-            <a routerLink="/admin/users" class="admin-tab">
-              <span class="material-icons-round">people</span> Quản lý User
-            </a>
-            <a routerLink="/admin/withdrawals" class="admin-tab">
-              <span class="material-icons-round">account_balance_wallet</span> Duyệt rút tiền
-            </a>
-            <a routerLink="/admin/disputes" class="admin-tab">
-              <span class="material-icons-round">gavel</span> Giải quyết tranh chấp
-            </a>
-            <a routerLink="/admin/revenue" class="admin-tab">
-              <span class="material-icons-round">receipt_long</span> Doanh thu & Dòng tiền
-            </a>
-          </div>
-
+    <div class="admin-page-content">
           <div class="dashboard-header animate-fade-in-up">
             <h1>Admin <span class="gradient-text">Dashboard</span></h1>
             <p>Tổng quan hệ thống UniTask</p>
@@ -293,63 +264,133 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
               </div>
             </div>
           }
-        }
-      </div>
-    </section>
+    </div>
   `,
   styles: [`
-    .admin-page {
-      padding: calc(80px + var(--space-8)) 0 var(--space-16);
+    .admin-page-content {
+      width: 100%;
     }
 
-    .auth-required {
-      text-align: center;
-      padding: var(--space-16);
-      max-width: 500px;
-      margin: var(--space-10) auto;
+    .dashboard-header {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: var(--space-4);
     }
 
-    .auth-required p { color: var(--text-secondary); }
-
-    .admin-nav {
-      display: flex;
-      gap: var(--space-2);
-      margin-bottom: var(--space-8);
-      background: var(--bg-glass);
-      padding: var(--space-2);
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--border-light);
-      width: fit-content;
+    .dashboard-header h1 {
+      font-size: var(--font-size-3xl);
+      font-weight: 800;
+      margin-bottom: var(--space-2);
     }
 
-    .admin-tab {
+    .gradient-text {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .dashboard-header p { color: var(--text-secondary); }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-5);
+      margin-bottom: var(--space-8);
+    }
+
+    .stat-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-5);
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .stat-icon .material-icons-round { color: white; font-size: 24px; }
+
+    .stat-number {
+      display: block;
+      font-size: var(--font-size-xl);
+      font-weight: 800;
+    }
+
+    .stat-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
+    /* Chart */
+    .chart-section, .packages-section {
+      margin-bottom: var(--space-8);
+    }
+
+    .dashboard-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--space-5);
+      margin-bottom: var(--space-8);
+    }
+
+    .breakdown-section h3 {
       display: flex;
       align-items: center;
       gap: var(--space-2);
-      padding: var(--space-3) var(--space-5);
-      border-radius: var(--radius-lg);
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      margin-bottom: var(--space-6);
+    }
+
+    .breakdown-section h3 .material-icons-round {
+      color: var(--primary-light);
+    }
+
+    .breakdown-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .breakdown-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .breakdown-info {
+      display: flex;
+      justify-content: space-between;
       font-size: var(--font-size-sm);
       font-weight: 600;
+    }
+
+    .breakdown-name {
       color: var(--text-secondary);
-      text-decoration: none;
-      transition: all var(--transition-fast);
     }
 
-    .admin-tab:hover {
+    .breakdown-val {
       color: var(--text-primary);
-      background: rgba(79, 70, 229, 0.08);
     }
 
-    .admin-tab.active {
-      background: var(--primary);
-      color: white;
-    }
+    
 
-    .admin-tab .material-icons-round { font-size: 18px; }
+    
+
+    
+
+    
+
+    
 
     .dashboard-header {
       margin-bottom: var(--space-8);

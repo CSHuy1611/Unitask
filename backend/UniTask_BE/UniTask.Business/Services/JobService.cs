@@ -25,6 +25,9 @@ namespace UniTask.Business.Services
             var query = _context.Jobs
                 .Include(j => j.Company)
                 .Include(j => j.Tags)
+                .Include(j => j.Requirements)
+                .Include(j => j.Benefits)
+                .Include(j => j.Applications)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(filter.StudentId))
@@ -74,25 +77,44 @@ namespace UniTask.Business.Services
             var skip = (filter.Page - 1) * filter.PageSize;
             var jobs = await query.Skip(skip).Take(filter.PageSize).ToListAsync();
 
-            return jobs.Select(MapToDto);
+            var employerIds = jobs.Select(j => j.EmployerId).Distinct().ToList();
+            var premiumEmployers = await _context.Subscriptions
+                .Include(s => s.Package)
+                .Where(s => employerIds.Contains(s.UserId) && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12)
+                .Select(s => s.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            return jobs.Select(j => MapToDto(j, premiumEmployers.Contains(j.EmployerId)));
         }
 
-        public async Task<JobDto?> GetJobByIdAsync(int id)
+        public async Task<JobDto?> GetJobByIdAsync(int id, string? currentUserId = null)
         {
             var job = await _context.Jobs
                 .Include(j => j.Company)
-                .Include(j => j.Tags)
                 .Include(j => j.Requirements)
                 .Include(j => j.Benefits)
+                .Include(j => j.Tags)
+                .Include(j => j.Applications)
                 .FirstOrDefaultAsync(j => j.Id == id);
 
             if (job == null) return null;
 
-            // Increment views
-            job.Views++;
-            await _context.SaveChangesAsync();
+            // Increment views only if the requester is not the employer who posted the job
+            if (string.IsNullOrEmpty(currentUserId) || job.EmployerId != currentUserId)
+            {
+                job.Views++;
+                await _context.SaveChangesAsync();
+            }
 
-            return MapToDto(job);
+            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == job.EmployerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
+
+            var dto = MapToDto(job, isPremium);
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                dto.IsAppliedByCurrentUser = await _context.Applications.AnyAsync(a => a.JobId == id && a.StudentProfile.UserId == currentUserId);
+            }
+            return dto;
         }
 
         public async Task<JobDto?> CreateJobAsync(string employerId, JobCreateDto dto)
@@ -205,7 +227,8 @@ namespace UniTask.Business.Services
             // Broadcast real-time event to Admin Dashboard
             await _hubContext.Clients.All.SendAsync("JobCreated");
 
-            return MapToDto(job);
+            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
+            return MapToDto(job, isPremium);
         }
 
         public async Task<bool> UpdateJobAsync(int id, string employerId, JobUpdateDto dto)
@@ -229,6 +252,7 @@ namespace UniTask.Business.Services
             job.Deadline = dto.Deadline;
             job.IsUrgent = dto.IsUrgent;
             job.IsRemote = dto.IsRemote;
+            job.HeadCount = dto.HeadCount;
 
             // Update collections
             _context.JobTags.RemoveRange(job.Tags);
@@ -240,6 +264,7 @@ namespace UniTask.Business.Services
             job.Benefits = dto.Benefits.Select(b => new JobBenefit { Content = b }).ToList();
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("JobCreated");
             return true;
         }
 
@@ -273,6 +298,7 @@ namespace UniTask.Business.Services
 
             _context.Jobs.Remove(job);
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("JobCreated");
             return true;
         }
 
@@ -397,6 +423,27 @@ namespace UniTask.Business.Services
             return true;
         }
 
+        public async Task<bool> StudentDisputeAsync(int jobId, string studentId, JobDisputeCreateDto dto)
+        {
+            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
+            if (job == null || (job.Status != DataAcesss.Entities.Enums.JobStatus.InProgress && job.Status != DataAcesss.Entities.Enums.JobStatus.PendingConfirmation))
+                return false;
+
+            var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId);
+            if (app == null) return false;
+
+            job.Status = DataAcesss.Entities.Enums.JobStatus.Disputed;
+            job.DisputeReason = dto.Reason;
+            job.StudentEvidenceText = dto.EvidenceText;
+            job.StudentEvidenceUrl = dto.EvidenceUrl;
+            job.DisputedDate = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("TransactionOccurred");
+
+            return true;
+        }
+
         public async Task<bool> SubmitStudentEvidenceAsync(int id, string studentId, StudentEvidenceSubmitDto dto)
         {
             var job = await _context.Jobs.Include(j => j.Applications).ThenInclude(a => a.StudentProfile).FirstOrDefaultAsync(j => j.Id == id);
@@ -417,7 +464,7 @@ namespace UniTask.Business.Services
             return true;
         }
 
-        private static JobDto MapToDto(Job j)
+        private static JobDto MapToDto(Job j, bool isCompanyPremium = false)
         {
             var salaryRange = new List<decimal>();
             if (!string.IsNullOrEmpty(j.SalaryText) && j.SalaryText.Contains("-"))
@@ -447,6 +494,7 @@ namespace UniTask.Business.Services
                 Deadline = j.Deadline,
                 Views = j.Views,
                 ApplicationsCount = j.ApplicationsCount,
+                AcceptedCount = j.Applications?.Count(a => a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed) ?? 0,
                 IsUrgent = j.IsUrgent,
                 IsRemote = j.IsRemote,
                 Status = j.Status,
@@ -474,6 +522,7 @@ namespace UniTask.Business.Services
                 CompanySize = j.Company?.Size,
                 CompanyLocation = j.Company?.Location,
                 CompanyWebsite = j.Company?.Website,
+                IsCompanyPremium = isCompanyPremium,
                 Tags = j.Tags?.Select(t => t.TagName).ToList() ?? new List<string>(),
                 Requirements = j.Requirements?.Select(r => r.Content).ToList() ?? new List<string>(),
                 Benefits = j.Benefits?.Select(b => b.Content).ToList() ?? new List<string>()
@@ -483,7 +532,7 @@ namespace UniTask.Business.Services
         public async Task<string?> GenerateCheckInOtpAsync(int jobId, string employerId)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.EmployerId == employerId);
-            if (job == null || job.Status != JobStatus.InProgress) return null;
+            if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return null;
 
             var otp = new Random().Next(100000, 999999).ToString();
             
@@ -501,7 +550,7 @@ namespace UniTask.Business.Services
         public async Task<string?> GenerateCheckOutOtpAsync(int jobId, string employerId)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.EmployerId == employerId);
-            if (job == null || job.Status != JobStatus.InProgress) return null;
+            if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return null;
 
             var otp = new Random().Next(100000, 999999).ToString();
             var apps = await _context.Applications.Where(a => a.JobId == jobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed)).ToListAsync();
@@ -518,7 +567,7 @@ namespace UniTask.Business.Services
         public async Task<bool> StudentCheckInAsync(int jobId, string studentId, string otp)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
-            if (job == null || job.Status != JobStatus.InProgress) return false;
+            if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return false;
 
             var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
             if (app == null) return false;
@@ -528,6 +577,10 @@ namespace UniTask.Business.Services
             app.CheckInTime = DateTime.UtcNow;
             app.CheckInOtp = null; // Clear OTP after use
             app.CheckInOtpExpiredAt = null;
+            
+            if (job.Status == JobStatus.Open) {
+                job.Status = JobStatus.InProgress;
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -536,7 +589,7 @@ namespace UniTask.Business.Services
         public async Task<bool> StudentCheckOutAsync(int jobId, string studentId, string otp)
         {
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
-            if (job == null || job.Status != JobStatus.InProgress) return false;
+            if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return false;
 
             var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
             if (app == null) return false;

@@ -7,6 +7,7 @@ namespace UniTask.Business.Interfaces
     {
         Task<object> GetDashboardStatsAsync();
         Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10);
+        Task<bool> ForceVerifyUserAsync(string userId);
         
         // Package Management
         Task<ServicePackageDto> CreatePackageAsync(ServicePackageCreateDto dto);
@@ -26,5 +27,6 @@ namespace UniTask.Business.Interfaces
         // Revenue & Cashflow
         Task<object> GetTransactionsAsync(int page = 1, int pageSize = 10, string? type = null);
         Task<byte[]> ExportRevenueReportExcelAsync(DateTime? startDate, DateTime? endDate);
+        Task<object> GetPayosDepositsAsync(int page = 1, int pageSize = 10);
     }
 }

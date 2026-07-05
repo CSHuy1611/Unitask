@@ -30,19 +30,6 @@ namespace UniTask.Api.Controllers
             return Ok(wallet);
         }
 
-        [HttpPost("deposit")]
-        public async Task<IActionResult> Deposit([FromBody] AmountDto dto)
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null) return Unauthorized();
-
-            var success = await _walletService.DepositAsync(userId, dto.Amount);
-            if (!success) return BadRequest("Deposit failed.");
-
-            return Ok(new { message = "Deposit successful" });
-        }
 
         [HttpPost("withdraw")]
         public async Task<IActionResult> Withdraw([FromBody] WithdrawRequestDto dto)

@@ -56,10 +56,16 @@ import { AuthService } from '../../services/auth.service';
         <div class="desktop-actions">
           @if (auth.isLoggedIn()) {
             <div class="user-menu">
-              @if (auth.currentUser()?.avatarUrl) {
-                <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="user-avatar-img" />
+              @if (auth.currentUser()?.avatarUrl && auth.currentUser()?.avatarUrl !== 'null') {
+                <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="user-avatar-img" [class.premium-avatar-glow]="isPremiumEmployer()" 
+                     #headerAvatarImg (error)="headerAvatarImg.style.display='none'; headerFallbackAvatar.style.display='flex'" />
+                <div #headerFallbackAvatar class="user-avatar" [class.premium-avatar-glow]="isPremiumEmployer()" style="display:none">
+                  {{ auth.currentUser()?.fullName?.charAt(0) || 'U' }}
+                </div>
               } @else {
-                <div class="user-avatar">{{ auth.currentUser()?.avatar }}</div>
+                <div class="user-avatar" [class.premium-avatar-glow]="isPremiumEmployer()">
+                  {{ auth.currentUser()?.fullName?.charAt(0) || 'U' }}
+                </div>
               }
               <span class="user-name">{{ auth.currentUser()?.fullName }}</span>
               <button class="btn btn-secondary btn-sm" (click)="onLogout()">
@@ -492,5 +498,17 @@ export class HeaderComponent {
   onLogout() {
     this.auth.logout();
     this.closeMenu();
+  }
+
+  isPremiumEmployer(): boolean {
+    if (!this.auth.isEmployer()) return false;
+    const pkg = this.auth.currentUser()?.activePackage;
+    if (!pkg) return false;
+    if (pkg.includes('VIP') || pkg.includes('Premium')) return true;
+    const match = pkg.match(/\d+/);
+    if (match) {
+      return parseInt(match[0], 10) >= 12;
+    }
+    return false;
   }
 }

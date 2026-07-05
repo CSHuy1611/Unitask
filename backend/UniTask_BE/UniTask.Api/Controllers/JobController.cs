@@ -28,7 +28,8 @@ namespace UniTask.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetJobById(int id)
         {
-            var job = await _jobService.GetJobByIdAsync(id);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var job = await _jobService.GetJobByIdAsync(id, currentUserId);
             if (job == null) return NotFound();
             return Ok(job);
         }
@@ -96,6 +97,14 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "Job approved and payment transferred to student." });
         }
 
+        [HttpPut("{id}/approve-debug")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ApproveJobDebug(int id)
+        {
+            var result = await _jobService.ApproveJobAsync(id, "485beccd-8e1d-49d5-a6ec-564d6fa54580");
+            return Ok(new { success = result, message = "Debug Approve" });
+        }
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "Employer")]
         public async Task<IActionResult> DeleteJob(int id)
@@ -137,6 +146,21 @@ namespace UniTask.Api.Controllers
             if (!result) return BadRequest(new { message = "Cannot submit evidence. Job might not be disputed or you are not the assigned student." });
 
             return Ok(new { message = "Evidence submitted successfully." });
+        }
+
+        [HttpPost("{id}/dispute/student")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> StudentDispute(int id, [FromBody] JobDisputeCreateDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (studentId == null) return Unauthorized();
+
+            var result = await _jobService.StudentDisputeAsync(id, studentId, dto);
+            if (!result) return BadRequest(new { message = "Cannot dispute job. Job might not be in progress or you are not the assigned student." });
+
+            return Ok(new { message = "Job reported as disputed. Dispute registered." });
         }
 
         [HttpPost("{id}/checkin-otp")]

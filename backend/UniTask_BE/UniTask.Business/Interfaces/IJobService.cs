@@ -5,7 +5,7 @@ namespace UniTask.Business.Interfaces
     public interface IJobService
     {
         Task<IEnumerable<JobDto>> GetJobsAsync(JobFilterDto filter);
-        Task<JobDto?> GetJobByIdAsync(int id);
+        Task<JobDto?> GetJobByIdAsync(int id, string? currentUserId = null);
         Task<JobDto?> CreateJobAsync(string employerId, JobCreateDto dto);
         Task<bool> UpdateJobAsync(int id, string employerId, JobUpdateDto dto);
         Task<bool> DeleteJobAsync(int id, string employerId);
@@ -13,6 +13,7 @@ namespace UniTask.Business.Interfaces
         Task<bool> ApproveJobAsync(int id, string employerId);
         Task<bool> RejectCompletionAsync(int id, string employerId, JobDisputeCreateDto dto);
         Task<bool> SubmitStudentEvidenceAsync(int id, string studentId, StudentEvidenceSubmitDto dto);
+        Task<bool> StudentDisputeAsync(int jobId, string studentId, JobDisputeCreateDto dto);
 
         // Check-in / Check-out OTP
         Task<string?> GenerateCheckInOtpAsync(int jobId, string employerId);

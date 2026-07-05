@@ -82,10 +82,17 @@ namespace UniTask.Api.Controllers
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null) return NotFound(new { message = "User not found" });
 
-            // Delete related EmployerProfile and Company if any
+            // Delete Employer related records
             var employerProfile = _dbContext.EmployerProfiles.FirstOrDefault(p => p.UserId == user.Id);
             if (employerProfile != null)
             {
+                // Delete all jobs posted by this employer first to satisfy FK constraints
+                var jobs = _dbContext.Jobs.Where(j => j.EmployerId == user.Id).ToList();
+                if (jobs.Any())
+                {
+                    _dbContext.Jobs.RemoveRange(jobs);
+                }
+
                 _dbContext.EmployerProfiles.Remove(employerProfile);
                 if (employerProfile.CompanyId.HasValue)
                 {
@@ -94,9 +101,19 @@ namespace UniTask.Api.Controllers
                 }
             }
 
-            // Delete StudentProfile if any
+            // Delete Student related records
             var studentProfile = _dbContext.StudentProfiles.FirstOrDefault(p => p.UserId == user.Id);
-            if (studentProfile != null) _dbContext.StudentProfiles.Remove(studentProfile);
+            if (studentProfile != null)
+            {
+                // Delete all applications and saved jobs to satisfy FK constraints
+                var applications = _dbContext.Applications.Where(a => a.StudentProfileId == studentProfile.Id).ToList();
+                if (applications.Any()) _dbContext.Applications.RemoveRange(applications);
+
+                var savedJobs = _dbContext.SavedJobs.Where(sj => sj.StudentProfileId == studentProfile.Id).ToList();
+                if (savedJobs.Any()) _dbContext.SavedJobs.RemoveRange(savedJobs);
+
+                _dbContext.StudentProfiles.Remove(studentProfile);
+            }
 
             await _dbContext.SaveChangesAsync();
 

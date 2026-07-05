@@ -58,6 +58,14 @@ namespace UniTask.Api.Controllers
             return Ok(users);
         }
 
+        [HttpPost("users/{userId}/force-verify")]
+        public async Task<IActionResult> ForceVerifyUser(string userId)
+        {
+            var result = await _adminService.ForceVerifyUserAsync(userId);
+            if (!result) return BadRequest(new { message = "Failed to force verify user." });
+            return Ok(new { message = "User verified successfully for testing." });
+        }
+
         // ===== PACKAGE MANAGEMENT =====
         [HttpPost("packages")]
         public async Task<IActionResult> CreatePackage([FromBody] ServicePackageCreateDto dto)
@@ -149,6 +157,14 @@ namespace UniTask.Api.Controllers
             var fileName = $"RevenueReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
             return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
+
+        [HttpGet("payos-deposits")]
+        public async Task<IActionResult> GetPayosDeposits([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var result = await _adminService.GetPayosDepositsAsync(page, pageSize);
+            return Ok(result);
+        }
+
 
         // ===== BUSINESS LICENSE MANAGEMENT =====
         [HttpGet("business-licenses/pending")]

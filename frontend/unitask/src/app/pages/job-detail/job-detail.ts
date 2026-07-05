@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobService } from '../../services/job.service';
 import { AuthService } from '../../services/auth.service';
@@ -15,8 +16,8 @@ import { Job } from '../../models/job.model';
     @if (job()) {
       <section class="detail-page">
         <div class="container">
-          <a routerLink="/jobs" class="back-link animate-fade-in">
-            <span class="material-icons-round">arrow_back</span> Quay lại danh sách
+          <a (click)="goBack()" class="back-link animate-fade-in" style="cursor: pointer;">
+            <span class="material-icons-round">arrow_back</span> Quay lại
           </a>
 
           <div class="detail-grid">
@@ -24,7 +25,7 @@ import { Job } from '../../models/job.model';
             <div class="detail-main animate-fade-in-up">
               <div class="detail-header glass-card">
                 <div class="header-top">
-                  <div class="company-logo" [style.background]="getLogoGradient()">
+                  <div class="company-logo" [class.premium-avatar-glow]="job()!.isCompanyPremium" [style.background]="getLogoGradient()">
                     {{ job()!.companyLogo }}
                   </div>
                   <div class="header-info">
@@ -33,6 +34,11 @@ import { Job } from '../../models/job.model';
                       <span class="meta-item">
                         <span class="material-icons-round">business</span>
                         {{ job()!.company }}
+                        @if (job()!.isCompanyPremium) {
+                          <span class="premium-badge" title="Nhà tuyển dụng Premium">
+                            <span class="material-icons-round" style="font-size: 14px;">workspace_premium</span>
+                          </span>
+                        }
                       </span>
                       <span class="meta-item">
                         <span class="material-icons-round">location_on</span>
@@ -171,6 +177,10 @@ import { Job } from '../../models/job.model';
                     <button class="btn btn-danger btn-lg full-width" disabled style="background:#EF4444; border-color:#EF4444; color:white">
                       <span class="material-icons-round">block</span> Tài khoản bị khóa
                     </button>
+                  } @else if (job()!.status !== 'open') {
+                    <button class="btn btn-secondary btn-lg full-width" disabled>
+                      <span class="material-icons-round">block</span> Đã tuyển đủ người
+                    </button>
                   } @else if (applied()) {
                     <button class="btn btn-secondary btn-lg full-width" disabled>
                       <span class="material-icons-round">check</span> Đã ứng tuyển
@@ -224,7 +234,7 @@ import { Job } from '../../models/job.model';
           <div class="empty-state glass-card">
             <span class="material-icons-round" style="font-size:64px;color:var(--text-muted)">work_off</span>
             <h2>Không tìm thấy việc làm</h2>
-            <a routerLink="/jobs" class="btn btn-primary">Quay lại danh sách</a>
+            <a (click)="goBack()" class="btn btn-primary" style="cursor: pointer;">Quay lại</a>
           </div>
         </div>
       </section>
@@ -485,6 +495,7 @@ export class JobDetailComponent implements OnInit {
   private router = inject(Router);
   private toast = inject(ToastService);
   auth = inject(AuthService);
+  locationService = inject(Location);
 
   job = signal<Job | null>(null);
   applied = signal(false);
@@ -498,7 +509,7 @@ export class JobDetailComponent implements OnInit {
     this.jobService.fetchJobDetail(id).subscribe({
       next: (found) => {
         this.job.set(found);
-        this.applied.set(this.auth.hasApplied(id));
+        this.applied.set(found.isAppliedByCurrentUser || false);
         const mockCompany = this.companyService.getById(found.companyId);
         if (mockCompany) {
           this.companyInfo.set(mockCompany);
@@ -594,5 +605,13 @@ export class JobDetailComponent implements OnInit {
       },
       error: () => this.toast.error('Lỗi kết nối khi nộp bằng chứng.')
     });
+  }
+
+  goBack() {
+    if (window.history.length > 1) {
+      this.locationService.back();
+    } else {
+      this.router.navigate(['/jobs']);
+    }
   }
 }

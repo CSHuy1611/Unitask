@@ -51,7 +51,7 @@ export class JobService {
   }
 
   fetchJobs() {
-    this.http.get<any[]>(`${API_BASE_URL}/job`).pipe(
+    this.http.get<any[]>(`${API_BASE_URL}/job?PageSize=1000`).pipe(
       map(dtos => dtos.map(dto => this.mapDtoToJob(dto)))
     ).subscribe({
       next: (jobs) => {
@@ -79,7 +79,8 @@ export class JobService {
       companyLogo: dto.companyLogoUrl || 'UT',
       location: dto.location || '',
       type: dto.type || 'Part-time',
-      salary: dto.salaryText || '',
+      category: dto.category || '',
+      salary: dto.salaryText || dto.salary || (dto.budget ? Math.round(dto.budget / (dto.headCount || 1)).toLocaleString('vi-VN') + 'đ' : ''),
       salaryRange: dto.salaryRange || [0, 0],
       description: dto.description || '',
       requirements: Array.isArray(dto.requirements) ? dto.requirements : (typeof dto.requirements === 'string' ? dto.requirements.split(/\r?\n|\\n/) : []),
@@ -89,6 +90,7 @@ export class JobService {
       deadline: dto.deadline ? dto.deadline.split('T')[0] : '',
       views: dto.views || 0,
       applications: dto.applicationsCount || 0,
+      acceptedCount: dto.acceptedCount || 0,
       isUrgent: dto.isUrgent || false,
       isRemote: dto.isRemote || false,
       budget: dto.budget || 0,
@@ -109,7 +111,9 @@ export class JobService {
       studentEvidenceUrl: dto.studentEvidenceUrl,
       disputedDate: dto.disputedDate ? dto.disputedDate.split('T')[0] : undefined,
       checkInTime: dto.checkInTime,
-      checkOutTime: dto.checkOutTime
+      checkOutTime: dto.checkOutTime,
+      isCompanyPremium: dto.isCompanyPremium || false,
+      isAppliedByCurrentUser: dto.isAppliedByCurrentUser || false
     };
   }
 
@@ -143,6 +147,7 @@ export class JobService {
     const payload = {
       title: job.title,
       type: job.type,
+      category: job.category || '',
       location: job.location,
       salaryText: job.salary,
       budget: job.budget,
@@ -153,7 +158,8 @@ export class JobService {
       benefits: Array.isArray(job.benefits) ? job.benefits : [],
       tags: Array.isArray(job.tags) ? job.tags : [],
       isRemote: job.isRemote,
-      isUrgent: job.isUrgent
+      isUrgent: job.isUrgent,
+      headCount: job.headCount
     };
 
     return this.http.post<any>(`${API_BASE_URL}/job`, payload).pipe(
@@ -173,6 +179,7 @@ export class JobService {
     const payload = {
       title: data.title,
       type: data.type,
+      category: data.category || '',
       location: data.location,
       salaryText: data.salary,
       budget: data.budget,
@@ -183,7 +190,8 @@ export class JobService {
       benefits: Array.isArray(data.benefits) ? data.benefits : [],
       tags: Array.isArray(data.tags) ? data.tags : [],
       isRemote: data.isRemote,
-      isUrgent: data.isUrgent
+      isUrgent: data.isUrgent,
+      headCount: data.headCount
     };
 
     return this.http.put<any>(`${API_BASE_URL}/job/${id}`, payload).pipe(
@@ -239,6 +247,46 @@ export class JobService {
       tap(() => this.fetchJobs()),
       map(() => ({ success: true, message: 'Đã nghiệm thu và thanh toán thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Lỗi nghiệm thu. Vui lòng thử lại.' }))
+    );
+  }
+
+  // Application-level actions (Auto-assign & per-student logic)
+  generateApplicationOtp(applicationId: number, type: 'checkin' | 'checkout'): Observable<{ success: boolean; otp?: string; message?: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/generate-otp?type=${type}`, {}).pipe(
+      map(res => ({ success: true, otp: res.otp })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể tạo mã OTP.' }))
+    );
+  }
+
+  studentCheckInApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/checkin`, { otp }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi Check-in.' }))
+    );
+  }
+
+  studentCheckOutApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/checkout`, { otp }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi Check-out.' }))
+    );
+  }
+
+  reportApplicationNoShow(applicationId: number, reason: string, evidenceUrl: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/report-noshow`, { reason, evidenceUrl }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi báo cáo vắng mặt.' }))
+    );
+  }
+
+  approveApplicationCompletion(applicationId: number): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/approve-completion`, {}).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi nghiệm thu.' }))
     );
   }
 
@@ -306,6 +354,14 @@ export class JobService {
       tap(() => this.fetchJobs()),
       map(() => ({ success: true, message: 'Đăng đánh giá thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Không thể đăng đánh giá.' }))
+    );
+  }
+
+  studentDispute(jobId: number, reason: string, evidenceUrl?: string, evidenceText?: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${jobId}/dispute/student`, { reason, evidenceUrl, evidenceText }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã gửi khiếu nại thành công. Ban quản trị sẽ xử lý.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể gửi khiếu nại.' }))
     );
   }
 }

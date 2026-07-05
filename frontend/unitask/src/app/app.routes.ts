@@ -1,5 +1,8 @@
 import { Routes } from '@angular/router';
 
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+
 export const routes: Routes = [
   {
     path: '',
@@ -23,34 +26,34 @@ export const routes: Routes = [
   },
   {
     path: 'employer/dashboard',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['Employer'] },
     loadComponent: () => import('./pages/employer-dashboard/employer-dashboard').then(m => m.EmployerDashboardComponent),
   },
   {
     path: 'profile',
+    canActivate: [authGuard],
     loadComponent: () => import('./pages/profile/profile').then(m => m.ProfileComponent),
   },
   {
-    path: 'admin/dashboard',
-    loadComponent: () => import('./pages/admin/admin-dashboard').then(m => m.AdminDashboardComponent),
-  },
-  {
-    path: 'admin/users',
-    loadComponent: () => import('./pages/admin/admin-users').then(m => m.AdminUsersComponent),
-  },
-  {
-    path: 'admin/withdrawals',
-    loadComponent: () => import('./pages/admin/admin-withdrawals').then(m => m.AdminWithdrawalsComponent),
-  },
-  {
-    path: 'admin/disputes',
-    loadComponent: () => import('./pages/admin/admin-disputes').then(m => m.AdminDisputesComponent),
-  },
-  {
-    path: 'admin/revenue',
-    loadComponent: () => import('./pages/admin/admin-revenue').then(m => m.AdminRevenueComponent),
+    path: 'admin',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['Admin'] },
+    loadComponent: () => import('./pages/admin/admin-layout').then(m => m.AdminLayoutComponent),
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', loadComponent: () => import('./pages/admin/admin-dashboard').then(m => m.AdminDashboardComponent) },
+      { path: 'users', loadComponent: () => import('./pages/admin/admin-users').then(m => m.AdminUsersComponent) },
+      { path: 'withdrawals', loadComponent: () => import('./pages/admin/admin-withdrawals').then(m => m.AdminWithdrawalsComponent) },
+      { path: 'disputes', loadComponent: () => import('./pages/admin/admin-disputes').then(m => m.AdminDisputesComponent) },
+      { path: 'revenue', loadComponent: () => import('./pages/admin/admin-revenue').then(m => m.AdminRevenueComponent) },
+      { path: 'payos-logs', loadComponent: () => import('./pages/admin/admin-payos').then(m => m.AdminPayosComponent) },
+    ]
   },
   {
     path: 'pricing',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['Employer'] },
     loadComponent: () => import('./pages/pricing/pricing').then(m => m.PricingComponent),
   },
   {

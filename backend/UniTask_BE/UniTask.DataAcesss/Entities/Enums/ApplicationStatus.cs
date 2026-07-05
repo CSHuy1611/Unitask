@@ -7,6 +7,8 @@ namespace UniTask.DataAcesss.Entities.Enums
         Accepted = 2,
         Rejected = 3,
         Cancelled = 4,
-        Completed = 5
+        Completed = 5,
+        NoShow = 6,
+        Disputed = 7
     }
 }
