@@ -97,6 +97,14 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "Job approved and payment transferred to student." });
         }
 
+        [HttpPut("{id}/approve-debug")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ApproveJobDebug(int id)
+        {
+            var result = await _jobService.ApproveJobAsync(id, "485beccd-8e1d-49d5-a6ec-564d6fa54580");
+            return Ok(new { success = result, message = "Debug Approve" });
+        }
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "Employer")]
         public async Task<IActionResult> DeleteJob(int id)
