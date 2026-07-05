@@ -37,5 +37,13 @@ namespace UniTask.DataAcesss.Entities
         public string? CheckOutOtp { get; set; }
         public DateTime? CheckOutOtpExpiredAt { get; set; }
         public DateTime? EscrowReleaseDate { get; set; }
+
+        // ===== Dispute Fields =====
+        public string? DisputeReason { get; set; }
+        public string? EmployerEvidenceText { get; set; }
+        public string? EmployerEvidenceUrl { get; set; }
+        public string? StudentEvidenceText { get; set; }
+        public string? StudentEvidenceUrl { get; set; }
+        public DateTime? DisputedDate { get; set; }
     }
 }

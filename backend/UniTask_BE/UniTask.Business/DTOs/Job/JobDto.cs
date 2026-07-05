@@ -52,6 +52,7 @@ namespace UniTask.Business.DTOs.Job
         public string? CompanySize { get; set; }
         public string? CompanyLocation { get; set; }
         public string? CompanyWebsite { get; set; }
+        public bool IsCompanyPremium { get; set; }
 
         public List<string> Tags { get; set; } = new();
         public List<string> Requirements { get; set; } = new();

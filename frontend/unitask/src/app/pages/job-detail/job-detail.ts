@@ -25,7 +25,7 @@ import { Job } from '../../models/job.model';
             <div class="detail-main animate-fade-in-up">
               <div class="detail-header glass-card">
                 <div class="header-top">
-                  <div class="company-logo" [style.background]="getLogoGradient()">
+                  <div class="company-logo" [class.premium-avatar-glow]="job()!.isCompanyPremium" [style.background]="getLogoGradient()">
                     {{ job()!.companyLogo }}
                   </div>
                   <div class="header-info">
@@ -34,6 +34,11 @@ import { Job } from '../../models/job.model';
                       <span class="meta-item">
                         <span class="material-icons-round">business</span>
                         {{ job()!.company }}
+                        @if (job()!.isCompanyPremium) {
+                          <span class="premium-badge" title="Nhà tuyển dụng Premium">
+                            <span class="material-icons-round" style="font-size: 14px;">workspace_premium</span>
+                          </span>
+                        }
                       </span>
                       <span class="meta-item">
                         <span class="material-icons-round">location_on</span>

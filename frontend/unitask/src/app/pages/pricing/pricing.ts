@@ -77,7 +77,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     <li><span class="material-icons-round" style="color:var(--success)">check</span> Ưu tiên hiển thị top</li>
                   }
                   @if (pkg.id >= 3) {
-                    <li><span class="material-icons-round" style="color:var(--success)">check</span> Tick xanh uy tín</li>
+                    <li><span class="material-icons-round" style="color:var(--warning)">workspace_premium</span> Huy hiệu Doanh nghiệp Premium</li>
                   }
                 </ul>
                 <button class="btn btn-lg full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)">

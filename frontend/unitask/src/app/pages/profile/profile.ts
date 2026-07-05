@@ -29,9 +29,9 @@ import Tesseract from 'tesseract.js';
               <div class="sidebar-card glass-card profile-card">
                 <div class="profile-avatar-wrapper">
                 @if (auth.currentUser()?.avatarUrl) {
-                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" />
+                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" [class.premium-avatar-glow]="isPremiumEmployer()" />
                 } @else {
-                  <div class="profile-avatar">
+                  <div class="profile-avatar" [class.premium-avatar-glow]="isPremiumEmployer()">
                     {{ auth.currentUser()?.avatar }}
                   </div>
                 }
@@ -578,34 +578,37 @@ import Tesseract from 'tesseract.js';
                               <span class="badge badge-danger">Tranh chấp</span>
                             }
                           </div>
-
-                          @if (job.status === 'in_progress') {
-                            <div class="job-actions">
-                              <div>
-                                @if (job.checkInTime && !job.checkOutTime) {
-                                  <span style="font-size: 12px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 4px;">
-                                    <i class="material-icons-round" style="font-size:14px">check_circle</i> Đã check-in
-                                  </span>
-                                } @else if (job.checkOutTime) {
-                                  <span style="font-size: 12px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 4px;">
-                                    <i class="material-icons-round" style="font-size:14px">done_all</i> Đã check-out (Chờ duyệt)
-                                  </span>
-                                }
-                              </div>
-                              <div class="job-actions-right">
-                                @if (!job.checkInTime) {
-                                  <button type="button" class="btn btn-primary btn-sm" (click)="openCheckInModal(job)">
-                                    <i class="material-icons-round" style="font-size:16px">login</i> Check-in OTP
-                                  </button>
-                                } @else if (!job.checkOutTime) {
-                                  <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(job)">
-                                    <i class="material-icons-round" style="font-size:16px">logout</i> Check-out OTP
-                                  </button>
-                                }
-                                <button type="button" class="btn btn-danger btn-sm" (click)="openReportModal(job)" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-                                  <i class="material-icons-round" style="font-size:16px">report_problem</i> Khiếu nại
+                          <!-- Student Application Status for the Job -->
+                          @let myApp = getMyApplicationForJob(job.id);
+                          @if (job.status === 'in_progress' && myApp) {
+                            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; flex-wrap: wrap;">
+                              @if (!myApp.checkInTime) {
+                                <button type="button" class="btn btn-primary btn-sm" (click)="openCheckInModal(myApp.id)" style="background: var(--primary-light)">
+                                  <span class="material-icons-round" style="font-size:16px">login</span> Check-in OTP
                                 </button>
-                              </div>
+                              } @else if (!myApp.checkOutTime) {
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                  <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
+                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ myApp.checkInTime | date:'HH:mm' }})
+                                  </span>
+                                  <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(myApp.id)">
+                                    <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
+                                  </button>
+                                </div>
+                              } @else {
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                  <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
+                                    <span class="material-icons-round" style="font-size:14px">done_all</span> Đã check-out ({{ myApp.checkOutTime | date:'HH:mm' }})
+                                  </span>
+                                  <button type="button" class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
+                                    <span class="material-icons-round" style="font-size:16px">task_alt</span> Báo cáo hoàn thành
+                                  </button>
+                                </div>
+                              }
+                              
+                              <button type="button" class="btn btn-danger btn-sm" (click)="openReportModal(job)" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                <span class="material-icons-round" style="font-size:16px">report_problem</span> Khiếu nại
+                              </button>
                             </div>
                           }
 
@@ -1751,6 +1754,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   });
 
+  getMyApplicationForJob(jobId: number): any {
+    return this.myApplications().find(app => app.jobId === jobId);
+  }
+
   editForm = {
     fullName: '',
     phone: '',
@@ -1797,6 +1804,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
         error: (err) => console.error('Failed to load student applications:', err)
       });
     }
+  }
+
+  isPremiumEmployer(): boolean {
+    if (!this.auth.isEmployer()) return false;
+    const pkg = this.auth.currentUser()?.activePackage;
+    if (!pkg) return false;
+    if (pkg.includes('VIP') || pkg.includes('Premium')) return true;
+    const match = pkg.match(/\d+/);
+    if (match) {
+      return parseInt(match[0], 10) >= 12;
+    }
+    return false;
   }
 
   toggleEditMode() {
@@ -1942,29 +1961,29 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   }
 
-  openCheckInModal(job: Job) {
-    this.selectedJobForOtp.set(job);
+  selectedAppForOtp = signal<number | null>(null);
+
+  openCheckInModal(appId: number) {
+    this.selectedAppForOtp.set(appId);
     this.otpInput = '';
     this.showCheckInModal.set(true);
   }
 
-  openCheckOutModal(job: Job) {
-    this.selectedJobForOtp.set(job);
+  openCheckOutModal(appId: number) {
+    this.selectedAppForOtp.set(appId);
     this.otpInput = '';
     this.showCheckOutModal.set(true);
   }
 
   submitCheckIn() {
-    const job = this.selectedJobForOtp();
-    if (!job || !this.otpInput) return;
-    this.jobService.studentCheckIn(job.id, this.otpInput).subscribe({
+    const appId = this.selectedAppForOtp();
+    if (!appId || !this.otpInput) return;
+    this.jobService.studentCheckInApplication(appId, this.otpInput).subscribe({
       next: (res) => {
         if (res.success) {
           this.toast.success(res.message);
           this.showCheckInModal.set(false);
-          this.jobService.fetchJobs();
           this.refreshStudentApplications();
-          this.auth.fetchProfile().subscribe();
         } else {
           this.toast.error(res.message);
         }
@@ -1974,16 +1993,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   submitCheckOut() {
-    const job = this.selectedJobForOtp();
-    if (!job || !this.otpInput) return;
-    this.jobService.studentCheckOut(job.id, this.otpInput).subscribe({
+    const appId = this.selectedAppForOtp();
+    if (!appId || !this.otpInput) return;
+    this.jobService.studentCheckOutApplication(appId, this.otpInput).subscribe({
       next: (res) => {
         if (res.success) {
           this.toast.success(res.message);
           this.showCheckOutModal.set(false);
-          this.jobService.fetchJobs();
           this.refreshStudentApplications();
-          this.auth.fetchProfile().subscribe();
         } else {
           this.toast.error(res.message);
         }

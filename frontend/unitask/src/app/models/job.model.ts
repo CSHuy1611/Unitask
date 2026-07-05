@@ -33,6 +33,7 @@ export interface Job {
   companySize?: string;
   companyLocation?: string;
   companyWebsite?: string;
+  isCompanyPremium?: boolean;
   disputeReason?: string;
   employerEvidenceText?: string;
   employerEvidenceUrl?: string;

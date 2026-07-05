@@ -110,8 +110,8 @@ export class JobService {
       studentEvidenceText: dto.studentEvidenceText,
       studentEvidenceUrl: dto.studentEvidenceUrl,
       disputedDate: dto.disputedDate ? dto.disputedDate.split('T')[0] : undefined,
-      checkInTime: dto.checkInTime,
-      checkOutTime: dto.checkOutTime
+      checkOutTime: dto.checkOutTime,
+      isCompanyPremium: dto.isCompanyPremium || false
     };
   }
 
@@ -252,6 +252,46 @@ export class JobService {
       tap(() => this.fetchJobs()),
       map(() => ({ success: true, message: 'Đã nghiệm thu và thanh toán thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Lỗi nghiệm thu. Vui lòng thử lại.' }))
+    );
+  }
+
+  // Application-level actions (Auto-assign & per-student logic)
+  generateApplicationOtp(applicationId: number, type: 'checkin' | 'checkout'): Observable<{ success: boolean; otp?: string; message?: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/generate-otp?type=${type}`, {}).pipe(
+      map(res => ({ success: true, otp: res.otp })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể tạo mã OTP.' }))
+    );
+  }
+
+  studentCheckInApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/checkin`, { otp }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi Check-in.' }))
+    );
+  }
+
+  studentCheckOutApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/checkout`, { otp }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi Check-out.' }))
+    );
+  }
+
+  reportApplicationNoShow(applicationId: number, reason: string, evidenceUrl: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/report-noshow`, { reason, evidenceUrl }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi báo cáo vắng mặt.' }))
+    );
+  }
+
+  approveApplicationCompletion(applicationId: number): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/approve-completion`, {}).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi nghiệm thu.' }))
     );
   }
 
