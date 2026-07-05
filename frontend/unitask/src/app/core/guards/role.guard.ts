@@ -6,14 +6,23 @@ export const roleGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  const expectedRoles = (route.data['roles'] as Array<string>).map(r => r.toLowerCase());
-  const user = authService.currentUser();
+  try {
+    const rolesData = route.data?.['roles'];
+    const expectedRoles = Array.isArray(rolesData) ? rolesData.map((r: string) => r.toLowerCase()) : [];
+    const user = authService.currentUser();
 
-  if (authService.isLoggedIn() && user && expectedRoles.includes(user.role.toLowerCase())) {
-    return true;
+    if (authService.isLoggedIn() && user && user.role) {
+      if (expectedRoles.length === 0 || expectedRoles.includes(user.role.toLowerCase())) {
+        return true;
+      }
+    }
+
+    console.warn('RoleGuard: Access denied. Expected roles:', expectedRoles, 'User role:', user?.role);
+    router.navigate(['/']);
+    return false;
+  } catch (error) {
+    console.error('RoleGuard error:', error);
+    router.navigate(['/']);
+    return false;
   }
-
-  // Not authorized, redirect to home or login
-  router.navigate(['/']);
-  return false;
 };
