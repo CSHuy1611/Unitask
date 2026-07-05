@@ -217,7 +217,14 @@ export class JobService {
   }
 
   getJobApplications(jobId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${API_BASE_URL}/application/job/${jobId}`);
+    return this.http.get<any[]>(`${API_BASE_URL}/application/job/${jobId}`).pipe(
+      map(apps => apps.map(app => {
+        let mappedStatus = app.status;
+        if (app.status === 2) mappedStatus = 1;
+        else if (app.status === 3) mappedStatus = 2;
+        return { ...app, status: mappedStatus };
+      }))
+    );
   }
 
   getMyApplications(): Observable<any[]> {
@@ -352,6 +359,14 @@ export class JobService {
       tap(() => this.fetchJobs()),
       map(() => ({ success: true, message: 'Đăng đánh giá thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Không thể đăng đánh giá.' }))
+    );
+  }
+
+  studentDispute(jobId: number, reason: string, evidenceUrl?: string, evidenceText?: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${jobId}/dispute/student`, { reason, evidenceUrl, evidenceText }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã gửi khiếu nại thành công. Ban quản trị sẽ xử lý.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể gửi khiếu nại.' }))
     );
   }
 }
