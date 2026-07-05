@@ -19,6 +19,7 @@ namespace UniTask.DataAcesss.Entities
         [ForeignKey(nameof(UserId))]
         public ApplicationUser User { get; set; } = null!;
 
+        [ConcurrencyCheck]
         [Column(TypeName = "decimal(18,0)")]
         public decimal Balance { get; set; } = 0;
 

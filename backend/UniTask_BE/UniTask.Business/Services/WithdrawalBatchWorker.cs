@@ -55,55 +55,19 @@ namespace UniTask.Business.Services
         public async Task ProcessBatchAsync()
         {
             using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var emailService = scope.ServiceProvider.GetRequiredService<UniTask.Business.Interfaces.IEmailService>();
+            var adminService = scope.ServiceProvider.GetRequiredService<UniTask.Business.Interfaces.IAdminService>();
 
-            var pendingWithdrawals = await context.Transactions
-                .Include(t => t.Wallet)
-                .ThenInclude(w => w.User)
-                .Where(t => t.Type == TransactionType.Withdrawal && t.Description != null && t.Description.StartsWith("[Pending]"))
-                .ToListAsync();
-
-            if (pendingWithdrawals.Any())
+            try
             {
-                foreach (var tx in pendingWithdrawals)
+                var result = await adminService.BatchProcessWithdrawalsAsync();
+                if (result)
                 {
-                    string cleanDesc = tx.Description!.Substring("[Pending]".Length).Trim();
-                    tx.Description = "[Processing] " + cleanDesc;
-
-                    if (tx.Wallet?.User?.Email != null)
-                    {
-                        var userSubject = "[UniTask] Yêu cầu rút tiền đang được chuyển khoản";
-                        var userBody = $@"
-<div style=""font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;"">
-    <div style=""text-align: center; margin-bottom: 20px;"">
-        <h2 style=""color: #d97706; margin: 0;"">Đang Xử Lý Chuyển Khoản</h2>
-        <p style=""color: #6b7280; font-size: 14px;"">UniTask Matching Platform</p>
-    </div>
-    <div style=""background-color: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px;"">
-        <p style=""color: #1f2937; margin-bottom: 15px;"">Chào {tx.Wallet.User.FullName},</p>
-        <p style=""color: #1f2937; margin-bottom: 15px;"">Yêu cầu rút <strong>{Math.Abs(tx.Amount).ToString("N0")} VND</strong> của bạn đã được quản trị viên duyệt và đang trong quá trình chuyển tiền đến ngân hàng.</p>
-        <p style=""color: #1f2937; margin-bottom: 15px;"">Giao dịch của bạn đã chuyển sang trạng thái <strong>[Đang xử lý]</strong>. Tiền sẽ về tài khoản của bạn trong vòng tối đa 24 giờ tới.</p>
-        <p style=""color: #1f2937;"">Vui lòng kiên nhẫn kiểm tra tài khoản ngân hàng. Cảm ơn bạn!</p>
-    </div>
-    <hr style=""border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0 15px 0;"" />
-    <div style=""text-align: center; font-size: 12px; color: #9ca3af;"">
-        Đây là email tự động từ hệ thống UniTask. Vui lòng không phản hồi email này.
-    </div>
-</div>";
-                        try
-                        {
-                            await emailService.SendEmailAsync(tx.Wallet.User.Email, userSubject, userBody);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, $"Failed to send processing email to {tx.Wallet.User.Email}");
-                        }
-                    }
+                    _logger.LogInformation("Successfully processed end-of-month withdrawal batch.");
                 }
-
-                await context.SaveChangesAsync();
-                _logger.LogInformation($"Successfully batched {pendingWithdrawals.Count} withdrawal requests into 'Processing' status.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to execute batch processing from AdminService.");
             }
         }
     }

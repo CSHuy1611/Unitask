@@ -120,6 +120,11 @@ namespace UniTask.Business.Services
                         // Update wallet
                         pendingTx.Wallet.Balance += roundedAmount;
 
+                        // Save metadata from PayOS webhook
+                        pendingTx.CounterAccountBankName = data.CounterAccountBankName;
+                        pendingTx.CounterAccountName = data.CounterAccountName;
+                        pendingTx.CounterAccountNumber = data.CounterAccountNumber;
+
                         // Mark transaction as success
                         pendingTx.Description = $"Nạp tiền qua PayOS thành công (demo dự án học tập). Mã ĐH: {orderCode}";
                         pendingTx.CreatedAt = DateTime.UtcNow; // update time

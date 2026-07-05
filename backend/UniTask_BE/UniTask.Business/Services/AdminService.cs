@@ -362,34 +362,60 @@ namespace UniTask.Business.Services
             var pendingWithdrawals = await _context.Transactions
                 .Include(t => t.Wallet)
                 .ThenInclude(w => w.User)
-                .Where(t => t.Type == TransactionType.Withdrawal && t.Description != null && (t.Description.StartsWith("[Pending]") || (!t.Description.StartsWith("[Processing]") && !t.Description.StartsWith("[Completed]"))))
+                .Where(t => t.Type == TransactionType.Withdrawal && t.Description != null && (t.Description.StartsWith("[Pending]") || (!t.Description.StartsWith("[Processing]") && !t.Description.StartsWith("[Completed]") && !t.Description.StartsWith("[Rejected]"))))
                 .ToListAsync();
 
-            if (pendingWithdrawals.Any())
+            if (!pendingWithdrawals.Any())
             {
-                foreach (var tx in pendingWithdrawals)
-                {
-                    string desc = tx.Description ?? "";
-                    string cleanDesc = desc;
-                    if (desc.StartsWith("[Pending]"))
-                    {
-                        cleanDesc = desc.Substring("[Pending]".Length).Trim();
-                    }
-                    tx.Description = "[Processing] " + cleanDesc;
+                return true;
+            }
 
-                    // Send email to user
-                    if (tx.Wallet?.User?.Email != null)
+            // Group by WalletId and Bank Information to merge multiple requests into a single payout
+            var grouped = pendingWithdrawals
+                .GroupBy(t => 
+                {
+                    string bankInfo = "";
+                    if (t.Description != null && t.Description.Contains(" - Ngân hàng:"))
                     {
-                        var userSubject = "[UniTask] Yêu cầu rút tiền đang được chuyển khoản";
-                        var userBody = $@"
+                        bankInfo = t.Description.Substring(t.Description.IndexOf(" - Ngân hàng:"));
+                    }
+                    return t.WalletId.ToString() + bankInfo;
+                })
+                .ToList();
+
+            foreach (var group in grouped)
+            {
+                var mainTx = group.OrderBy(t => t.CreatedAt).First();
+                var mergeTxList = group.Where(t => t.Id != mainTx.Id).ToList();
+
+                // Merge amounts into the first (main) transaction
+                foreach (var tx in mergeTxList)
+                {
+                    mainTx.Amount += tx.Amount; // tx.Amount is negative
+                    _context.Transactions.Remove(tx);
+                }
+
+                string desc = mainTx.Description ?? "";
+                string cleanDesc = desc;
+                if (desc.StartsWith("[Pending]"))
+                {
+                    cleanDesc = desc.Substring("[Pending]".Length).Trim();
+                }
+                mainTx.Description = "[Processing] " + cleanDesc;
+
+                // Send email to user for the grouped payout
+                if (mainTx.Wallet?.User?.Email != null)
+                {
+                    var userSubject = "[UniTask] Yêu cầu rút tiền đang được chuyển khoản";
+                    var userBody = $@"
 <div style=""font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;"">
     <div style=""text-align: center; margin-bottom: 20px;"">
         <h2 style=""color: #d97706; margin: 0;"">Đang Xử Lý Chuyển Khoản</h2>
         <p style=""color: #6b7280; font-size: 14px;"">UniTask Matching Platform</p>
     </div>
     <div style=""background-color: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px;"">
-        <p style=""color: #1f2937; margin-bottom: 15px;"">Chào {tx.Wallet.User.FullName},</p>
-        <p style=""color: #1f2937; margin-bottom: 15px;"">Yêu cầu rút <strong>{Math.Abs(tx.Amount).ToString("N0")} VND</strong> của bạn đã được quản trị viên duyệt và đang trong quá trình chuyển tiền đến ngân hàng.</p>
+        <p style=""color: #1f2937; margin-bottom: 15px;"">Chào {mainTx.Wallet.User.FullName},</p>
+        <p style=""color: #1f2937; margin-bottom: 15px;"">Yêu cầu rút <strong>{Math.Abs(mainTx.Amount).ToString("N0")} VND</strong> của bạn đã được quản trị viên duyệt và đang trong quá trình chuyển tiền đến ngân hàng.</p>
         <p style=""color: #1f2937; margin-bottom: 15px;"">Giao dịch của bạn đã chuyển sang trạng thái <strong>[Đang xử lý]</strong>. Tiền sẽ về tài khoản của bạn trong vòng tối đa 24 giờ tới.</p>
         <p style=""color: #1f2937;"">Vui lòng kiên nhẫn kiểm tra tài khoản ngân hàng. Cảm ơn bạn!</p>
     </div>
@@ -398,19 +424,18 @@ namespace UniTask.Business.Services
         Đây là email tự động từ hệ thống UniTask. Vui lòng không phản hồi email này.
     </div>
 </div>";
-                        try
-                        {
-                            await _emailService.SendEmailAsync(tx.Wallet.User.Email, userSubject, userBody);
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Console.WriteLine($"[Email Error] {ex.Message}");
-                        }
+                    try
+                    {
+                        await _emailService.SendEmailAsync(mainTx.Wallet.User.Email, userSubject, userBody);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Console.WriteLine($"[Email Error] {ex.Message}");
                     }
                 }
-
-                await _context.SaveChangesAsync();
             }
+
+            await _context.SaveChangesAsync();
             return true;
         }
 
@@ -690,85 +715,120 @@ namespace UniTask.Business.Services
             var transactions = await query.ToListAsync();
 
             using var workbook = new ClosedXML.Excel.XLWorkbook();
+            
+            // Common styles
+            var headerColor = ClosedXML.Excel.XLColor.FromHtml("#1E293B"); // Dark Blue
+            var rowColorAlt = ClosedXML.Excel.XLColor.FromHtml("#F8FAFC");
+            string currencyFormat = "_-* #,##0 ₫_-;-* #,##0 ₫_-;_-* \"-\"?? ₫_-;_-@_-";
 
-            // Format functions
-            Action<ClosedXML.Excel.IXLWorksheet> formatSheet = (sheet) => {
-                var range = sheet.RangeUsed();
-                if (range != null) {
-                    var table = range.CreateTable();
-                    table.Theme = ClosedXML.Excel.XLTableTheme.TableStyleMedium2;
-                    sheet.Columns().AdjustToContents();
-                }
+            Action<ClosedXML.Excel.IXLWorksheet, int, string> formatTable = (sheet, startRow, tableName) => {
+                var range = sheet.Range(startRow, 1, sheet.LastRowUsed().RowNumber(), sheet.LastColumnUsed().ColumnNumber());
+                var table = range.CreateTable(tableName);
+                table.Theme = ClosedXML.Excel.XLTableTheme.TableStyleLight9;
+                table.ShowAutoFilter = true;
+                
+                // Style Headers
+                var headerRow = range.FirstRow();
+                headerRow.Style.Font.Bold = true;
+                headerRow.Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+                headerRow.Style.Fill.BackgroundColor = headerColor;
+                headerRow.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                headerRow.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
+
+                sheet.Columns().AdjustToContents();
             };
 
             // Calculate Metrics
             var totalRevenue = transactions.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee).Sum(t => Math.Abs(t.Amount));
             var totalCashIn = transactions.Where(t => t.Type == TransactionType.Deposit && !(t.Description != null && t.Description.Contains("[PAYOS_PENDING]"))).Sum(t => t.Amount);
             var totalCashOut = transactions.Where(t => t.Type == TransactionType.Withdrawal && !(t.Description != null && t.Description.StartsWith("[Rejected]"))).Sum(t => Math.Abs(t.Amount));
-            
             var payingUserIds = transactions.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee).Select(t => t.Wallet.UserId).Distinct().ToList();
             var arpu = payingUserIds.Count > 0 ? totalRevenue / payingUserIds.Count : 0;
 
             // 1. Sheet Tổng Quan (Executive Summary)
             var summarySheet = workbook.Worksheets.Add("Tổng Quan");
-            summarySheet.Cell("A1").Value = "BÁO CÁO TÀI CHÍNH TỔNG QUAN";
+            summarySheet.Style.Font.FontName = "Arial";
+            summarySheet.Style.Font.FontSize = 11;
+            summarySheet.ShowGridLines = false;
+
+            summarySheet.Cell("A1").Value = "HỆ THỐNG UNITASK";
             summarySheet.Cell("A1").Style.Font.Bold = true;
-            summarySheet.Cell("A1").Style.Font.FontSize = 16;
-            summarySheet.Range("A1:B1").Merge();
+            summarySheet.Cell("A1").Style.Font.FontSize = 14;
+            summarySheet.Cell("A1").Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#3B82F6");
 
-            summarySheet.Cell("A3").Value = "Kỳ báo cáo";
-            summarySheet.Cell("B3").Value = (startDate.HasValue ? startDate.Value.ToString("dd/MM/yyyy") : "Từ đầu") + " - " + (endDate.HasValue ? endDate.Value.ToString("dd/MM/yyyy") : "Đến nay");
+            summarySheet.Cell("A3").Value = "BÁO CÁO TÀI CHÍNH TỔNG QUAN";
+            summarySheet.Cell("A3").Style.Font.Bold = true;
+            summarySheet.Cell("A3").Style.Font.FontSize = 18;
+            summarySheet.Cell("A3").Style.Font.FontColor = headerColor;
+            summarySheet.Range("A3:C3").Merge();
 
-            summarySheet.Cell("A5").Value = "Chỉ số";
-            summarySheet.Cell("B5").Value = "Giá trị (VNĐ)";
-            summarySheet.Range("A5:B5").Style.Font.Bold = true;
-            summarySheet.Range("A5:B5").Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGray;
+            summarySheet.Cell("A5").Value = "Kỳ báo cáo:";
+            summarySheet.Cell("A5").Style.Font.Italic = true;
+            summarySheet.Cell("B5").Value = (startDate.HasValue ? startDate.Value.ToString("dd/MM/yyyy") : "Từ đầu") + " - " + (endDate.HasValue ? endDate.Value.ToString("dd/MM/yyyy") : "Đến nay");
+            summarySheet.Cell("A6").Value = "Ngày lập:";
+            summarySheet.Cell("A6").Style.Font.Italic = true;
+            summarySheet.Cell("B6").Value = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
 
-            summarySheet.Cell("A6").Value = "Tổng doanh thu (Platform Revenue)";
-            summarySheet.Cell("B6").Value = totalRevenue;
+            summarySheet.Cell("A8").Value = "CHỈ SỐ CHÍNH";
+            summarySheet.Cell("A8").Style.Font.Bold = true;
+            summarySheet.Cell("A8").Style.Fill.BackgroundColor = headerColor;
+            summarySheet.Cell("A8").Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+            summarySheet.Cell("B8").Value = "GIÁ TRỊ";
+            summarySheet.Cell("B8").Style.Font.Bold = true;
+            summarySheet.Cell("B8").Style.Fill.BackgroundColor = headerColor;
+            summarySheet.Cell("B8").Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+
+            summarySheet.Cell("A9").Value = "Tổng doanh thu (Platform Revenue)";
+            summarySheet.Cell("B9").Value = totalRevenue;
+            summarySheet.Cell("A10").Value = "Tổng dòng tiền vào (Total Cash In)";
+            summarySheet.Cell("B10").Value = totalCashIn;
+            summarySheet.Cell("A11").Value = "Tổng dòng tiền ra (Total Cash Out)";
+            summarySheet.Cell("B11").Value = totalCashOut;
+            summarySheet.Cell("A12").Value = "Dòng tiền thuần (Net Cash Flow)";
+            summarySheet.Cell("B12").Value = totalCashIn - totalCashOut;
+            summarySheet.Cell("A13").Value = "ARPU (Doanh thu TB / Khách trả phí)";
+            summarySheet.Cell("B13").Value = arpu;
             
-            summarySheet.Cell("A7").Value = "Tổng dòng tiền vào (Total Cash In)";
-            summarySheet.Cell("B7").Value = totalCashIn;
+            summarySheet.Cell("A14").Value = "Số lượng khách hàng trả phí";
+            summarySheet.Cell("B14").Value = payingUserIds.Count;
 
-            summarySheet.Cell("A8").Value = "Tổng dòng tiền ra (Total Cash Out)";
-            summarySheet.Cell("B8").Value = totalCashOut;
-
-            summarySheet.Cell("A9").Value = "Dòng tiền thuần (Net Cash Flow)";
-            summarySheet.Cell("B9").Value = totalCashIn - totalCashOut;
-
-            summarySheet.Cell("A10").Value = "ARPU (Doanh thu TB / Khách trả phí)";
-            summarySheet.Cell("B10").Value = arpu;
-
-            summarySheet.Range("B6:B10").Style.NumberFormat.Format = "#,##0";
+            var summaryTableRange = summarySheet.Range("A8:B14");
+            summaryTableRange.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            summaryTableRange.Style.Border.InsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            
+            summarySheet.Range("B9:B13").Style.NumberFormat.Format = currencyFormat;
+            summarySheet.Cell("B14").Style.NumberFormat.Format = "#,##0";
             summarySheet.Columns().AdjustToContents();
 
             // 2. Sheet Dòng Tiền (Cashflow Ledger)
             var cashflowSheet = workbook.Worksheets.Add("Sổ Dòng Tiền");
-            cashflowSheet.Cell(1, 1).Value = "ID GD";
-            cashflowSheet.Cell(1, 2).Value = "Thời gian";
-            cashflowSheet.Cell(1, 3).Value = "Tên khách hàng";
-            cashflowSheet.Cell(1, 4).Value = "Email";
-            cashflowSheet.Cell(1, 5).Value = "Phân loại";
-            cashflowSheet.Cell(1, 6).Value = "Số tiền (VNĐ)";
-            cashflowSheet.Cell(1, 7).Value = "Trạng thái";
-            cashflowSheet.Cell(1, 8).Value = "Tham chiếu PayOS";
+            cashflowSheet.Style.Font.FontName = "Arial";
+            cashflowSheet.Cell(1, 1).Value = "MÃ GD";
+            cashflowSheet.Cell(1, 2).Value = "THỜI GIAN";
+            cashflowSheet.Cell(1, 3).Value = "TÊN KHÁCH HÀNG";
+            cashflowSheet.Cell(1, 4).Value = "EMAIL";
+            cashflowSheet.Cell(1, 5).Value = "PHÂN LOẠI";
+            cashflowSheet.Cell(1, 6).Value = "SỐ TIỀN";
+            cashflowSheet.Cell(1, 7).Value = "TRẠNG THÁI";
+            cashflowSheet.Cell(1, 8).Value = "THAM CHIẾU PAYOS";
 
-            var cashflows = transactions.Where(t => t.Type == TransactionType.Deposit || t.Type == TransactionType.Withdrawal).ToList();
+            var cashflows = transactions.Where(t => t.Type == TransactionType.Deposit || t.Type == TransactionType.Withdrawal).OrderByDescending(t => t.CreatedAt).ToList();
             for (int i = 0; i < cashflows.Count; i++)
             {
                 var t = cashflows[i];
                 int row = i + 2;
                 cashflowSheet.Cell(row, 1).Value = t.Id;
                 cashflowSheet.Cell(row, 2).Value = t.CreatedAt;
+                cashflowSheet.Cell(row, 2).Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
                 cashflowSheet.Cell(row, 3).Value = t.Wallet.User.FullName;
                 cashflowSheet.Cell(row, 4).Value = t.Wallet.User.Email;
                 cashflowSheet.Cell(row, 5).Value = t.Type == TransactionType.Deposit ? "Nạp tiền" : "Rút tiền";
                 
                 var amountCell = cashflowSheet.Cell(row, 6);
                 amountCell.Value = t.Amount;
-                amountCell.Style.NumberFormat.Format = "#,##0";
-                if (t.Amount > 0) amountCell.Style.Font.FontColor = ClosedXML.Excel.XLColor.Green;
-                else amountCell.Style.Font.FontColor = ClosedXML.Excel.XLColor.Red;
+                amountCell.Style.NumberFormat.Format = currencyFormat;
+                amountCell.Style.Font.FontColor = t.Type == TransactionType.Deposit ? ClosedXML.Excel.XLColor.ForestGreen : ClosedXML.Excel.XLColor.Firebrick;
+                amountCell.Style.Font.Bold = true;
                 
                 string status = "Hoàn thành";
                 if (t.Type == TransactionType.Withdrawal && t.Description != null)
@@ -791,23 +851,25 @@ namespace UniTask.Business.Services
                 }
                 cashflowSheet.Cell(row, 8).Value = refCode;
             }
-            formatSheet(cashflowSheet);
+            if (cashflows.Count > 0) formatTable(cashflowSheet, 1, "TableCashflow");
 
             // 3. Sheet Chi Tiết Doanh Thu (Revenue Breakdown)
             var revenueSheet = workbook.Worksheets.Add("Chi Tiết Doanh Thu");
-            revenueSheet.Cell(1, 1).Value = "ID GD";
-            revenueSheet.Cell(1, 2).Value = "Thời gian";
-            revenueSheet.Cell(1, 3).Value = "Tên khách hàng";
-            revenueSheet.Cell(1, 4).Value = "Nguồn doanh thu";
-            revenueSheet.Cell(1, 5).Value = "Số tiền (VNĐ)";
+            revenueSheet.Style.Font.FontName = "Arial";
+            revenueSheet.Cell(1, 1).Value = "MÃ GD";
+            revenueSheet.Cell(1, 2).Value = "THỜI GIAN";
+            revenueSheet.Cell(1, 3).Value = "TÊN KHÁCH HÀNG";
+            revenueSheet.Cell(1, 4).Value = "NGUỒN DOANH THU";
+            revenueSheet.Cell(1, 5).Value = "SỐ TIỀN";
 
-            var revenues = transactions.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee).ToList();
+            var revenues = transactions.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee).OrderByDescending(t => t.CreatedAt).ToList();
             for (int i = 0; i < revenues.Count; i++)
             {
                 var t = revenues[i];
                 int row = i + 2;
                 revenueSheet.Cell(row, 1).Value = t.Id;
                 revenueSheet.Cell(row, 2).Value = t.CreatedAt;
+                revenueSheet.Cell(row, 2).Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
                 revenueSheet.Cell(row, 3).Value = t.Wallet.User.FullName;
                 
                 string typeName = "Khác";
@@ -817,18 +879,21 @@ namespace UniTask.Business.Services
 
                 revenueSheet.Cell(row, 4).Value = typeName;
                 revenueSheet.Cell(row, 5).Value = Math.Abs(t.Amount);
-                revenueSheet.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
+                revenueSheet.Cell(row, 5).Style.NumberFormat.Format = currencyFormat;
+                revenueSheet.Cell(row, 5).Style.Font.FontColor = ClosedXML.Excel.XLColor.Teal;
+                revenueSheet.Cell(row, 5).Style.Font.Bold = true;
             }
-            formatSheet(revenueSheet);
+            if (revenues.Count > 0) formatTable(revenueSheet, 1, "TableRevenue");
 
             // 4. Sheet Active Users (Customer Activity)
             var activeSheet = workbook.Worksheets.Add("Hoạt Động Khách Hàng");
-            activeSheet.Cell(1, 1).Value = "Tên khách hàng";
-            activeSheet.Cell(1, 2).Value = "Email";
-            activeSheet.Cell(1, 3).Value = "Vai trò";
-            activeSheet.Cell(1, 4).Value = "Tổng tiền đã nạp";
-            activeSheet.Cell(1, 5).Value = "Doanh thu mang lại";
-            activeSheet.Cell(1, 6).Value = "Trạng thái eKYC";
+            activeSheet.Style.Font.FontName = "Arial";
+            activeSheet.Cell(1, 1).Value = "TÊN KHÁCH HÀNG";
+            activeSheet.Cell(1, 2).Value = "EMAIL";
+            activeSheet.Cell(1, 3).Value = "VAI TRÒ";
+            activeSheet.Cell(1, 4).Value = "TỔNG NẠP";
+            activeSheet.Cell(1, 5).Value = "DOANH THU MANG LẠI";
+            activeSheet.Cell(1, 6).Value = "TRẠNG THÁI EKYC";
 
             var userIdsWithTx = transactions.Select(t => t.Wallet.UserId).Distinct().ToList();
             var jobQuery = _context.Jobs.AsQueryable();
@@ -852,18 +917,59 @@ namespace UniTask.Business.Services
                 var userRev = uTx.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee).Sum(t => Math.Abs(t.Amount));
 
                 activeSheet.Cell(row, 4).Value = userDeposit;
-                activeSheet.Cell(row, 4).Style.NumberFormat.Format = "#,##0";
+                activeSheet.Cell(row, 4).Style.NumberFormat.Format = currencyFormat;
                 
                 activeSheet.Cell(row, 5).Value = userRev;
-                activeSheet.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
+                activeSheet.Cell(row, 5).Style.NumberFormat.Format = currencyFormat;
+                activeSheet.Cell(row, 5).Style.Font.FontColor = ClosedXML.Excel.XLColor.Teal;
                 
-                activeSheet.Cell(row, 6).Value = u.EkycStatus.ToString();
+                string ekycText = u.EkycStatus switch {
+                    EkycStatus.Verified => "Đã xác thực",
+                    EkycStatus.Pending => "Chờ xác thực",
+                    EkycStatus.Rejected => "Bị từ chối",
+                    _ => "Chưa xác thực"
+                };
+                activeSheet.Cell(row, 6).Value = ekycText;
             }
-            formatSheet(activeSheet);
+            if (activeUsers.Count > 0) formatTable(activeSheet, 1, "TableActiveUsers");
 
             using var stream = new System.IO.MemoryStream();
             workbook.SaveAs(stream);
             return stream.ToArray();
+        }
+
+        public async Task<object> GetPayosDepositsAsync(int page = 1, int pageSize = 10)
+        {
+            var rawQuery = _context.Transactions
+                .Include(t => t.Wallet)
+                    .ThenInclude(w => w.User)
+                .Where(t => t.Type == TransactionType.Deposit && !t.Description.Contains("[PAYOS_PENDING]"))
+                .OrderByDescending(t => t.CreatedAt);
+
+            var totalCount = await rawQuery.CountAsync();
+
+            var items = await rawQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(t => new
+                {
+                    id = t.Id,
+                    amount = t.Amount,
+                    createdAt = t.CreatedAt,
+                    userFullName = t.Wallet.User.FullName,
+                    userEmail = t.Wallet.User.Email,
+                    counterAccountBankName = t.CounterAccountBankName,
+                    counterAccountName = t.CounterAccountName,
+                    counterAccountNumber = t.CounterAccountNumber
+                })
+                .ToListAsync();
+
+            return new
+            {
+                items = items,
+                totalCount = totalCount,
+                hasMore = page * pageSize < totalCount
+            };
         }
     }
 }

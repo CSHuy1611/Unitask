@@ -788,6 +788,12 @@ import Tesseract from 'tesseract.js';
               </button>
             </div>
             <form (ngSubmit)="onSubmitWithdraw()">
+              @if (withdrawSuccess()) {
+                <div class="alert alert-success mb-4 d-flex items-center gap-2" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); padding: 12px; border-radius: 8px;">
+                  <span class="material-icons-round">check_circle</span>
+                  {{ withdrawMessage() }}
+                </div>
+              }
               <div class="form-group mb-4">
                 <label class="form-label">Số tiền rút (Tối thiểu 10.000đ, Tối đa {{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ) *</label>
                 <input type="text" class="form-input" [(ngModel)]="withdrawForm.amount" name="amount" placeholder="Ví dụ: 100.000" required>
@@ -824,7 +830,7 @@ import Tesseract from 'tesseract.js';
               </div>
               <div class="form-actions d-flex justify-between gap-3">
                 <button type="button" class="btn btn-secondary flex-1" (click)="showWithdrawModal.set(false)">Hủy</button>
-                <button type="submit" class="btn btn-primary flex-1" [disabled]="!withdrawForm.amount || !withdrawForm.bank || !withdrawForm.account || !withdrawForm.name">
+                <button type="submit" class="btn btn-primary flex-1" [disabled]="!withdrawForm.amount || !withdrawForm.bank || !withdrawForm.account || !withdrawForm.name || isSubmittingWithdraw()">
                   Xác nhận rút tiền
                 </button>
               </div>
@@ -1614,6 +1620,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   editMessage = signal('');
 
   showWithdrawModal = signal(false);
+  withdrawSuccess = signal(false);
+  withdrawMessage = signal('');
+  isSubmittingWithdraw = signal(false);
   selectedJobToComplete = signal<Job | null>(null);
 
   selectedJobToReport = signal<Job | null>(null);

@@ -1,6 +1,5 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { API_BASE_URL } from '../../config/api.config';
@@ -22,36 +21,9 @@ interface Withdrawal {
 @Component({
   selector: 'app-admin-withdrawals',
   standalone: true,
-  imports: [RouterLink],
+  imports: [],
   template: `
-    <section class="admin-page animate-fade-in">
-      <div class="container">
-        @if (!auth.isAdmin()) {
-          <div class="auth-required glass-card animate-fade-in-up">
-            <span class="material-icons-round" style="font-size:64px;color:#EF4444">admin_panel_settings</span>
-            <h2>Truy cập bị từ chối</h2>
-            <p>Chỉ tài khoản Admin mới có quyền truy cập khu vực này.</p>
-            <a routerLink="/login" class="btn btn-primary btn-lg">Đăng nhập Admin</a>
-          </div>
-        } @else {
-          <!-- Admin Nav -->
-          <div class="admin-nav animate-fade-in-up">
-            <a routerLink="/admin/dashboard" class="admin-tab">
-              <span class="material-icons-round">dashboard</span> Dashboard
-            </a>
-            <a routerLink="/admin/users" class="admin-tab">
-              <span class="material-icons-round">people</span> Quản lý User
-            </a>
-            <a routerLink="/admin/withdrawals" class="admin-tab active">
-              <span class="material-icons-round">account_balance_wallet</span> Duyệt rút tiền
-            </a>
-            <a routerLink="/admin/disputes" class="admin-tab">
-              <span class="material-icons-round">gavel</span> Giải quyết tranh chấp
-            </a>
-            <a routerLink="/admin/revenue" class="admin-tab">
-              <span class="material-icons-round">receipt_long</span> Doanh thu & Dòng tiền
-            </a>
-          </div>
+    <div class="admin-page-content animate-fade-in">
 
           <div class="dashboard-header animate-fade-in-up">
             <h1>Quản lý <span class="gradient-text">Duyệt rút tiền</span></h1>
@@ -232,9 +204,7 @@ interface Withdrawal {
               }
             }
           </div>
-        }
-      </div>
-    </section>
+        </div>
 
     <!-- Confirm Modal -->
     @if (selectedWithdrawal()) {
@@ -274,6 +244,10 @@ interface Withdrawal {
     }
   `,
   styles: [`
+    .admin-page-content {
+      width: 100%;
+    }
+
     .admin-page {
       padding: calc(80px + var(--space-8)) 0 var(--space-16);
     }

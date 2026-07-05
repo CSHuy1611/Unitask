@@ -50,9 +50,6 @@ import { API_BASE_URL } from '../../config/api.config';
               </div>
             </div>
             <div style="display:flex; gap: 12px; align-items: center;">
-              <button class="btn btn-success" (click)="testDeposit()" [disabled]="isProcessing()">
-                <span class="material-icons-round">bolt</span> Nạp 500k (Test)
-              </button>
               <button class="btn btn-primary" (click)="openDepositModal()">
                 <span class="material-icons-round">add_circle</span> Nạp thêm
               </button>
@@ -451,20 +448,7 @@ export class PricingComponent implements OnInit {
     this.showPaymentModal.set(true);
   }
 
-  testDeposit() {
-    this.isProcessing.set(true);
-    this.http.post(`${API_BASE_URL}/wallet/deposit`, { amount: 500000 }).subscribe({
-      next: () => {
-        this.toast.success('Nạp 500.000đ thành công (Test)');
-        this.auth.fetchBalance().subscribe();
-        this.isProcessing.set(false);
-      },
-      error: (err) => {
-        this.toast.error(err.error?.message || 'Nạp tiền thất bại');
-        this.isProcessing.set(false);
-      }
-    });
-  }
+
 
   buyPackage(pkg: any) {
     const user = this.auth.currentUser();

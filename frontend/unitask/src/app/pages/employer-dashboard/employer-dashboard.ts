@@ -317,9 +317,6 @@ import { Subscription } from 'rxjs';
                         <span style="color: var(--text-secondary); display: block;">Số dư ví hiện tại:</span>
                         <strong style="font-size: 1.2rem; color: var(--text-primary);">{{ (auth.currentUser()?.balance || 0).toLocaleString('vi-VN') }}đ</strong>
                       </div>
-                      <button class="btn btn-success btn-sm" (click)="testDeposit()" [disabled]="isProcessingPackage()">
-                        <span class="material-icons-round">add_circle</span> Nạp 500k (Test)
-                      </button>
                     </div>
                   </div>
 
@@ -1697,20 +1694,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  testDeposit() {
-    this.isProcessingPackage.set(true);
-    this.http.post(`${API_BASE_URL}/wallet/deposit`, { amount: 500000 }).subscribe({
-      next: () => {
-        this.toast.success('Nạp 500.000đ thành công (Test)');
-        this.auth.fetchBalance().subscribe();
-        this.isProcessingPackage.set(false);
-      },
-      error: (err) => {
-        this.toast.error(err.error?.message || 'Nạp tiền thất bại');
-        this.isProcessingPackage.set(false);
-      }
-    });
-  }
+
 
   private getEmptyForm() {
     return {
