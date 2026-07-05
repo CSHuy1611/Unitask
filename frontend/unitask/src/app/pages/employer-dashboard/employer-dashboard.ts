@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -853,7 +853,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     {{ generatedOtp() }}
                   </span>
                 </div>
-                <button class="btn btn-primary" style="width:100%" (click)="generatedOtp.set('')">Đóng</button>
+                <button class="btn btn-primary" style="width:100%" (click)="generatedOtp.set(''); stopPolling()">Đóng</button>
               </div>
             </div>
           }
@@ -1398,7 +1398,7 @@ import { API_BASE_URL } from '../../config/api.config';
     }
   `]
 })
-export class EmployerDashboardComponent implements OnInit {
+export class EmployerDashboardComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   jobService = inject(JobService);
   private toast = inject(ToastService);
@@ -1410,6 +1410,15 @@ export class EmployerDashboardComponent implements OnInit {
   postSuccess = signal(false);
   postMessage = signal('');
   editingJobId = signal<number | null>(null);
+
+  // Polling properties for OTP
+  pollingInterval: any = null;
+  pollingAppId: number | null = null;
+  pollingJobId: number | null = null;
+
+  ngOnDestroy() {
+    this.stopPolling();
+  }
 
   showPackagesModal = signal(false);
   packages = signal<any[]>([]);
@@ -1962,12 +1971,47 @@ export class EmployerDashboardComponent implements OnInit {
         if (res.success && res.otp) {
           this.otpType.set(type);
           this.generatedOtp.set(res.otp);
+
+          this.pollingAppId = app.id;
+          this.pollingJobId = app.jobId;
+          this.startPolling(type);
         } else {
           this.toast.error(res.message || `Không thể tạo OTP ${type}.`);
         }
       },
       error: () => this.toast.error('Lỗi kết nối khi tạo OTP.')
     });
+  }
+
+  startPolling(type: 'checkin' | 'checkout') {
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
+    
+    this.pollingInterval = setInterval(() => {
+      if (!this.pollingJobId) return;
+      
+      this.jobService.getJobApplications(this.pollingJobId).subscribe(apps => {
+        const app = apps.find(a => a.id === this.pollingAppId);
+        if (app) {
+          if ((type === 'checkin' && app.checkInTime) || (type === 'checkout' && app.checkOutTime)) {
+            this.stopPolling();
+            this.generatedOtp.set('');
+            this.toast.success(`✅ Sinh viên đã ${type === 'checkin' ? 'Check-in' : 'Check-out'} thành công!`);
+            if (this.selectedJobForApplicants()) {
+              this.viewApplicants(this.selectedJobForApplicants()!);
+            }
+          }
+        }
+      });
+    }, 3000);
+  }
+
+  stopPolling() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+    this.pollingAppId = null;
+    this.pollingJobId = null;
   }
 
   approveApplicationCompletion(app: any) {
