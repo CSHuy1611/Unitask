@@ -109,7 +109,12 @@ namespace UniTask.Business.Services
 
             var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == job.EmployerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
 
-            return MapToDto(job, isPremium);
+            var dto = MapToDto(job, isPremium);
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                dto.IsAppliedByCurrentUser = await _context.Applications.AnyAsync(a => a.JobId == id && a.StudentProfile.UserId == currentUserId);
+            }
+            return dto;
         }
 
         public async Task<JobDto?> CreateJobAsync(string employerId, JobCreateDto dto)
@@ -259,6 +264,7 @@ namespace UniTask.Business.Services
             job.Benefits = dto.Benefits.Select(b => new JobBenefit { Content = b }).ToList();
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("JobCreated");
             return true;
         }
 
@@ -292,6 +298,7 @@ namespace UniTask.Business.Services
 
             _context.Jobs.Remove(job);
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("JobCreated");
             return true;
         }
 

@@ -6,7 +6,10 @@ import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
 import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
+import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../config/api.config';
+import { SignalRService } from '../../services/signalr.service';
+import { Subscription } from 'rxjs';
 import Tesseract from 'tesseract.js';
 
 @Component({
@@ -28,11 +31,15 @@ import Tesseract from 'tesseract.js';
             <aside class="dashboard-sidebar animate-fade-in-up">
               <div class="sidebar-card glass-card profile-card">
                 <div class="profile-avatar-wrapper">
-                @if (auth.currentUser()?.avatarUrl) {
-                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" [class.premium-avatar-glow]="isPremiumEmployer()" />
+                @if (auth.currentUser()?.avatarUrl && auth.currentUser()?.avatarUrl !== 'null') {
+                  <img [src]="auth.currentUser()?.avatarUrl" alt="Avatar" class="profile-avatar-img" [class.premium-avatar-glow]="isPremiumEmployer()"
+                       #avatarImg (error)="avatarImg.style.display='none'; fallbackAvatar.style.display='flex'" />
+                  <div #fallbackAvatar class="profile-avatar" [class.premium-avatar-glow]="isPremiumEmployer()" style="display:none">
+                    {{ auth.currentUser()?.fullName?.charAt(0) || 'U' }}
+                  </div>
                 } @else {
                   <div class="profile-avatar" [class.premium-avatar-glow]="isPremiumEmployer()">
-                    {{ auth.currentUser()?.avatar }}
+                    {{ auth.currentUser()?.fullName?.charAt(0) || 'U' }}
                   </div>
                 }
                 <button class="avatar-upload-btn" (click)="avatarInput.click()" [disabled]="avatarUploading()">
@@ -568,8 +575,21 @@ import Tesseract from 'tesseract.js';
                                 <span style="color:var(--success)"><i class="material-icons-round" style="font-size:14px">payments</i> {{ job.budget?.toLocaleString('vi-VN') }}đ</span>
                               </div>
                             </div>
-                            @if (job.status === 'in_progress') {
-                              <span class="badge badge-warning">Đang thực hiện</span>
+                            @let myApp = getMyApplicationForJob(job.id);
+                            @if (job.status === 'open') {
+                              <!-- Accepted but waiting for more people -->
+                              <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818CF8; border: 1px solid rgba(99, 102, 241, 0.3); white-space: nowrap;">
+                                <span class="material-icons-round" style="font-size:13px; vertical-align:middle">hourglass_top</span>
+                                Chờ đủ người
+                              </span>
+                            } @else if (job.status === 'in_progress') {
+                              @if (myApp && !myApp.checkInTime) {
+                                <span class="badge badge-warning" style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3);">Chờ Check-in</span>
+                              } @else if (myApp && myApp.checkInTime && !myApp.checkOutTime) {
+                                <span class="badge badge-warning">Đang thực hiện</span>
+                              } @else {
+                                <span class="badge badge-warning">Đang thực hiện</span>
+                              }
                             } @else if (job.status === 'pending_confirmation') {
                               <span class="badge badge-primary">Chờ NTD nghiệm thu</span>
                             } @else if (job.status === 'completed') {
@@ -578,8 +598,16 @@ import Tesseract from 'tesseract.js';
                               <span class="badge badge-danger">Tranh chấp</span>
                             }
                           </div>
+                          <!-- Info box when waiting for more people -->
+                          @if (job.status === 'open') {
+                            <div style="margin-top: 8px; padding: 10px 14px; background: rgba(99, 102, 241, 0.06); border: 1px dashed rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: 8px;">
+                              <span class="material-icons-round" style="font-size:18px; color:#818CF8; flex-shrink:0; margin-top:1px">info</span>
+                              <p style="margin:0; font-size:13px; color: var(--text-secondary); line-height:1.5">
+                                Công việc đã được giao cho bạn nhưng <strong style="color:#818CF8">chưa đủ người</strong>. Vui lòng chờ nhà tuyển dụng hoàn tất tuyển đủ nhân sự, bạn sẽ có thể Check-in để bắt đầu làm việc.
+                              </p>
+                            </div>
+                          }
                           <!-- Student Application Status for the Job -->
-                          @let myApp = getMyApplicationForJob(job.id);
                           @if (job.status === 'in_progress' && myApp) {
                             <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; flex-wrap: wrap;">
                               @if (!myApp.checkInTime) {
@@ -595,76 +623,10 @@ import Tesseract from 'tesseract.js';
                                     <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
                                   </button>
                                 </div>
-                              } @else {
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                  <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
-                                    <span class="material-icons-round" style="font-size:14px">done_all</span> Đã check-out ({{ myApp.checkOutTime | date:'HH:mm' }})
-                                  </span>
-                                  <button type="button" class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
-                                    <span class="material-icons-round" style="font-size:16px">task_alt</span> Báo cáo hoàn thành
-                                  </button>
-                                </div>
-                              }
-                              
-                              <button type="button" class="btn btn-danger btn-sm" (click)="openReportModal(job)" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-                                <span class="material-icons-round" style="font-size:16px">report_problem</span> Khiếu nại
-                              </button>
-                            </div>
-                          }
-
-                          @if (job.status === 'disputed') {
-                            <div class="dispute-box" style="margin-top: 12px; padding: 16px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: var(--radius-lg);">
-                              <div style="margin-bottom: 12px; font-size: 13px;">
-                                <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px;">
-                                  <span class="material-icons-round" style="font-size: 18px;">warning</span> Nhà tuyển dụng từ chối thanh toán:
-                                </strong>
-                                <p style="margin: 6px 0; color: var(--text-secondary);"><strong>Lý do:</strong> {{ job.disputeReason || 'Không có lý do chi tiết' }}</p>
-                                @if (job.employerEvidenceText) {
-                                  <p style="margin: 6px 0; color: var(--text-secondary);"><strong>Mô tả của NTD:</strong> {{ job.employerEvidenceText }}</p>
-                                }
-                                @if (job.employerEvidenceUrl) {
-                                  <a [href]="job.employerEvidenceUrl" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 500;">Xem bằng chứng từ NTD</a>
-                                }
-                              </div>
-
-                              @if (!job.studentEvidenceText) {
-                                <div style="margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px;">
-                                  <strong style="font-size: 13px; color: var(--text-primary); display: block; margin-bottom: 8px;">Cung cấp bằng chứng bảo vệ quyền lợi của bạn:</strong>
-                                  <div class="form-group" style="margin-bottom: 8px;">
-                                    <textarea class="form-textarea" rows="2" style="font-size: 13px; padding: 8px;"
-                                              placeholder="Nhập mô tả bằng chứng của bạn (VD: tôi đã làm xong đúng hạn, hình ảnh chat...)"
-                                              [(ngModel)]="studentEvidenceTexts[job.id]"
-                                              name="studentEvText-{{job.id}}"></textarea>
-                                  </div>
-                                  <div class="form-group" style="margin-bottom: 12px;">
-                                    <input type="text" class="form-input" style="font-size: 13px; padding: 8px;"
-                                           placeholder="Link hình ảnh/video bằng chứng (nếu có)"
-                                           [(ngModel)]="studentEvidenceUrls[job.id]"
-                                           name="studentEvUrl-{{job.id}}">
-                                  </div>
-                                  <div style="text-align: right;">
-                                    <button class="btn btn-primary btn-sm" (click)="submitEvidence(job.id)">
-                                      <span class="material-icons-round" style="font-size: 16px;">send</span> Gửi bằng chứng
-                                    </button>
-                                  </div>
-                                </div>
-                              } @else {
-                                <div style="margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; font-size: 13px;">
-                                  <strong style="color: var(--success); display: flex; align-items: center; gap: 4px;">
-                                    <span class="material-icons-round" style="font-size: 18px;">check_circle</span> Bằng chứng bạn đã nộp:
-                                  </strong>
-                                  <p style="margin: 6px 0; color: var(--text-secondary);">{{ job.studentEvidenceText }}</p>
-                                  @if (job.studentEvidenceUrl) {
-                                    <a [href]="job.studentEvidenceUrl" target="_blank" style="color: var(--primary-light); text-decoration: underline; font-weight: 500;">Link bằng chứng đã gửi</a>
-                                  }
-                                  <div style="margin-top: 12px; color: var(--warning); display: flex; align-items: center; gap: 4px; font-weight: 600;">
-                                    <span class="material-icons-round" style="font-size: 16px;">hourglass_top</span>
-                                    <span>Đang chờ Admin xét duyệt tranh chấp.</span>
-                                  </div>
-                                </div>
                               }
                             </div>
                           }
+
                         </div>
                       }
                     </div>
@@ -1643,6 +1605,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private jobService = inject(JobService);
   private toast = inject(ToastService);
+  private signalRService = inject(SignalRService);
+
+  private subscriptions = new Subscription();
 
   isEditing = signal(false);
   editSuccess = signal(false);
@@ -1655,7 +1620,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   reportReason = signal('');
   reportEvidenceUrl = signal('');
   reportEvidenceText = signal('');
-  
+
   showCheckInModal = signal(false);
   showCheckOutModal = signal(false);
   showReviewModal = signal(false);
@@ -1698,13 +1663,19 @@ export class ProfileComponent implements OnInit, OnDestroy {
       (j.selectedStudentId === user.id ||
         (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
         acceptedJobIds.includes(j.id)) &&
-      (j.status === 'in_progress' || j.status === 'pending_confirmation' || j.status === 'disputed')
-    ).map(j => {
+      (j.status === 'open' || j.status === 'in_progress' || j.status === 'pending_confirmation')
+    ).filter(j => {
+      // Only include 'open' jobs if my application is Accepted for that job
+      if (j.status === 'open') {
+        return acceptedJobIds.includes(j.id);
+      }
+      return true;
+    }).map(j => {
       const myApp = this.myApplications().find(app => app.jobId === j.id);
       return {
         ...j,
-        checkInTime: myApp?.checkInTime,
-        checkOutTime: myApp?.checkOutTime
+        checkInTime: myApp?.checkInTime ? (myApp.checkInTime.endsWith('Z') ? myApp.checkInTime : myApp.checkInTime + 'Z') : undefined,
+        checkOutTime: myApp?.checkOutTime ? (myApp.checkOutTime.endsWith('Z') ? myApp.checkOutTime : myApp.checkOutTime + 'Z') : undefined
       };
     });
   });
@@ -1713,12 +1684,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user || user.role !== 'student') return [];
 
-    const completedAppJobIds = this.myApplications()
+    const historyAppJobIds = this.myApplications()
       .filter(app => app.status === 5 || app.status === 'Completed' || app.status === 'completed')
       .map(app => app.jobId);
 
     return this.jobService.getAllJobs().filter(j =>
-      completedAppJobIds.includes(j.id)
+      historyAppJobIds.includes(j.id) || 
+      (j.selectedStudentId === user.id && (j.status === 'completed' || j.status === 'disputed' || j.status === 'closed'))
     ).map(j => {
       const myApp = this.myApplications().find(app => app.jobId === j.id);
       return {
@@ -1740,7 +1712,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     const appliedApps = this.myApplications()
       .filter(app => !excludedJobIds.includes(app.jobId));
-      
+
     const appliedJobIds = appliedApps.map(app => app.jobId);
 
     return this.jobService.getAllJobs().filter(j =>
@@ -1755,7 +1727,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   });
 
   getMyApplicationForJob(jobId: number): any {
-    return this.myApplications().find(app => app.jobId === jobId);
+    const app = this.myApplications().find(a => a.jobId === jobId);
+    if (!app) return null;
+    return {
+      ...app,
+      checkInTime: app.checkInTime ? (app.checkInTime.endsWith('Z') ? app.checkInTime : app.checkInTime + 'Z') : undefined,
+      checkOutTime: app.checkOutTime ? (app.checkOutTime.endsWith('Z') ? app.checkOutTime : app.checkOutTime + 'Z') : undefined
+    };
   }
 
   editForm = {
@@ -1794,6 +1772,57 @@ export class ProfileComponent implements OnInit, OnDestroy {
       if (this.auth.isStudent() && this.auth.currentUser()?.ekycStatus !== 'verified') {
         this.loadEkycLibraries();
       }
+
+      this.subscriptions.add(
+        this.signalRService.applicationApprovedOccurred$.subscribe(jobId => {
+          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
+          if (hasMyApplication) {
+            this.toast.success('Nhà tuyển dụng vừa Nghiệm thu thành công! Bạn đã nhận được lương vào Ví.');
+            this.refreshStudentApplications();
+            this.jobService.fetchJobs();
+            this.auth.fetchBalance().subscribe();
+          }
+        })
+      );
+
+      this.subscriptions.add(
+        this.signalRService.applicationCheckInOccurred$.subscribe(jobId => {
+          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
+          if (hasMyApplication) {
+            // Không hiện toast ở đây vì submitCheckIn() đã hiện rồi
+            this.refreshStudentApplications();
+            this.jobService.fetchJobs();
+          }
+        })
+      );
+
+      this.subscriptions.add(
+        this.signalRService.applicationCheckOutOccurred$.subscribe(jobId => {
+          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
+          if (hasMyApplication) {
+            // Không hiện toast ở đây vì submitCheckOut() đã hiện rồi
+            this.refreshStudentApplications();
+            this.jobService.fetchJobs();
+          }
+        })
+      );
+
+      this.subscriptions.add(
+        this.signalRService.applicationStatusChanged$.subscribe(jobId => {
+          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
+          if (hasMyApplication) {
+            this.refreshStudentApplications();
+            this.jobService.fetchJobs();
+          }
+        })
+      );
+
+      // Khi có job mới/cập nhật, load lại danh sách để appliedJobs/workingJobs cập nhật
+      this.subscriptions.add(
+        this.signalRService.jobCreated$.subscribe(() => {
+          this.jobService.fetchJobs();
+        })
+      );
     }
   }
 
@@ -1946,7 +1975,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const url = this.reportEvidenceUrl();
     const text = this.reportEvidenceText();
     if (!job || !reason) return;
-    
+
     this.jobService.studentDispute(job.id, reason, url, text).subscribe({
       next: (res) => {
         if (res.success) {
@@ -2379,6 +2408,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopCamera();
+    this.subscriptions.unsubscribe();
   }
 
   ekycStepMessage = signal<string>('');
@@ -2518,7 +2548,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       // Thay vì chỉ cần 1 từ khóa (some), ta yêu cầu phải khớp ÍT NHẤT 3 từ khóa
       // để tránh việc các giấy tờ khác (vd: giấy phép lái xe) tình cờ có dòng "họ và tên" lọt qua.
       const matchFrontCount = frontKeywords.filter(kw => normFrontText.includes(kw)).length;
-      
+
       // Bắt buộc: phải đọc được text VÀ có đủ số lượng từ khóa
       if (!frontOcrText || matchFrontCount < 3) {
         throw new Error("Ảnh mặt trước không đúng định dạng CCCD, vui lòng thử lại.");
@@ -2572,7 +2602,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       ];
       // Yêu cầu khớp ÍT NHẤT 2 từ khóa cho mặt sau
       const matchBackCount = backKeywords.filter(kw => normBackText.includes(kw)).length;
-      
+
       // Bắt buộc: phải đọc được text VÀ có đủ số lượng từ khóa
       if (!backOcrText || matchBackCount < 2) {
         throw new Error("Ảnh mặt sau không đúng định dạng CCCD, vui lòng thử lại.");
