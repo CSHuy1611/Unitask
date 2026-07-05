@@ -140,6 +140,21 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "Evidence submitted successfully." });
         }
 
+        [HttpPost("{id}/dispute/student")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> StudentDispute(int id, [FromBody] JobDisputeCreateDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (studentId == null) return Unauthorized();
+
+            var result = await _jobService.StudentDisputeAsync(id, studentId, dto);
+            if (!result) return BadRequest(new { message = "Cannot dispute job. Job might not be in progress or you are not the assigned student." });
+
+            return Ok(new { message = "Job reported as disputed. Dispute registered." });
+        }
+
         [HttpPost("{id}/checkin-otp")]
         [Authorize(Roles = "Employer")]
         public async Task<IActionResult> GenerateCheckInOtp(int id)
