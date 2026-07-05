@@ -57,5 +57,7 @@ namespace UniTask.Business.DTOs.Job
         public List<string> Tags { get; set; } = new();
         public List<string> Requirements { get; set; } = new();
         public List<string> Benefits { get; set; } = new();
+        
+        public bool IsAppliedByCurrentUser { get; set; }
     }
 }

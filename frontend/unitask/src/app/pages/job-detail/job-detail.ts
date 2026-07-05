@@ -505,7 +505,7 @@ export class JobDetailComponent implements OnInit {
     this.jobService.fetchJobDetail(id).subscribe({
       next: (found) => {
         this.job.set(found);
-        this.applied.set(this.auth.hasApplied(id));
+        this.applied.set(found.isAppliedByCurrentUser || false);
         const mockCompany = this.companyService.getById(found.companyId);
         if (mockCompany) {
           this.companyInfo.set(mockCompany);
