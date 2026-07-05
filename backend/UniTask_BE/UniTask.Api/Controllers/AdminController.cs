@@ -58,6 +58,14 @@ namespace UniTask.Api.Controllers
             return Ok(users);
         }
 
+        [HttpPost("users/{userId}/force-verify")]
+        public async Task<IActionResult> ForceVerifyUser(string userId)
+        {
+            var result = await _adminService.ForceVerifyUserAsync(userId);
+            if (!result) return BadRequest(new { message = "Failed to force verify user." });
+            return Ok(new { message = "User verified successfully for testing." });
+        }
+
         // ===== PACKAGE MANAGEMENT =====
         [HttpPost("packages")]
         public async Task<IActionResult> CreatePackage([FromBody] ServicePackageCreateDto dto)
