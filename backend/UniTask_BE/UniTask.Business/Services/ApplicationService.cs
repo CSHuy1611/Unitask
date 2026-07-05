@@ -75,6 +75,7 @@ namespace UniTask.Business.Services
             job.ApplicationsCount++;
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("JobApplicationAdded", jobId);
 
             // Load relations for mapping
             await _context.Entry(application).Reference(a => a.Job).LoadAsync();
