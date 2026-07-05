@@ -145,6 +145,16 @@ namespace UniTask.Business.Services
             };
         }
 
+        public async Task<bool> ForceVerifyUserAsync(string userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return false;
+            
+            user.EkycStatus = EkycStatus.Verified;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<ServicePackageDto> CreatePackageAsync(ServicePackageCreateDto dto)
         {
             var package = new ServicePackage

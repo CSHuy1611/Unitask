@@ -7,6 +7,7 @@ namespace UniTask.Business.Interfaces
     {
         Task<object> GetDashboardStatsAsync();
         Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10);
+        Task<bool> ForceVerifyUserAsync(string userId);
         
         // Package Management
         Task<ServicePackageDto> CreatePackageAsync(ServicePackageCreateDto dto);
