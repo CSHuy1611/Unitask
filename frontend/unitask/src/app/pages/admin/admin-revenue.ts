@@ -46,29 +46,43 @@ import { API_BASE_URL } from '../../config/api.config';
             <p>Kiểm tra chi tiết giao dịch và xuất báo cáo Excel</p>
           </div>
 
-          <!-- Export Actions -->
-          <div class="filter-actions glass-card animate-fade-in-up" style="animation-delay:0.1s; margin-bottom: var(--space-6); display: flex; gap: var(--space-4); align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group custom-input-group" style="margin-bottom: 0;">
-              <label><span class="material-icons-round" style="font-size: 16px;">calendar_today</span> Từ ngày</label>
-              <input type="date" class="form-control custom-input" [(ngModel)]="startDate" />
-            </div>
-            <div class="form-group custom-input-group" style="margin-bottom: 0;">
-              <label><span class="material-icons-round" style="font-size: 16px;">event</span> Đến ngày</label>
-              <input type="date" class="form-control custom-input" [(ngModel)]="endDate" />
-            </div>
-            <button class="btn btn-primary" style="height: 42px; display: flex; align-items: center; gap: 8px;" (click)="exportExcel()" [disabled]="isExporting()">
-              <span class="material-icons-round">file_download</span> 
-              {{ isExporting() ? 'Đang xuất...' : 'Xuất Báo Cáo Excel' }}
-            </button>
-            <div style="flex: 1"></div>
-            <div class="form-group custom-input-group" style="margin-bottom: 0; min-width: 250px;">
-              <label><span class="material-icons-round" style="font-size: 16px;">filter_list</span> Lọc theo loại</label>
-              <select class="form-control custom-input" [(ngModel)]="filterType" (change)="loadTransactions(1)">
-                <option value="All">Tất cả giao dịch</option>
-                <option value="CashIn">Dòng tiền Nạp (Deposit)</option>
-                <option value="CashOut">Dòng tiền Rút (Withdrawal)</option>
-                <option value="Revenue">Doanh thu (Hoa hồng & Gói dịch vụ)</option>
-              </select>
+          <!-- Export Actions & Filters -->
+          <div class="filter-actions glass-card animate-fade-in-up" style="animation-delay:0.1s; margin-bottom: var(--space-6);">
+            <div class="filters-grid">
+              <!-- Date Filters -->
+              <div class="date-filters">
+                <div class="form-group custom-input-group">
+                  <label><span class="material-icons-round">calendar_today</span> Từ ngày</label>
+                  <div class="input-with-icon">
+                    <input type="date" class="form-control custom-input" [(ngModel)]="startDate" />
+                  </div>
+                </div>
+                
+                <div class="form-group custom-input-group">
+                  <label><span class="material-icons-round">event</span> Đến ngày</label>
+                  <div class="input-with-icon">
+                    <input type="date" class="form-control custom-input" [(ngModel)]="endDate" />
+                  </div>
+                </div>
+                
+                <button class="btn btn-primary export-btn" (click)="exportExcel()" [disabled]="isExporting()">
+                  <span class="material-icons-round">file_download</span> 
+                  {{ isExporting() ? 'Đang xuất...' : 'Xuất Excel' }}
+                </button>
+              </div>
+
+              <!-- Type Filter -->
+              <div class="type-filter">
+                <div class="form-group custom-input-group">
+                  <label><span class="material-icons-round">filter_list</span> Lọc theo loại</label>
+                  <select class="form-control custom-input" [(ngModel)]="filterType" (ngModelChange)="loadTransactions(1)">
+                    <option value="All">Tất cả giao dịch</option>
+                    <option value="CashIn">Dòng tiền Nạp (Deposit)</option>
+                    <option value="CashOut">Dòng tiền Rút (Withdrawal)</option>
+                    <option value="Revenue">Doanh thu (Hoa hồng & Gói dịch vụ)</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -273,14 +287,24 @@ import { API_BASE_URL } from '../../config/api.config';
       color: var(--text-secondary);
     }
 
+    .custom-input-group {
+      margin-bottom: 0;
+      width: 100%;
+    }
+
     .custom-input-group label {
       display: flex;
       align-items: center;
       gap: 6px;
-      color: var(--text-muted);
+      color: var(--text-secondary);
       font-weight: 600;
-      font-size: var(--font-size-sm);
-      margin-bottom: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .custom-input-group label .material-icons-round {
+      font-size: 16px;
+      color: var(--primary-light);
     }
 
     .custom-input {
@@ -289,19 +313,79 @@ import { API_BASE_URL } from '../../config/api.config';
       color: var(--text-primary) !important;
       border-radius: var(--radius-md) !important;
       padding: 10px 16px !important;
-      height: 42px !important;
+      height: 44px !important;
+      font-size: 0.95rem !important;
       transition: all 0.3s ease !important;
+      width: 100%;
     }
 
     .custom-input:focus {
-      border-color: var(--primary-color) !important;
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2) !important;
+      border-color: var(--primary-light) !important;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
       outline: none !important;
+      background: rgba(15, 23, 42, 0.8) !important;
+    }
+
+    /* Fix Date Picker Icon in Dark Mode */
+    .custom-input::-webkit-calendar-picker-indicator {
+      filter: invert(1) opacity(0.7);
+      cursor: pointer;
+    }
+    
+    .custom-input::-webkit-calendar-picker-indicator:hover {
+      filter: invert(1) opacity(1);
     }
 
     .custom-input option {
       background: #1e293b;
       color: var(--text-primary);
+    }
+
+    .filters-grid {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+    }
+
+    .date-filters {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+      flex: 2;
+      min-width: 300px;
+    }
+
+    .type-filter {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .export-btn {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 24px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+      .filters-grid {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .date-filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .export-btn {
+        width: 100%;
+        justify-content: center;
+      }
     }
   `]
 })
