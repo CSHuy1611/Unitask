@@ -255,14 +255,44 @@ namespace UniTask.Business.Services
         {
             var application = await _context.Applications
                 .Include(a => a.Job)
+                .Include(a => a.StudentProfile)
                 .FirstOrDefaultAsync(a => a.Id == applicationId);
 
             if (application == null || application.Job.EmployerId != employerId) return false;
+            if (application.Status == ApplicationStatus.Completed && application.EscrowReleaseDate != null) return false;
             
             application.Status = ApplicationStatus.Completed;
-            
-            // Escrow release logic would go here. We update EscrowReleaseDate.
             application.EscrowReleaseDate = DateTime.UtcNow;
+
+            var salaryPerPerson = Math.Round(application.Job.Budget / (application.Job.HeadCount > 0 ? application.Job.HeadCount : 1), 0);
+            
+            var studentId = application.StudentProfile?.UserId;
+            if (studentId != null)
+            {
+                var studentWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == studentId);
+                if (studentWallet != null)
+                {
+                    studentWallet.Balance += salaryPerPerson;
+                    _context.Transactions.Add(new DataAcesss.Entities.Transaction
+                    {
+                        WalletId = studentWallet.Id,
+                        Amount = salaryPerPerson,
+                        Type = DataAcesss.Entities.Enums.TransactionType.EscrowRelease,
+                        Description = $"Nhận tiền công từ công việc: {application.Job.Title}",
+                        RelatedJobId = application.JobId,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            var allApps = await _context.Applications
+                .Where(a => a.JobId == application.JobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed))
+                .ToListAsync();
+                
+            if (allApps.All(a => a.Status == ApplicationStatus.Completed))
+            {
+                application.Job.Status = DataAcesss.Entities.Enums.JobStatus.Completed;
+            }
 
             await _context.SaveChangesAsync();
             return true;
