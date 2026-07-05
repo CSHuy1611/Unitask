@@ -576,7 +576,13 @@ import Tesseract from 'tesseract.js';
                               </div>
                             </div>
                             @let myApp = getMyApplicationForJob(job.id);
-                            @if (job.status === 'in_progress') {
+                            @if (job.status === 'open') {
+                              <!-- Accepted but waiting for more people -->
+                              <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818CF8; border: 1px solid rgba(99, 102, 241, 0.3); white-space: nowrap;">
+                                <span class="material-icons-round" style="font-size:13px; vertical-align:middle">hourglass_top</span>
+                                Chờ đủ người
+                              </span>
+                            } @else if (job.status === 'in_progress') {
                               @if (myApp && !myApp.checkInTime) {
                                 <span class="badge badge-warning" style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3);">Chờ Check-in</span>
                               } @else if (myApp && myApp.checkInTime && !myApp.checkOutTime) {
@@ -592,6 +598,15 @@ import Tesseract from 'tesseract.js';
                               <span class="badge badge-danger">Tranh chấp</span>
                             }
                           </div>
+                          <!-- Info box when waiting for more people -->
+                          @if (job.status === 'open') {
+                            <div style="margin-top: 8px; padding: 10px 14px; background: rgba(99, 102, 241, 0.06); border: 1px dashed rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: 8px;">
+                              <span class="material-icons-round" style="font-size:18px; color:#818CF8; flex-shrink:0; margin-top:1px">info</span>
+                              <p style="margin:0; font-size:13px; color: var(--text-secondary); line-height:1.5">
+                                Công việc đã được giao cho bạn nhưng <strong style="color:#818CF8">chưa đủ người</strong>. Vui lòng chờ nhà tuyển dụng hoàn tất tuyển đủ nhân sự, bạn sẽ có thể Check-in để bắt đầu làm việc.
+                              </p>
+                            </div>
+                          }
                           <!-- Student Application Status for the Job -->
                           @if (job.status === 'in_progress' && myApp) {
                             <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; flex-wrap: wrap;">
@@ -1648,8 +1663,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
       (j.selectedStudentId === user.id ||
         (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
         acceptedJobIds.includes(j.id)) &&
-      (j.status === 'in_progress' || j.status === 'pending_confirmation')
-    ).map(j => {
+      (j.status === 'open' || j.status === 'in_progress' || j.status === 'pending_confirmation')
+    ).filter(j => {
+      // Only include 'open' jobs if my application is Accepted for that job
+      if (j.status === 'open') {
+        return acceptedJobIds.includes(j.id);
+      }
+      return true;
+    }).map(j => {
       const myApp = this.myApplications().find(app => app.jobId === j.id);
       return {
         ...j,
