@@ -225,7 +225,7 @@ export class JobService {
   }
 
   assignJob(applicationId: number): Observable<{ success: boolean; message: string }> {
-    return this.http.put<any>(`${API_BASE_URL}/application/${applicationId}/status`, { status: 2 }).pipe(
+    return this.http.put<any>(`${API_BASE_URL}/application/${applicationId}/status`, { status: 1 }).pipe(
       tap(() => this.fetchJobs()),
       map(() => ({ success: true, message: 'Đã giao việc thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Không thể giao việc.' }))
