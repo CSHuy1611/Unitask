@@ -64,6 +64,21 @@ namespace UniTask.Business.Services
                 AppliedDate = DateTime.UtcNow
             };
 
+            // Auto-assign logic
+            var currentAcceptedCount = await _context.Applications
+                .CountAsync(a => a.JobId == jobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed || a.Status == ApplicationStatus.Disputed || a.Status == ApplicationStatus.NoShow));
+
+            if (currentAcceptedCount < job.HeadCount)
+            {
+                application.Status = ApplicationStatus.Accepted;
+                currentAcceptedCount++;
+
+                if (currentAcceptedCount >= job.HeadCount)
+                {
+                    job.Status = JobStatus.InProgress;
+                }
+            }
+
             _context.Applications.Add(application);
 
             // Update Job ApplicationsCount
@@ -167,6 +182,112 @@ namespace UniTask.Business.Services
             return true;
         }
 
+        public async Task<string?> GenerateOtpAsync(int applicationId, string employerId, string otpType)
+        {
+            var application = await _context.Applications
+                .Include(a => a.Job)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.Job.EmployerId != employerId) return null;
+            if (application.Status != ApplicationStatus.Accepted && application.Status != ApplicationStatus.Completed) return null;
+
+            var random = new Random();
+            var otp = random.Next(100000, 999999).ToString();
+            var expiry = DateTime.UtcNow.AddMinutes(5);
+
+            if (otpType == "checkin")
+            {
+                application.CheckInOtp = otp;
+                application.CheckInOtpExpiredAt = expiry;
+            }
+            else if (otpType == "checkout")
+            {
+                application.CheckOutOtp = otp;
+                application.CheckOutOtpExpiredAt = expiry;
+            }
+
+            await _context.SaveChangesAsync();
+            return otp;
+        }
+
+        public async Task<bool> StudentCheckInAsync(int applicationId, string studentId, string otp)
+        {
+            var application = await _context.Applications
+                .Include(a => a.StudentProfile)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.StudentProfile.UserId != studentId) return false;
+            
+            if (application.CheckInOtp != otp || application.CheckInOtpExpiredAt < DateTime.UtcNow)
+                return false;
+
+            application.CheckInTime = DateTime.UtcNow;
+            application.CheckInOtp = null; // Clear OTP
+            
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> StudentCheckOutAsync(int applicationId, string studentId, string otp)
+        {
+            var application = await _context.Applications
+                .Include(a => a.StudentProfile)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.StudentProfile.UserId != studentId) return false;
+            
+            if (application.CheckOutOtp != otp || application.CheckOutOtpExpiredAt < DateTime.UtcNow)
+                return false;
+
+            application.CheckOutTime = DateTime.UtcNow;
+            application.CheckOutOtp = null; // Clear OTP
+            
+            // We do not change status here, Employer has to Approve it.
+            
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ReportNoShowAsync(int applicationId, string employerId, string reason, string evidenceUrl)
+        {
+            var application = await _context.Applications
+                .Include(a => a.Job)
+                .Include(a => a.StudentProfile)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.Job.EmployerId != employerId) return false;
+            
+            application.Status = ApplicationStatus.Disputed;
+            application.DisputeReason = reason;
+            application.EmployerEvidenceUrl = evidenceUrl;
+            application.DisputedDate = DateTime.UtcNow;
+
+            // Notice: We NO LONGER penalize the student immediately.
+            // The penalty and NoShow marking will be done by an Admin
+            // during the dispute resolution process if the employer's claim is valid.
+            
+            // Escrow budget remains frozen.
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ApproveCompletionAsync(int applicationId, string employerId)
+        {
+            var application = await _context.Applications
+                .Include(a => a.Job)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.Job.EmployerId != employerId) return false;
+            
+            application.Status = ApplicationStatus.Completed;
+            
+            // Escrow release logic would go here. We update EscrowReleaseDate.
+            application.EscrowReleaseDate = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         private static ApplicationDto MapToDto(Application a)
         {
             var skillsList = new List<string>();
@@ -198,7 +319,15 @@ namespace UniTask.Business.Services
                 StudentGpa = a.StudentProfile?.GPA,
                 StudentReliabilityScore = a.StudentProfile?.ReliabilityScore ?? 100,
                 Status = a.Status,
-                AppliedDate = a.AppliedDate
+                AppliedDate = a.AppliedDate,
+                CheckInTime = a.CheckInTime,
+                CheckOutTime = a.CheckOutTime,
+                DisputeReason = a.DisputeReason,
+                EmployerEvidenceText = a.EmployerEvidenceText,
+                EmployerEvidenceUrl = a.EmployerEvidenceUrl,
+                StudentEvidenceText = a.StudentEvidenceText,
+                StudentEvidenceUrl = a.StudentEvidenceUrl,
+                DisputedDate = a.DisputedDate
             };
         }
     }

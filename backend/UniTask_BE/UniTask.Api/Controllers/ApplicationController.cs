@@ -76,5 +76,81 @@ namespace UniTask.Api.Controllers
 
             return Ok(new { message = "Status updated successfully" });
         }
+
+        [HttpPost("{id}/generate-otp")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> GenerateOtp(int id, [FromQuery] string type)
+        {
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            var otp = await _applicationService.GenerateOtpAsync(id, employerId, type);
+            if (otp == null) return BadRequest(new { message = "Không thể tạo mã OTP. Vui lòng thử lại." });
+
+            return Ok(new { otp });
+        }
+
+        [HttpPost("{id}/checkin")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> CheckIn(int id, [FromBody] ApplicationOtpDto dto)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (studentId == null) return Unauthorized();
+
+            var success = await _applicationService.StudentCheckInAsync(id, studentId, dto.Otp);
+            if (!success) return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+
+            return Ok(new { message = "Check-in thành công." });
+        }
+
+        [HttpPost("{id}/checkout")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> CheckOut(int id, [FromBody] ApplicationOtpDto dto)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (studentId == null) return Unauthorized();
+
+            var success = await _applicationService.StudentCheckOutAsync(id, studentId, dto.Otp);
+            if (!success) return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+
+            return Ok(new { message = "Check-out thành công. Đang chờ nghiệm thu." });
+        }
+
+        [HttpPost("{id}/report-noshow")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> ReportNoShow(int id, [FromBody] ReportNoShowDto dto)
+        {
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            var success = await _applicationService.ReportNoShowAsync(id, employerId, dto.Reason, dto.EvidenceUrl);
+            if (!success) return BadRequest(new { message = "Không thể báo cáo vắng mặt." });
+
+            return Ok(new { message = "Báo cáo thành công. Hệ thống đã lưu lại." });
+        }
+
+        [HttpPost("{id}/approve-completion")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> ApproveCompletion(int id)
+        {
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            var success = await _applicationService.ApproveCompletionAsync(id, employerId);
+            if (!success) return BadRequest(new { message = "Không thể nghiệm thu." });
+
+            return Ok(new { message = "Nghiệm thu thành công. Tiền đã được chuyển." });
+        }
+    }
+
+    public class ApplicationOtpDto
+    {
+        public string Otp { get; set; } = string.Empty;
+    }
+
+    public class ReportNoShowDto
+    {
+        public string Reason { get; set; } = string.Empty;
+        public string EvidenceUrl { get; set; } = string.Empty;
     }
 }

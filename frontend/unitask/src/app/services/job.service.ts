@@ -248,6 +248,46 @@ export class JobService {
     );
   }
 
+  // Application-level actions (Auto-assign & per-student logic)
+  generateApplicationOtp(applicationId: number, type: 'checkin' | 'checkout'): Observable<{ success: boolean; otp?: string; message?: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/generate-otp?type=${type}`, {}).pipe(
+      map(res => ({ success: true, otp: res.otp })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể tạo mã OTP.' }))
+    );
+  }
+
+  studentCheckInApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/checkin`, { otp }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi Check-in.' }))
+    );
+  }
+
+  studentCheckOutApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/checkout`, { otp }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi Check-out.' }))
+    );
+  }
+
+  reportApplicationNoShow(applicationId: number, reason: string, evidenceUrl: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/report-noshow`, { reason, evidenceUrl }).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi báo cáo vắng mặt.' }))
+    );
+  }
+
+  approveApplicationCompletion(applicationId: number): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/approve-completion`, {}).pipe(
+      tap(() => this.fetchJobs()),
+      map(res => ({ success: true, message: res.message })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi nghiệm thu.' }))
+    );
+  }
+
   rejectCompletion(jobId: number, reason: string, evidenceText: string = '', evidenceUrl: string = ''): Observable<{ success: boolean; message: string }> {
     return this.http.put<any>(`${API_BASE_URL}/job/${jobId}/reject-completion`, { reason, evidenceText, evidenceUrl }).pipe(
       tap(() => this.fetchJobs()),

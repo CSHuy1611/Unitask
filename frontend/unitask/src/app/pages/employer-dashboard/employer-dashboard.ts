@@ -409,41 +409,19 @@ import { API_BASE_URL } from '../../config/api.config';
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px">
                           <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content: flex-end;">
                             <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)">
-                              <span class="material-icons-round" style="font-size:16px">group</span> Ứng viên ({{ job.applications || 0 }})
-                            </button>
-                            <button class="btn btn-secondary btn-sm" (click)="generateCheckInOtp(job)" style="gap:4px">
-                              <span class="material-icons-round" style="font-size:14px">login</span> OTP Check-in
-                            </button>
-                            <button class="btn btn-secondary btn-sm" (click)="generateCheckOutOtp(job)" style="gap:4px">
-                              <span class="material-icons-round" style="font-size:14px">logout</span> OTP Check-out
+                              <span class="material-icons-round" style="font-size:16px">group</span> Quản lý Sinh viên ({{ job.acceptedCount || 0 }}/{{ job.headCount || 1 }})
                             </button>
                           </div>
                           @if (job.status === 'in_progress') {
                             <span class="badge badge-warning" style="align-self: flex-end;">Đang thực hiện</span>
                           }
-                          @if (job.checkInTime) {
-                            <span style="font-size: 11px; color: var(--success); font-weight: 500;">
-                              ✓ Check-in: {{ job.checkInTime | date:'HH:mm dd/MM/yyyy' }}
-                            </span>
-                          }
-                          @if (job.checkOutTime) {
-                            <span style="font-size: 11px; color: var(--success); font-weight: 500;">
-                              ✓ Check-out: {{ job.checkOutTime | date:'HH:mm dd/MM/yyyy' }}
-                            </span>
-                          }
                         </div>
-                      } @else if (job.status === 'pending_confirmation') {
-                        <button class="btn btn-success btn-sm" (click)="jobToApprove.set(job)" style="gap:4px">
-                          <span class="material-icons-round" style="font-size:16px">check_circle</span> Trả lương
-                        </button>
-                        <button class="btn btn-danger btn-sm" (click)="jobToDispute.set(job)" style="gap:4px; background:#EF4444; border-color:#EF4444; color:white">
-                          <span class="material-icons-round" style="font-size:16px">gavel</span> Tranh chấp
-                        </button>
-                      } @else if (job.status === 'disputed') {
-                        <span class="badge badge-warning" style="background:rgba(239,68,68,0.15); color:#EF4444">Đang tranh chấp</span>
                       } @else if (job.status === 'completed') {
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px">
                           <span class="badge badge-success">Đã hoàn thành</span>
+                          <button class="btn btn-primary btn-sm" (click)="viewApplicants(job)" style="gap:4px">
+                            <span class="material-icons-round" style="font-size:16px">group</span> Danh sách ứng viên
+                          </button>
                           <button class="btn btn-secondary btn-sm" (click)="openReviewModal(job)" style="gap:4px">
                             <span class="material-icons-round" style="font-size:16px">rate_review</span> Đánh giá sinh viên
                           </button>
@@ -534,7 +512,7 @@ import { API_BASE_URL } from '../../config/api.config';
                   @for (app of jobApplications(); track app.id) {
                     <div class="applicant-card p-4 rounded-lg d-flex flex-col gap-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; border-radius: 8px;">
                       <div class="d-flex justify-between items-start" style="flex-wrap: wrap; gap: 12px; width: 100%;">
-                        <div class="d-flex items-center gap-3">
+                        <div class="d-flex items-center gap-3 w-full">
                           <div class="avatar-sm" style="width:52px; height:52px; border-radius:50%; background:var(--primary-gradient); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:1.2rem; overflow:hidden; border: 2px solid var(--primary-light)">
                             @if (app.studentAvatarUrl) {
                               <img [src]="app.studentAvatarUrl" alt="Avatar" style="width:100%; height:100%; object-fit:cover" />
@@ -542,7 +520,7 @@ import { API_BASE_URL } from '../../config/api.config';
                               {{ app.studentName ? app.studentName[0] : 'U' }}
                             }
                           </div>
-                          <div>
+                          <div style="flex: 1;">
                             <div class="d-flex items-center gap-2">
                               <strong style="color:var(--text-primary); font-size:1.15rem">{{ app.studentName }}</strong>
                               @if (app.studentEkycStatus === 'Verified' || app.studentEkycStatus === 'verified') {
@@ -556,38 +534,63 @@ import { API_BASE_URL } from '../../config/api.config';
                               📚 Ngành: {{ app.studentMajor }} &bull; Năm thứ {{ app.studentYear }}
                             </span>
                           </div>
-                        </div>
-                        
-                        <div class="d-flex gap-2 items-center">
                           @if (app.studentCVUrl) {
-                            <a [href]="app.studentCVUrl" target="_blank" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; background: rgba(var(--primary-rgb), 0.15); color: var(--primary-light); border-color: var(--primary-light); font-size: 0.8rem; padding: 6px 10px;" title="Xem CV trên Cloudinary">
+                            <a [href]="app.studentCVUrl" target="_blank" class="btn btn-secondary btn-sm" style="background: rgba(var(--primary-rgb), 0.15); color: var(--primary-light); border-color: var(--primary-light); font-size: 0.8rem; padding: 6px 10px;" title="Xem CV trên Cloudinary">
                               <span class="material-icons-round" style="font-size:16px">insert_drive_file</span> Xem CV
                             </a>
                           }
-                          @if (app.status === 0) {
-                            <button class="btn btn-primary btn-sm" (click)="userToAssign.set(app.id)" style="display:inline-flex; align-items:center; gap:4px; font-size: 0.8rem; padding: 6px 10px;">
-                              <span class="material-icons-round" style="font-size:16px">handshake</span> Giao việc
-                            </button>
-                          } @else if (app.status === 1) {
-                            <span class="badge badge-success" style="display:inline-flex; align-items:center; gap:4px; padding: 6px 12px; font-size: 0.8rem;">
-                              <span class="material-icons-round" style="font-size:14px">check</span> Đã giao việc
-                            </span>
-                          } @else if (app.status === 2) {
-                            <span class="badge badge-danger" style="display:inline-flex; align-items:center; gap:4px; padding: 6px 12px; font-size: 0.8rem;">
-                              <span class="material-icons-round" style="font-size:14px">close</span> Đã từ chối
-                            </span>
-                          }
                         </div>
                       </div>
+                      
+                      <!-- Status & Actions Centered -->
+                      <div class="d-flex flex-col items-center gap-3 w-full" style="margin-top: 8px;">
+                        @if (app.status === 2 || app.status === 'Accepted') {
+                          <span class="badge badge-warning" style="background:transparent; border:1px solid var(--warning); color:var(--warning); padding: 4px 16px; border-radius: 8px; font-weight: 600;">Đang thực hiện</span>
+                          <div class="d-flex flex-col items-center gap-2 w-full">
+                            <div class="d-flex justify-center gap-3 w-full" style="margin-bottom: 4px;">
+                              <button class="btn btn-secondary btn-sm" (click)="generateAppOtp(app, 'checkin')" style="gap:6px; font-size:0.85rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px;">
+                                <span class="material-icons-round" style="font-size:16px">login</span> OTP Check-in
+                              </button>
+                              <button class="btn btn-secondary btn-sm" (click)="generateAppOtp(app, 'checkout')" style="gap:6px; font-size:0.85rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px;">
+                                <span class="material-icons-round" style="font-size:16px">logout</span> OTP Check-out
+                              </button>
+                            </div>
+                            <button class="btn btn-danger btn-sm" (click)="appToDispute.set(app)" style="gap:6px; font-size:0.85rem; background:transparent; color:#EF4444; border:1px solid #EF4444; border-radius: 20px; padding: 6px 20px;">
+                              <span class="material-icons-round" style="font-size:16px">gavel</span> Báo cáo vi phạm / Khiếu nại
+                            </button>
+                            <button class="btn btn-sm" (click)="appToApprove.set(app)" style="gap:6px; font-size:0.85rem; background: white; color: black; font-weight: 600; border-radius: 20px; padding: 6px 24px; border: none; margin-top: 4px;">
+                              <span class="material-icons-round" style="font-size:16px">check_circle</span> Nghiệm thu
+                            </button>
+                          </div>
+                        } @else if (app.status === 5 || app.status === 'Completed') {
+                          <span class="badge badge-success" style="padding: 6px 16px; border-radius: 8px; font-size: 0.9rem;">Đã nghiệm thu</span>
+                        } @else if (app.status === 6 || app.status === 'NoShow') {
+                          <span class="badge badge-danger" style="padding: 6px 16px; border-radius: 8px; font-size: 0.9rem;">Đã bùng kèo</span>
+                        } @else if (app.status === 7 || app.status === 'Disputed') {
+                          <span class="badge badge-warning" style="background:rgba(239,68,68,0.15); color:#EF4444; padding: 6px 16px; border-radius: 8px; font-size: 0.9rem;">Đang tranh chấp</span>
+                        }
+                      </div>
+
+                      <!-- Timeline for checkin/out -->
+                      @if ((app.checkInTime || app.checkOutTime) && app.status !== 6 && app.status !== 7) {
+                        <div style="display:flex; justify-content:center; gap: 24px; padding:8px 12px; background:rgba(16,185,129,0.05); border-radius:6px; font-size:0.85rem; width: 100%;">
+                          <div style="color:var(--success)">
+                            <strong>Check-in:</strong> {{ app.checkInTime ? (app.checkInTime | date:'HH:mm dd/MM') : 'Chưa' }}
+                          </div>
+                          <div style="color:var(--success)">
+                            <strong>Check-out:</strong> {{ app.checkOutTime ? (app.checkOutTime | date:'HH:mm dd/MM') : 'Chưa' }}
+                          </div>
+                        </div>
+                      }
 
                       <!-- Student Academics & Bio -->
-                      <div class="student-academic-details" style="padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; border-left: 3px solid var(--primary-light); display: flex; flex-direction: column; gap: 8px; width: 100%;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem; width: 100%;">
+                      <div class="student-academic-details" style="padding: 12px 16px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border-left: 3px solid var(--primary-light); display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; width: 100%;">
                           <span style="color:var(--text-secondary)">Điểm trung bình tích lũy GPA:</span>
-                          <strong style="color:var(--warning); font-size:1rem">{{ app.studentGpa ? app.studentGpa.toFixed(2) : 'Chưa cập nhật' }} / 4.00</strong>
+                          <strong style="color:var(--warning); font-size:1.1rem">{{ app.studentGpa ? app.studentGpa.toFixed(2) : 'Chưa cập nhật' }} / 4.00</strong>
                         </div>
                         @if (app.studentBio) {
-                          <div style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5; font-style:italic; margin-top:4px;">
+                          <div style="font-size:0.95rem; color:var(--text-secondary); line-height:1.5; font-style:italic;">
                             "{{ app.studentBio }}"
                           </div>
                         }
@@ -595,7 +598,7 @@ import { API_BASE_URL } from '../../config/api.config';
 
                       <div class="d-flex gap-2 items-center" style="flex-wrap:wrap; width: 100%;">
                         @for (skill of app.studentSkills; track skill) {
-                          <span class="badge badge-secondary" style="font-size:0.75rem; background: rgba(255,255,255,0.06); color: var(--text-secondary)">{{ skill }}</span>
+                          <span class="badge badge-secondary" style="font-size:0.8rem; background: rgba(255,255,255,0.08); color: var(--text-secondary); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">{{ skill }}</span>
                         }
                       </div>
                     </div>
@@ -625,36 +628,50 @@ import { API_BASE_URL } from '../../config/api.config';
             </div>
           }
 
-          <!-- Confirm Approve Modal -->
-          @if (jobToApprove()) {
+          <!-- Confirm Approve App Modal -->
+          @if (appToApprove()) {
             <div class="modal-overlay animate-fade-in">
               <div class="modal-content glass-card p-6" style="width: 100%; max-width: 450px; text-align: center;">
                 <span class="material-icons-round" style="font-size:64px; color:var(--success); margin-bottom:16px">payments</span>
-                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận nghiệm thu</h3>
-                <p style="color:var(--text-secondary); margin-bottom:24px">Bạn xác nhận nghiệm thu công việc này? Số tiền <strong>{{ jobToApprove()?.budget?.toLocaleString('vi-VN') }}đ</strong> sẽ được chuyển thẳng cho sinh viên.</p>
+                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận nghiệm thu Sinh viên</h3>
+                <p style="color:var(--text-secondary); margin-bottom:24px">Bạn xác nhận nghiệm thu công việc này cho <strong>{{ appToApprove()?.studentName }}</strong>? Hệ thống sẽ giải ngân phần tiền công tương ứng cho sinh viên này.</p>
                 <div class="form-actions d-flex justify-center gap-3">
-                  <button class="btn btn-secondary" (click)="jobToApprove.set(null)">Hủy</button>
-                  <button class="btn btn-success" (click)="approveCompletion(jobToApprove()!)">Nghiệm thu & Trả lương</button>
+                  <button class="btn btn-secondary" (click)="appToApprove.set(null)">Hủy</button>
+                  <button class="btn btn-success" (click)="approveApplicationCompletion(appToApprove()!)">Nghiệm thu & Trả lương</button>
                 </div>
               </div>
             </div>
           }
 
-          <!-- Dispute Completion Modal -->
-          @if (jobToDispute()) {
+          <!-- Dispute App Modal -->
+          @if (appToDispute()) {
             <div class="modal-overlay animate-fade-in">
               <div class="modal-content glass-card p-6" style="width: 100%; max-width: 500px; text-align: left;">
-                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Báo cáo tranh chấp công việc</h3>
-                <p style="color:var(--text-secondary); margin-bottom:16px">Vui lòng cung cấp lý do từ chối nghiệm thu và bằng chứng chứng minh sinh viên chưa hoàn thành.</p>
+                <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Báo cáo Vi phạm / Khiếu nại</h3>
+                <p style="color:var(--text-secondary); margin-bottom:16px">Ghi nhận vi phạm đối với sinh viên <strong>{{ appToDispute()?.studentName }}</strong>. Sinh viên sẽ bị trừ Điểm tín nhiệm tùy theo mức độ vi phạm.</p>
                 
                 <div class="form-group mb-4">
-                  <label class="form-label" style="display:block; margin-bottom:6px">Lý do tranh chấp *</label>
-                  <input type="text" class="form-input" style="width:100%" [(ngModel)]="disputeReasonInput" placeholder="VD: Sinh viên không nộp kết quả đúng hẹn" required>
+                  <label class="form-label" style="display:block; margin-bottom:6px">Lý do vi phạm *</label>
+                  <select class="form-input" style="width:100%" [(ngModel)]="disputeReasonInput" required>
+                    <option value="">-- Chọn lý do vi phạm --</option>
+                    <option value="Không đến làm việc (No-Show hoàn toàn)">Không đến làm việc (No-Show hoàn toàn)</option>
+                    <option value="Bỏ về giữa chừng / Làm không đủ thời gian">Bỏ về giữa chừng / Làm không đủ thời gian</option>
+                    <option value="Làm việc hời hợt, không đúng yêu cầu kỹ năng">Làm việc hời hợt, không đúng yêu cầu kỹ năng</option>
+                    <option value="Vi phạm nội quy, thái độ không tốt">Vi phạm nội quy, thái độ không tốt</option>
+                    <option value="Khác">Khác (Nhập lý do cụ thể bên dưới)</option>
+                  </select>
                 </div>
+
+                @if (disputeReasonInput === 'Khác') {
+                  <div class="form-group mb-4">
+                    <label class="form-label" style="display:block; margin-bottom:6px">Nhập lý do cụ thể *</label>
+                    <input type="text" class="form-input" style="width:100%" [(ngModel)]="disputeReasonOther" placeholder="Nhập lý do của bạn..." required>
+                  </div>
+                }
                 
                 <div class="form-group mb-4">
                   <label class="form-label" style="display:block; margin-bottom:6px">Mô tả bằng chứng chi tiết *</label>
-                  <textarea class="form-input" style="width:100%" rows="3" [(ngModel)]="disputeEvidenceText" placeholder="Mô tả cụ thể bằng chứng..." required></textarea>
+                  <textarea class="form-input" style="width:100%" rows="3" [(ngModel)]="disputeEvidenceText" placeholder="Mô tả cụ thể bằng chứng (tin nhắn, hình ảnh công việc)..." required></textarea>
                 </div>
 
                 <div class="form-group mb-6">
@@ -663,8 +680,8 @@ import { API_BASE_URL } from '../../config/api.config';
                 </div>
 
                 <div class="form-actions d-flex justify-end gap-3" style="justify-content:flex-end">
-                  <button class="btn btn-secondary" (click)="jobToDispute.set(null)">Hủy</button>
-                  <button class="btn btn-danger" (click)="submitDispute(jobToDispute()!)" [disabled]="!disputeReasonInput || !disputeEvidenceText">Báo cáo tranh chấp</button>
+                  <button class="btn btn-secondary" (click)="appToDispute.set(null)">Hủy</button>
+                  <button class="btn btn-danger" (click)="submitNoShow(appToDispute()!)" [disabled]="!disputeReasonInput || (disputeReasonInput === 'Khác' && !disputeReasonOther) || !disputeEvidenceText">Gửi báo cáo</button>
                 </div>
               </div>
             </div>
@@ -1254,6 +1271,7 @@ export class EmployerDashboardComponent implements OnInit {
   jobToApprove = signal<Job | null>(null);
   jobToDispute = signal<Job | null>(null);
   disputeReasonInput = '';
+  disputeReasonOther = '';
   disputeEvidenceText = '';
   disputeEvidenceUrl = '';
 
@@ -1777,12 +1795,33 @@ export class EmployerDashboardComponent implements OnInit {
     });
   }
 
-  approveCompletion(job: Job) {
-    this.jobService.approveJob(job.id).subscribe({
+  appToApprove = signal<any | null>(null);
+  appToDispute = signal<any | null>(null);
+
+  generateAppOtp(app: any, type: 'checkin' | 'checkout') {
+    this.jobService.generateApplicationOtp(app.id, type).subscribe({
+      next: (res) => {
+        if (res.success && res.otp) {
+          this.otpType.set(type);
+          this.generatedOtp.set(res.otp);
+        } else {
+          this.toast.error(res.message || `Không thể tạo OTP ${type}.`);
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi tạo OTP.')
+    });
+  }
+
+  approveApplicationCompletion(app: any) {
+    this.jobService.approveApplicationCompletion(app.id).subscribe({
       next: (res) => {
         if (res.success) {
-          this.jobToApprove.set(null); // close modal
-          this.toast.success('Nghiệm thu thành công! Đã giải ngân cho sinh viên.');
+          this.appToApprove.set(null);
+          this.toast.success('Đã nghiệm thu sinh viên thành công!');
+          // Refresh applications
+          if (this.selectedJobForApplicants()) {
+            this.viewApplicants(this.selectedJobForApplicants()!);
+          }
         } else {
           this.toast.error(res.message || 'Có lỗi xảy ra khi nghiệm thu');
         }
@@ -1791,21 +1830,33 @@ export class EmployerDashboardComponent implements OnInit {
     });
   }
 
-  submitDispute(job: Job) {
-    if (!this.disputeReasonInput || !this.disputeEvidenceText) return;
-    this.jobService.rejectCompletion(job.id, this.disputeReasonInput, this.disputeEvidenceText, this.disputeEvidenceUrl).subscribe({
+  submitNoShow(app: any) {
+    let finalReason = this.disputeReasonInput === 'Khác' ? this.disputeReasonOther : this.disputeReasonInput;
+    if (!finalReason) return;
+
+    // Append evidence text if provided
+    if (this.disputeEvidenceText) {
+      finalReason += `\n- Bằng chứng/Mô tả thêm: ${this.disputeEvidenceText}`;
+    }
+
+    this.jobService.reportApplicationNoShow(app.id, finalReason, this.disputeEvidenceUrl).subscribe({
       next: (res) => {
         if (res.success) {
-          this.jobToDispute.set(null);
+          this.toast.success('Báo cáo vi phạm thành công!');
+          this.appToDispute.set(null);
           this.disputeReasonInput = '';
+          this.disputeReasonOther = '';
           this.disputeEvidenceText = '';
           this.disputeEvidenceUrl = '';
-          this.toast.success('Đã báo cáo tranh chấp lên Admin.');
+          
+          if (this.selectedJobForApplicants()) {
+            this.viewApplicants(this.selectedJobForApplicants()!);
+          }
         } else {
-          this.toast.error(res.message || 'Lỗi gửi tranh chấp.');
+          this.toast.error(res.message);
         }
       },
-      error: () => this.toast.error('Lỗi kết nối khi gửi tranh chấp.')
+      error: () => this.toast.error('Lỗi khi gửi báo cáo.')
     });
   }
 
