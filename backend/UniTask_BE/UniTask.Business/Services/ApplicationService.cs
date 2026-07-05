@@ -5,15 +5,17 @@ using UniTask.Business.Interfaces;
 using UniTask.DataAcesss;
 using UniTask.DataAcesss.Entities;
 using UniTask.DataAcesss.Entities.Enums;
+using Microsoft.AspNetCore.SignalR;
+using UniTask.Business.Hubs;
 
 namespace UniTask.Business.Services
 {
     public class ApplicationService : IApplicationService
     {
         private readonly AppDbContext _context;
-        private readonly Microsoft.AspNetCore.SignalR.IHubContext<Hubs.DashboardHub> _hubContext;
+        private readonly IHubContext<DashboardHub> _hubContext;
 
-        public ApplicationService(AppDbContext context, Microsoft.AspNetCore.SignalR.IHubContext<Hubs.DashboardHub> hubContext)
+        public ApplicationService(AppDbContext context, IHubContext<DashboardHub> hubContext)
         {
             _context = context;
             _hubContext = hubContext;
@@ -209,6 +211,9 @@ namespace UniTask.Business.Services
             
             await _context.SaveChangesAsync();
             await _hubContext.Clients.All.SendAsync("ApplicationCheckInOccurred", application.JobId);
+            
+            // Notify employer via SignalR
+            await _hubContext.Clients.All.SendAsync("CheckInSuccess", application.Id);
             return true;
         }
 
@@ -231,6 +236,9 @@ namespace UniTask.Business.Services
             
             await _context.SaveChangesAsync();
             await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", application.JobId);
+
+            // Notify employer via SignalR
+            await _hubContext.Clients.All.SendAsync("CheckOutSuccess", application.Id);
             return true;
         }
 
