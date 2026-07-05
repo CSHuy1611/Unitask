@@ -67,14 +67,20 @@ import { ToastService } from '../../services/toast.service';
             <span class="material-icons-round">visibility</span> {{ job().views }}
           </span>
           <span class="stat">
-            <span class="material-icons-round">people</span> {{ job().applicants?.length || 0 }} ứng viên
+            <span class="material-icons-round">people</span> {{ job().applications || 0 }} ứng viên
           </span>
         </div>
         
         @if (auth.currentUser()?.role === 'student') {
-          <button class="btn btn-primary btn-sm" (click)="applyForJob($event)" [disabled]="hasApplied()">
-            {{ hasApplied() ? 'Đã ứng tuyển' : 'Ứng tuyển ngay' }}
-          </button>
+          @if (job().status !== 'open') {
+            <button class="btn btn-secondary btn-sm" disabled (click)="$event.preventDefault(); $event.stopPropagation()">
+              Đã đủ người
+            </button>
+          } @else {
+            <button class="btn btn-primary btn-sm" (click)="applyForJob($event)" [disabled]="hasApplied()">
+              {{ hasApplied() ? 'Đã ứng tuyển' : 'Ứng tuyển ngay' }}
+            </button>
+          }
         }
       </div>
     </a>

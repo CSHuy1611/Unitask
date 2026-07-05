@@ -24,8 +24,12 @@ namespace UniTask.Business.Services
         public async Task<ApplicationDto?> ApplyJobAsync(int jobId, string studentId, ApplicationCreateDto dto)
         {
             var job = await _context.Jobs.FindAsync(jobId);
-            if (job == null || job.Status != JobStatus.Open)
-                return null; // Cannot apply to closed or non-existent jobs
+            if (job == null) return null;
+
+            if (job.Status != JobStatus.Open)
+            {
+                throw new System.InvalidOperationException("Công việc này đã đóng đăng ký hoặc đã tuyển đủ người.");
+            }
 
             var profile = await _context.StudentProfiles.FirstOrDefaultAsync(p => p.UserId == studentId);
             if (profile == null) return null;
