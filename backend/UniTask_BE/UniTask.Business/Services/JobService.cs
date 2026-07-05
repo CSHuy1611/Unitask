@@ -397,6 +397,27 @@ namespace UniTask.Business.Services
             return true;
         }
 
+        public async Task<bool> StudentDisputeAsync(int jobId, string studentId, JobDisputeCreateDto dto)
+        {
+            var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
+            if (job == null || job.Status != DataAcesss.Entities.Enums.JobStatus.InProgress)
+                return false;
+
+            var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId);
+            if (app == null) return false;
+
+            job.Status = DataAcesss.Entities.Enums.JobStatus.Disputed;
+            job.DisputeReason = dto.Reason;
+            job.StudentEvidenceText = dto.EvidenceText;
+            job.StudentEvidenceUrl = dto.EvidenceUrl;
+            job.DisputedDate = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("TransactionOccurred");
+
+            return true;
+        }
+
         public async Task<bool> SubmitStudentEvidenceAsync(int id, string studentId, StudentEvidenceSubmitDto dto)
         {
             var job = await _context.Jobs.Include(j => j.Applications).ThenInclude(a => a.StudentProfile).FirstOrDefaultAsync(j => j.Id == id);

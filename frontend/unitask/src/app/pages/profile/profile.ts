@@ -592,14 +592,10 @@ import Tesseract from 'tesseract.js';
                               } @else {
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                   <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
-                                    <span class="material-icons-round" style="font-size:14px">done_all</span> Đã check-out
+                                    <span class="material-icons-round" style="font-size:14px">done_all</span> Đã check-out (Chờ duyệt)
                                   </span>
-                                  <button type="button" class="btn btn-success btn-sm" (click)="selectedJobToComplete.set(job)">
-                                    <span class="material-icons-round" style="font-size:16px">task_alt</span> Báo cáo hoàn thành
-                                  </button>
                                 </div>
                               }
-                              
                               <button type="button" class="btn btn-danger btn-sm" (click)="openReportModal(job)" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
                                 <span class="material-icons-round" style="font-size:16px">report_problem</span> Khiếu nại
                               </button>
@@ -820,21 +816,6 @@ import Tesseract from 'tesseract.js';
             <div class="form-actions d-flex justify-between gap-3">
               <button class="btn btn-secondary flex-1" (click)="selectedJobToReport.set(null)">Hủy</button>
               <button class="btn btn-danger flex-1" [disabled]="!reportReason()" (click)="submitReport()" style="background: #EF4444;">Gửi khiếu nại</button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Confirm Complete Modal -->
-      @if (selectedJobToComplete()) {
-        <div class="modal-overlay animate-fade-in">
-          <div class="modal-content glass-card p-6" style="width: 100%; max-width: 450px; text-align: center;">
-            <span class="material-icons-round" style="font-size:64px; color:var(--success); margin-bottom:16px">task_alt</span>
-            <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận hoàn thành</h3>
-            <p style="color:var(--text-secondary); margin-bottom:24px">Bạn xác nhận đã hoàn thành công việc <strong>{{ selectedJobToComplete()?.title }}</strong>? Yêu cầu nghiệm thu sẽ được gửi đến Nhà tuyển dụng.</p>
-            <div class="form-actions d-flex justify-center gap-3">
-              <button class="btn btn-secondary" (click)="selectedJobToComplete.set(null)">Hủy</button>
-              <button class="btn btn-primary" (click)="studentCompleteJob(selectedJobToComplete()!)">Xác nhận</button>
             </div>
           </div>
         </div>
@@ -1819,22 +1800,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Phase 4: Student confirms completion
-  studentCompleteJob(job: Job) {
-    this.jobService.completeJob(job.id).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.toast.success(`Báo cáo thành công! Số tiền ${(job.budget || 0).toLocaleString('vi-VN')}đ sẽ được chuyển vào tài khoản sau khi nghiệm thu.`);
-          this.selectedJobToComplete.set(null);
-          this.refreshStudentApplications();
-        } else {
-          this.toast.error(res.message);
-        }
-      },
-      error: () => this.toast.error('Lỗi kết nối khi báo cáo.')
-    });
-  }
-
   openReportModal(job: Job) {
     this.selectedJobToReport.set(job);
     this.reportReason.set('');
@@ -1842,11 +1807,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   submitReport() {
-    if (!this.reportReason()) return;
+    const job = this.selectedJobToReport();
+    const reason = this.reportReason();
+    const url = this.reportEvidenceUrl();
+    if (!job || !reason) return;
     
-    // Giả lập gọi API khiếu nại
-    this.toast.success('Đã gửi khiếu nại thành công. Ban quản trị sẽ liên hệ để giải quyết trong thời gian sớm nhất!');
-    this.selectedJobToReport.set(null);
+    this.jobService.studentDispute(job.id, reason, url).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success('Đã gửi khiếu nại thành công. Ban quản trị sẽ liên hệ để giải quyết.');
+          this.selectedJobToReport.set(null);
+          this.refreshStudentApplications();
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Lỗi kết nối khi gửi khiếu nại.')
+    });
   }
 
   openCheckInModal(job: Job) {

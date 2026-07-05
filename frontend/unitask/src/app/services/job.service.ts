@@ -308,4 +308,12 @@ export class JobService {
       catchError(err => of({ success: false, message: err.error?.message || 'Không thể đăng đánh giá.' }))
     );
   }
+
+  studentDispute(jobId: number, reason: string, evidenceUrl?: string, evidenceText?: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${jobId}/dispute/student`, { reason, evidenceUrl, evidenceText }).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã gửi khiếu nại thành công. Ban quản trị sẽ xử lý.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Không thể gửi khiếu nại.' }))
+    );
+  }
 }

@@ -34,13 +34,13 @@ import { AuthService } from '../../services/auth.service';
             </div>
           }
 
-          <form (ngSubmit)="onLogin()" class="auth-form">
+          <form (ngSubmit)="onLogin(emailInput.value, passwordInput.value)" class="auth-form">
             <div class="form-group">
               <label class="form-label">Email</label>
               <div class="input-icon">
                 <span class="material-icons-round">email</span>
-                <input type="email" class="form-input" placeholder="your@email.com"
-                       [(ngModel)]="email" name="email" required>
+                <input #emailInput type="email" class="form-input" placeholder="your@email.com"
+                       [value]="email" (input)="email = emailInput.value" name="email" required>
               </div>
             </div>
 
@@ -48,8 +48,8 @@ import { AuthService } from '../../services/auth.service';
               <label class="form-label">Mật khẩu</label>
               <div class="input-icon">
                 <span class="material-icons-round">lock</span>
-                <input type="password" class="form-input" placeholder="••••••••"
-                       [(ngModel)]="password" name="password" required>
+                <input #passwordInput type="password" class="form-input" placeholder="••••••••"
+                       [value]="password" (input)="password = passwordInput.value" name="password" required>
               </div>
             </div>
 
@@ -202,12 +202,25 @@ export class LoginComponent {
   errorMsg = signal('');
   successMsg = signal('');
 
-  onLogin() {
+  onLogin(emailVal: string, passwordVal: string) {
     this.errorMsg.set('');
     this.successMsg.set('');
+    
+    const e = emailVal || this.email;
+    const p = passwordVal || this.password;
+    
+    if (!e) {
+      this.errorMsg.set('Vui lòng nhập Email');
+      return;
+    }
+    if (!p) {
+      this.errorMsg.set('Vui lòng nhập mật khẩu');
+      return;
+    }
+
     this.loading.set(true);
 
-    this.auth.login(this.email, this.password).subscribe({
+    this.auth.login(e, p).subscribe({
       next: (result) => {
         this.loading.set(false);
         if (result.success) {

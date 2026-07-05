@@ -13,6 +13,7 @@ namespace UniTask.Business.Interfaces
         Task<bool> ApproveJobAsync(int id, string employerId);
         Task<bool> RejectCompletionAsync(int id, string employerId, JobDisputeCreateDto dto);
         Task<bool> SubmitStudentEvidenceAsync(int id, string studentId, StudentEvidenceSubmitDto dto);
+        Task<bool> StudentDisputeAsync(int jobId, string studentId, JobDisputeCreateDto dto);
 
         // Check-in / Check-out OTP
         Task<string?> GenerateCheckInOtpAsync(int jobId, string employerId);
