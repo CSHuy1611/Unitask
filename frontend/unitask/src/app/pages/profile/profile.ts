@@ -330,7 +330,7 @@ import Tesseract from 'tesseract.js';
                               <strong>Giấy phép kinh doanh (Đã tải lên)</strong>
                               <span class="cv-date">Trạng thái: 
                                 @if (auth.currentUser()?.isBusinessLicenseVerified) {
-                                  <strong style="color: var(--success);">Đã xác thực AI</strong>
+                                  <strong style="color: var(--success);">Đã xác thực thành công</strong>
                                 } @else {
                                   <strong style="color: var(--warning);">Đang chờ hoặc không hợp lệ</strong>
                                 }
@@ -350,7 +350,7 @@ import Tesseract from 'tesseract.js';
                         } @else {
                           <span class="material-icons-round upload-icon" style="font-size: 32px; color: var(--primary-light);">add_photo_alternate</span>
                           <p><strong>Tải lên Giấy phép kinh doanh mới</strong></p>
-                          <span class="upload-note">Hỗ trợ JPG, PNG (AI tự động kiểm tra MST)</span>
+                          <span class="upload-note">Hỗ trợ JPG, PNG</span>
                         }
                       </div>
                       <input #licenseInput type="file" accept="image/*" style="display:none" (change)="onLicenseSelected($event)">

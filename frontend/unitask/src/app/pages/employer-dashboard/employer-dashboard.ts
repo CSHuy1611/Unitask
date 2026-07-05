@@ -1697,10 +1697,10 @@ export class EmployerDashboardComponent implements OnInit {
       });
     } else {
       // Create mode
-      if (user.ekycStatus !== 'verified') {
+      if (!user.businessLicenseUrl || !user.isBusinessLicenseVerified) {
         this.postSuccess.set(false);
-        this.postMessage.set('Tài khoản của bạn chưa được xác nhận danh tính (eKYC). Vui lòng cập nhật CCCD trong hồ sơ và chờ duyệt để đăng tin.');
-        this.toast.error('Vui lòng hoàn thành xác thực eKYC trước khi đăng tin!');
+        this.postMessage.set('Giấy phép kinh doanh của bạn chưa được xác thực. Vui lòng cập nhật Giấy phép kinh doanh (có chứa MST) trong mục Hồ sơ và chờ hệ thống xác nhận trước khi đăng tin.');
+        this.toast.error('Vui lòng xác thực Giấy phép kinh doanh trước khi đăng tin!');
         return;
       }
 
