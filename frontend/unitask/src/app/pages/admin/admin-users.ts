@@ -102,7 +102,7 @@ import { API_BASE_URL } from '../../config/api.config';
                       <td>
                         @if (user.ekycStatus !== 'verified') {
                           <button class="btn btn-sm btn-primary" (click)="forceVerify(user.id)" style="font-size: 11px; padding: 4px 8px; margin-right: 4px;">
-                            Ép XT (Test)
+                            Xác thực
                           </button>
                         }
                         <button class="btn btn-sm btn-secondary" (click)="openEditModal(user)" style="font-size: 11px; padding: 4px 8px;" title="Sửa thông tin">
