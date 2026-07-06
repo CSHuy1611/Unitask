@@ -31,6 +31,39 @@ namespace UniTask.DataAcesss
 
             Randomizer.Seed = new Random(2026);
             var password = "Demo@2026";
+            var usedEmails = new HashSet<string>();
+
+            string RemoveDiacritics(string text)
+            {
+                var normalizedString = text.Normalize(System.Text.NormalizationForm.FormD);
+                var stringBuilder = new System.Text.StringBuilder();
+
+                foreach (var c in normalizedString)
+                {
+                    var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+                    if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+                    {
+                        stringBuilder.Append(c);
+                    }
+                }
+
+                return stringBuilder.ToString().Normalize(System.Text.NormalizationForm.FormC).Replace("đ", "d").Replace("Đ", "D");
+            }
+
+            string CreateUniqueEmail(string fullName)
+            {
+                var noAccents = RemoveDiacritics(fullName).ToLower();
+                var cleanName = System.Text.RegularExpressions.Regex.Replace(noAccents, @"[^a-z0-9]", "");
+                var email = $"{cleanName}@gmail.com";
+                int counter = 1;
+                while (usedEmails.Contains(email))
+                {
+                    email = $"{cleanName}{counter}@gmail.com";
+                    counter++;
+                }
+                usedEmails.Add(email);
+                return email;
+            }
 
             // 1. Generate 10 Companies
             var companyFaker = new Faker<Company>("vi")
@@ -50,9 +83,9 @@ namespace UniTask.DataAcesss
             // 2. Generate 10 Employers
             var employers = new List<ApplicationUser>();
             var employerFaker = new Faker<ApplicationUser>("vi")
-                .RuleFor(u => u.UserName, (f, u) => $"mock_employer_{f.IndexFaker}@gmail.com")
-                .RuleFor(u => u.Email, (f, u) => u.UserName)
                 .RuleFor(u => u.FullName, f => f.Name.FullName())
+                .RuleFor(u => u.UserName, (f, u) => CreateUniqueEmail(u.FullName))
+                .RuleFor(u => u.Email, (f, u) => u.UserName)
                 .RuleFor(u => u.PhoneNumber, f => f.Phone.PhoneNumber("09########"))
                 .RuleFor(u => u.UserType, UserType.Employer)
                 .RuleFor(u => u.EkycStatus, EkycStatus.Verified)
@@ -83,9 +116,9 @@ namespace UniTask.DataAcesss
             // 3. Generate 40 Students
             var students = new List<ApplicationUser>();
             var studentFaker = new Faker<ApplicationUser>("vi")
-                .RuleFor(u => u.UserName, (f, u) => $"mock_student_{f.IndexFaker}@gmail.com")
-                .RuleFor(u => u.Email, (f, u) => u.UserName)
                 .RuleFor(u => u.FullName, f => f.Name.FullName())
+                .RuleFor(u => u.UserName, (f, u) => CreateUniqueEmail(u.FullName))
+                .RuleFor(u => u.Email, (f, u) => u.UserName)
                 .RuleFor(u => u.PhoneNumber, f => f.Phone.PhoneNumber("03########"))
                 .RuleFor(u => u.UserType, UserType.Student)
                 .RuleFor(u => u.EkycStatus, EkycStatus.Verified)
@@ -102,7 +135,7 @@ namespace UniTask.DataAcesss
                 .RuleFor(p => p.Bio, f => f.Lorem.Sentence())
                 .RuleFor(p => p.Address, f => f.Address.City())
                 .RuleFor(p => p.DateOfBirth, f => f.Date.Past(5, new DateTime(2005, 1, 1)))
-                .RuleFor(p => p.ReliabilityScore, f => f.Random.Int(80, 100));
+                .RuleFor(p => p.ReliabilityScore, 100);
 
             for (int i = 0; i < 40; i++)
             {
