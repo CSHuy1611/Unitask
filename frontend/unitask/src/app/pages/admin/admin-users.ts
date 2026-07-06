@@ -485,6 +485,37 @@ import { API_BASE_URL } from '../../config/api.config';
     .empty-state p { margin-top: var(--space-3); color: var(--text-secondary); }
     .text-muted { color: var(--text-muted); }
 
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      width: 100%;
+      max-width: 450px;
+    }
+
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--border-light);
+    }
+    .modal-header h2 { font-size: var(--font-size-lg); margin: 0; }
+    
+    .modal-body { padding: var(--space-5); }
+    
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: var(--space-3);
+      padding: var(--space-4) var(--space-5);
+      border-top: 1px solid var(--border-light);
+      background: rgba(255,255,255,0.02);
+    }
+
     @media (max-width: 900px) {
       .dashboard-header { flex-direction: column; align-items: flex-start; gap: var(--space-4); }
       .header-actions { flex-wrap: wrap; }
