@@ -617,7 +617,7 @@ import Tesseract from 'tesseract.js';
                               } @else if (!myApp.checkOutTime) {
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                   <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
-                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ myApp.checkInTime | date:'HH:mm' }})
+                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ myApp.checkInTime + 'Z' | date:'HH:mm' }})
                                   </span>
                                   <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(myApp.id)">
                                     <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
