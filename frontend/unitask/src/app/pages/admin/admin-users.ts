@@ -101,10 +101,13 @@ import { API_BASE_URL } from '../../config/api.config';
                       <td><span class="text-muted">{{ user.createdAt }}</span></td>
                       <td>
                         @if (user.ekycStatus !== 'verified') {
-                          <button class="btn btn-sm btn-primary" (click)="forceVerify(user.id)" style="font-size: 11px; padding: 4px 8px;">
+                          <button class="btn btn-sm btn-primary" (click)="forceVerify(user.id)" style="font-size: 11px; padding: 4px 8px; margin-right: 4px;">
                             Ép XT (Test)
                           </button>
                         }
+                        <button class="btn btn-sm btn-secondary" (click)="openEditModal(user)" style="font-size: 11px; padding: 4px 8px;" title="Sửa thông tin">
+                          <span class="material-icons-round" style="font-size: 14px;">edit</span>
+                        </button>
                       </td>
                     </tr>
                   } @empty {
@@ -130,6 +133,37 @@ import { API_BASE_URL } from '../../config/api.config';
               </div>
             }
           </div>
+
+          <!-- Edit User Modal -->
+          @if (isEditModalOpen()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content animate-scale-in" style="max-width: 450px;">
+                <div class="modal-header">
+                  <h2>Sửa thông tin Người dùng</h2>
+                  <button class="icon-btn" (click)="closeEditModal()"><span class="material-icons-round">close</span></button>
+                </div>
+                <div class="modal-body">
+                  <p style="margin-bottom: var(--space-4); color: var(--text-secondary);">
+                    Bạn đang sửa thông tin cho: <strong style="color: var(--text-primary);">{{ selectedUser()?.fullName }}</strong>
+                  </p>
+                  <div class="form-group">
+                    <label>Địa chỉ Email mới</label>
+                    <input type="email" class="form-control" [ngModel]="editingEmail()" (ngModelChange)="editingEmail.set($event)" placeholder="Nhập email mới..." />
+                    <small class="text-caption" style="display: block; margin-top: var(--space-2); color: var(--warning);">Lưu ý: Username đăng nhập của User cũng sẽ bị thay đổi theo email này.</small>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-secondary" (click)="closeEditModal()">Hủy</button>
+                  <button class="btn btn-primary" (click)="updateEmail()" [disabled]="isUpdating()">
+                    @if (isUpdating()) {
+                      <span class="material-icons-round spinner-icon">sync</span>
+                    }
+                    Lưu thay đổi
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
     </div>
   `,
   styles: [`
@@ -477,6 +511,13 @@ export class AdminUsersComponent {
   pageSize = 10;
   hasMore = signal<boolean>(false);
   isLoading = signal<boolean>(false);
+  
+  // Edit Modal State
+  isEditModalOpen = signal<boolean>(false);
+  selectedUser = signal<any>(null);
+  editingEmail = signal<string>('');
+  isUpdating = signal<boolean>(false);
+
  
   filteredUsers = computed(() => {
     let result = this.users();
@@ -537,5 +578,46 @@ export class AdminUsersComponent {
         }
       });
     }
+  }
+
+  openEditModal(user: any) {
+    this.selectedUser.set(user);
+    this.editingEmail.set(user.email);
+    this.isEditModalOpen.set(true);
+  }
+
+  closeEditModal() {
+    this.isEditModalOpen.set(false);
+    this.selectedUser.set(null);
+    this.editingEmail.set('');
+  }
+
+  updateEmail() {
+    const user = this.selectedUser();
+    const newEmail = this.editingEmail().trim();
+
+    if (!user || !newEmail) {
+      this.toast.error('Vui lòng nhập địa chỉ email.');
+      return;
+    }
+
+    if (newEmail === user.email) {
+      this.closeEditModal();
+      return;
+    }
+
+    this.isUpdating.set(true);
+    this.http.put<any>(`${API_BASE_URL}/admin/users/${user.id}/email`, { email: newEmail }).subscribe({
+      next: (res) => {
+        this.isUpdating.set(false);
+        this.toast.success(res.message);
+        this.closeEditModal();
+        this.loadUsers(this.currentPage()); // Reload current page
+      },
+      error: (err) => {
+        this.isUpdating.set(false);
+        this.toast.error(err.error?.message || 'Không thể cập nhật email.');
+      }
+    });
   }
 }

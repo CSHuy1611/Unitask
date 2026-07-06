@@ -155,6 +155,22 @@ namespace UniTask.Business.Services
             return true;
         }
 
+        public async Task<bool> UpdateUserEmailAsync(string userId, string newEmail)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return false;
+
+            // Update Email and UserName (Identity uses UserName for login)
+            user.Email = newEmail;
+            user.NormalizedEmail = newEmail.ToUpper();
+            user.UserName = newEmail;
+            user.NormalizedUserName = newEmail.ToUpper();
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
         public async Task<ServicePackageDto> CreatePackageAsync(ServicePackageCreateDto dto)
         {
             var package = new ServicePackage
