@@ -66,6 +66,16 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "User verified successfully for testing." });
         }
 
+        [HttpPut("users/{userId}/email")]
+        public async Task<IActionResult> UpdateUserEmail(string userId, [FromBody] AdminUserUpdateDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var result = await _adminService.UpdateUserEmailAsync(userId, dto.Email);
+            if (!result) return BadRequest(new { message = "Failed to update user email." });
+            return Ok(new { message = "User email updated successfully." });
+        }
+
+
         // ===== PACKAGE MANAGEMENT =====
         [HttpPost("packages")]
         public async Task<IActionResult> CreatePackage([FromBody] ServicePackageCreateDto dto)
