@@ -189,5 +189,21 @@ namespace UniTask.Api.Controllers
             if (!result) return BadRequest(new { message = "Không tìm thấy hồ sơ Employer." });
             return Ok(new { message = "Giấy phép kinh doanh đã bị từ chối và xóa. Employer cần upload lại." });
         }
+
+        // ===== MOCK DATA SEEDER =====
+        [AllowAnonymous]
+        [HttpPost("seed-demo-data")]
+        public async Task<IActionResult> SeedDemoData([FromServices] IServiceProvider serviceProvider)
+        {
+            try
+            {
+                await UniTask.DataAcesss.MockDataSeeder.SeedMockDataAsync(serviceProvider);
+                return Ok(new { message = "Mock data generated successfully (40 Students, 10 Employers, 20+ Jobs). Passwords for all users: Demo@2026" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Failed to generate mock data.", error = ex.Message });
+            }
+        }
     }
 }
