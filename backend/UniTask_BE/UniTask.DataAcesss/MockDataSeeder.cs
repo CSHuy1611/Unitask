@@ -23,8 +23,8 @@ namespace UniTask.DataAcesss
                     await roleManager.CreateAsync(new IdentityRole(role));
             }
 
-            // Check if mock data already exists
-            if (await context.Users.AnyAsync(u => u.Email != null && u.Email.Contains("mock_student")))
+            // Check if mock data already exists (using a known tag since emails are now random)
+            if (await context.JobTags.AnyAsync(t => t.TagName == "Mock"))
             {
                 return; // Already seeded
             }
@@ -96,7 +96,8 @@ namespace UniTask.DataAcesss
             for (int i = 0; i < 10; i++)
             {
                 var employer = employerFaker.Generate();
-                await userManager.CreateAsync(employer, password);
+                var result = await userManager.CreateAsync(employer, password);
+                if (!result.Succeeded) throw new Exception("Failed to create Employer: " + string.Join(", ", result.Errors.Select(e => e.Description)));
                 await userManager.AddToRoleAsync(employer, "Employer");
                 employers.Add(employer);
 
@@ -140,7 +141,8 @@ namespace UniTask.DataAcesss
             for (int i = 0; i < 40; i++)
             {
                 var student = studentFaker.Generate();
-                await userManager.CreateAsync(student, password);
+                var result = await userManager.CreateAsync(student, password);
+                if (!result.Succeeded) throw new Exception("Failed to create Student: " + string.Join(", ", result.Errors.Select(e => e.Description)));
                 await userManager.AddToRoleAsync(student, "Student");
                 students.Add(student);
 
