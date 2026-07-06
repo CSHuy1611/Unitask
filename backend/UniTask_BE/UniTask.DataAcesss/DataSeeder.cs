@@ -31,10 +31,17 @@ namespace UniTask.DataAcesss
                     PhoneNumber = "0900000000", UserType = UserType.Admin, EkycStatus = EkycStatus.Verified,
                     EkycDate = new DateTime(2026, 1, 1), CreatedAt = new DateTime(2026, 1, 1), EmailConfirmed = true
                 };
-                await userManager.CreateAsync(admin, "admin123");
-                await userManager.AddToRoleAsync(admin, "Admin");
-                context.Wallets.Add(new Wallet { UserId = admin.Id, Balance = 0 });
-                await context.SaveChangesAsync();
+                var result = await userManager.CreateAsync(admin, "Admin@123");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(admin, "Admin");
+                    context.Wallets.Add(new Wallet { UserId = admin.Id, Balance = 0 });
+                    await context.SaveChangesAsync();
+                }
+                else
+                {
+                    throw new Exception("Failed to create Admin: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
             }
 
             // ===== 1.2 Fix ReliabilityScore = 0 bug (Hotfix) =====
