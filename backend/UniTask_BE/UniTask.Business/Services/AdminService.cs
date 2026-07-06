@@ -670,6 +670,7 @@ namespace UniTask.Business.Services
             var query = _context.Transactions
                 .Include(t => t.Wallet)
                 .ThenInclude(w => w.User)
+                .Where(t => t.Description == null || !t.Description.Contains("[PAYOS_PENDING]"))
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(type) && type != "All")
@@ -721,6 +722,7 @@ namespace UniTask.Business.Services
             var query = _context.Transactions
                 .Include(t => t.Wallet)
                 .ThenInclude(w => w.User)
+                .Where(t => t.Description == null || !t.Description.Contains("[PAYOS_PENDING]"))
                 .AsQueryable();
 
             if (startDate.HasValue)
@@ -765,8 +767,7 @@ namespace UniTask.Business.Services
             var summarySheet = workbook.Worksheets.Add("Tổng Quan");
             summarySheet.Style.Font.FontName = "Arial";
             summarySheet.Style.Font.FontSize = 11;
-            summarySheet.ShowGridLines = false;
-
+            // Add metadata
             summarySheet.Cell("A1").Value = "HỆ THỐNG UNITASK";
             summarySheet.Cell("A1").Style.Font.Bold = true;
             summarySheet.Cell("A1").Style.Font.FontSize = 14;

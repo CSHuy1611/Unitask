@@ -140,11 +140,15 @@ import { AuthService } from '../../services/auth.service';
     @media (max-width: 992px) {
       .admin-container {
         flex-direction: column;
+        padding: var(--space-4);
       }
       .admin-sidebar {
         flex: none;
         width: 100%;
         position: static;
+      }
+      .admin-main-content {
+        width: 100%;
       }
     }
   `]
