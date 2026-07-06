@@ -79,7 +79,7 @@ import { API_BASE_URL } from '../../config/api.config';
                   } @else {
                     @for (item of transactions(); track item.id) {
                       <tr>
-                        <td>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                        <td>{{ item.createdAt + 'Z' | date:'dd/MM/yyyy HH:mm' }}</td>
                         <td>{{ item.fullName }}</td>
                         <td>{{ item.email }}</td>
                         <td>

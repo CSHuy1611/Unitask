@@ -669,10 +669,10 @@ import { Subscription } from 'rxjs';
                                   <span>Check-in</span>
                                 </div>
                                 <span style="font-size: 0.9rem; color: var(--text-primary); font-weight: 500; padding-left: 2px;">
-                                  {{ app.checkInTime ? (app.checkInTime | date:'HH:mm') : '--:--' }}
+                                  {{ app.checkInTime ? (app.checkInTime + 'Z' | date:'HH:mm') : '--:--' }}
                                 </span>
                                 <span style="font-size: 0.8rem; color: var(--text-muted); padding-left: 2px;">
-                                  {{ app.checkInTime ? (app.checkInTime | date:'dd/MM/yyyy') : '' }}
+                                  {{ app.checkInTime ? (app.checkInTime + 'Z' | date:'dd/MM/yyyy') : '' }}
                                 </span>
                               </div>
                               <div style="display: flex; flex-direction: column; gap: 4px; border-left: 1px solid rgba(16,185,129,0.1); padding-left: 10px;">
@@ -681,10 +681,10 @@ import { Subscription } from 'rxjs';
                                   <span>Check-out</span>
                                 </div>
                                 <span style="font-size: 0.9rem; color: var(--text-primary); font-weight: 500; padding-left: 2px;">
-                                  {{ app.checkOutTime ? (app.checkOutTime | date:'HH:mm') : '--:--' }}
+                                  {{ app.checkOutTime ? (app.checkOutTime + 'Z' | date:'HH:mm') : '--:--' }}
                                 </span>
                                 <span style="font-size: 0.8rem; color: var(--text-muted); padding-left: 2px;">
-                                  {{ app.checkOutTime ? (app.checkOutTime | date:'dd/MM/yyyy') : '' }}
+                                  {{ app.checkOutTime ? (app.checkOutTime + 'Z' | date:'dd/MM/yyyy') : '' }}
                                 </span>
                               </div>
                             </div>
@@ -957,7 +957,7 @@ import { Subscription } from 'rxjs';
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                       <div>
                         <strong style="display:block; color:var(--text-primary)">{{ txn.description }}</strong>
-                        <span style="font-size: 12px; color: var(--text-muted)">{{ txn.createdAt | date:'HH:mm dd/MM/yyyy' }}</span>
+                        <span style="font-size: 12px; color: var(--text-muted)">{{ txn.createdAt + 'Z' | date:'HH:mm dd/MM/yyyy' }}</span>
                       </div>
                       <div [ngStyle]="{'color': txn.amount > 0 ? 'var(--success)' : '#EF4444'}" style="font-weight: bold; font-size: 16px;">
                         {{ txn.amount > 0 ? '+' : '' }}{{ txn.amount.toLocaleString('vi-VN') }}đ

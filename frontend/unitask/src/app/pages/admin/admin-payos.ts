@@ -55,8 +55,8 @@ import { API_BASE_URL } from '../../config/api.config';
                     @for (item of deposits(); track item.id) {
                       <tr class="animate-fade-in-up" [style.animation-delay]="$index * 0.05 + 's'">
                         <td>
-                          <div class="font-medium">{{ item.createdAt | date:'dd/MM/yyyy' }}</div>
-                          <div class="text-sm text-muted">{{ item.createdAt | date:'HH:mm:ss' }}</div>
+                          <div class="font-medium">{{ item.createdAt + 'Z' | date:'dd/MM/yyyy' }}</div>
+                          <div class="text-sm text-muted">{{ item.createdAt + 'Z' | date:'HH:mm:ss' }}</div>
                         </td>
                         <td>
                           <div class="font-medium">{{ item.userFullName }}</div>
