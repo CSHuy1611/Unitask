@@ -23,10 +23,10 @@ namespace UniTask.DataAcesss
                     await roleManager.CreateAsync(new IdentityRole(role));
             }
 
-            // Check if mock data already exists (using a known tag since emails are now random)
-            if (await context.JobTags.AnyAsync(t => t.TagName == "Mock"))
+            // Check if mock data already exists (by checking user count)
+            if (await context.Users.CountAsync() >= 10)
             {
-                return; // Already seeded
+                return; // Already seeded with mock or real users
             }
 
             Randomizer.Seed = new Random(2026);
@@ -155,16 +155,30 @@ namespace UniTask.DataAcesss
             await context.SaveChangesAsync();
 
             // 4. Generate 20-30 Expired Jobs
+            var jobTemplates = new[] {
+                new { Title = "Thực tập sinh Marketing / Content Creator", Category = "Marketing & Content", Tags = new[] { "Marketing", "Sinh viên", "Content" } },
+                new { Title = "Nhân viên Telesales (Part-time)", Category = "Sales", Tags = new[] { "Sales", "Bán thời gian", "Sinh viên" } },
+                new { Title = "Cộng tác viên viết bài PR", Category = "Marketing & Content", Tags = new[] { "Freelance", "Viết lách" } },
+                new { Title = "Thực tập sinh Lập trình Web (Frontend)", Category = "IT & Công nghệ", Tags = new[] { "IT", "Thực tập", "Frontend" } },
+                new { Title = "Nhân viên hỗ trợ sự kiện", Category = "Sự kiện", Tags = new[] { "Sự kiện", "Part-time" } },
+                new { Title = "Designer thực tập (Photoshop/Illustrator)", Category = "Thiết kế & Đồ họa", Tags = new[] { "Thiết kế", "Đồ họa", "Sinh viên" } },
+                new { Title = "Nhân viên nhập liệu bán thời gian", Category = "Hành chính", Tags = new[] { "Nhập liệu", "Bán thời gian", "Sinh viên" } }
+            };
+
+            var jobDescriptions = new[] {
+                "Mô tả công việc:\n- Quản lý và lên nội dung cho Fanpage.\n- Hỗ trợ quay dựng video cơ bản.\nYêu cầu:\n- Sinh viên năm 2 trở lên.\n- Có khả năng viết lách tốt.\nQuyền lợi:\n- Được đào tạo bài bản.\n- Hỗ trợ dấu mộc thực tập.",
+                "Mô tả công việc:\n- Gọi điện tư vấn khóa học cho khách hàng theo data có sẵn.\n- Cập nhật thông tin lên hệ thống.\nYêu cầu:\n- Giọng nói dễ nghe, không ngọng.\n- Có laptop cá nhân.\nQuyền lợi:\n- Lương cứng + Hoa hồng.\n- Thời gian làm việc linh hoạt.",
+                "Mô tả công việc:\n- Phối hợp cùng team để triển khai giao diện người dùng trên nền tảng Web.\n- Xử lý lỗi và tối ưu hiệu suất.\nYêu cầu:\n- Nắm vững HTML, CSS, JavaScript.\n- Có tinh thần học hỏi cao.\nQuyền lợi:\n- Có lương thực tập.\n- Xem xét lên chính thức sau 2 tháng."
+            };
+
             var jobFaker = new Faker<Job>("vi")
-                .RuleFor(j => j.Title, f => f.Name.JobTitle())
-                .RuleFor(j => j.Description, f => f.Lorem.Paragraphs(2))
                 .RuleFor(j => j.Location, f => f.Address.City())
-                .RuleFor(j => j.Type, f => f.PickRandom("Freelance", "Part-time"))
+                .RuleFor(j => j.Type, f => f.PickRandom("Freelance", "Part-time", "Thực tập"))
                 .RuleFor(j => j.SalaryText, f => f.Random.Int(100, 500) + "k/buổi")
                 .RuleFor(j => j.Budget, f => f.Random.Int(200000, 1000000))
                 .RuleFor(j => j.Commission, (f, j) => j.Budget * 0.1m)
-                .RuleFor(j => j.PostedDate, f => f.Date.Between(new DateTime(2026, 6, 1), new DateTime(2026, 6, 25)))
-                .RuleFor(j => j.Deadline, (f, j) => j.PostedDate.AddDays(f.Random.Int(3, 10)))
+                .RuleFor(j => j.PostedDate, f => f.Date.Between(new DateTime(2026, 5, 1), new DateTime(2026, 6, 15)))
+                .RuleFor(j => j.Deadline, (f, j) => j.PostedDate.AddDays(f.Random.Int(5, 15)))
                 .RuleFor(j => j.Views, f => f.Random.Int(100, 1000))
                 .RuleFor(j => j.ApplicationsCount, f => f.Random.Int(5, 20))
                 .RuleFor(j => j.IsUrgent, f => f.Random.Bool())
@@ -175,20 +189,30 @@ namespace UniTask.DataAcesss
             {
                 var employerProfile = await context.EmployerProfiles.FirstAsync(e => e.UserId == employer.Id);
                 
-                // Each employer gets 2-3 past jobs
-                int numJobs = new Random().Next(2, 4);
+                int numJobs = Randomizer.Seed.Next(2, 4);
                 for (int i = 0; i < numJobs; i++)
                 {
                     var job = jobFaker.Generate();
+                    var template = jobTemplates[Randomizer.Seed.Next(jobTemplates.Length)];
+                    
+                    job.Title = template.Title;
+                    job.Category = template.Category;
+                    job.Description = jobDescriptions[Randomizer.Seed.Next(jobDescriptions.Length)];
                     job.EmployerId = employer.Id;
                     job.CompanyId = employerProfile.CompanyId.Value;
                     
                     context.Jobs.Add(job);
-                    await context.SaveChangesAsync(); // save to get ID
+                    await context.SaveChangesAsync(); 
 
-                    context.JobTags.Add(new JobTag { JobId = job.Id, TagName = "Mock" });
-                    context.JobRequirements.Add(new JobRequirement { JobId = job.Id, Content = "Sinh viên ngoan ngoãn" });
-                    context.JobBenefits.Add(new JobBenefit { JobId = job.Id, Content = "Môi trường thân thiện" });
+                    foreach (var tag in template.Tags)
+                    {
+                        context.JobTags.Add(new JobTag { JobId = job.Id, TagName = tag });
+                    }
+                    
+                    context.JobRequirements.Add(new JobRequirement { JobId = job.Id, Content = "Tinh thần trách nhiệm cao" });
+                    context.JobRequirements.Add(new JobRequirement { JobId = job.Id, Content = "Chăm chỉ, trung thực" });
+                    context.JobBenefits.Add(new JobBenefit { JobId = job.Id, Content = "Môi trường làm việc năng động" });
+                    context.JobBenefits.Add(new JobBenefit { JobId = job.Id, Content = "Cơ hội thăng tiến và học hỏi" });
                 }
             }
             await context.SaveChangesAsync();
