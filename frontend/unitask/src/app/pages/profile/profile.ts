@@ -607,6 +607,15 @@ import Tesseract from 'tesseract.js';
                               </p>
                             </div>
                           }
+                          <!-- Info box when waiting for confirmation -->
+                          @if (job.status === 'pending_confirmation') {
+                            <div style="margin-top: 8px; padding: 10px 14px; background: rgba(59, 130, 246, 0.06); border: 1px dashed rgba(59, 130, 246, 0.25); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: 8px;">
+                              <span class="material-icons-round" style="font-size:18px; color:var(--primary); flex-shrink:0; margin-top:1px">info</span>
+                              <p style="margin:0; font-size:13px; color: var(--text-secondary); line-height:1.5">
+                                Hệ thống sẽ <strong style="color:var(--primary)">tự động nghiệm thu và cộng tiền</strong> vào ví của bạn sau 24h kể từ lúc check-out nếu Nhà tuyển dụng không phản hồi.
+                              </p>
+                            </div>
+                          }
                           <!-- Student Application Status for the Job -->
                           @if (job.status === 'in_progress' && myApp) {
                             <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; flex-wrap: wrap;">
@@ -617,7 +626,7 @@ import Tesseract from 'tesseract.js';
                               } @else if (!myApp.checkOutTime) {
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                   <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
-                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ myApp.checkInTime | date:'HH:mm' }})
+                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ formatUtcTime(myApp.checkInTime) | date:'HH:mm' }})
                                   </span>
                                   <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(myApp.id)">
                                     <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
@@ -673,6 +682,15 @@ import Tesseract from 'tesseract.js';
                               <button type="button" class="btn btn-primary btn-sm" (click)="openReviewModal(job)">
                                 <i class="material-icons-round" style="font-size:16px">star</i> Đánh giá nhà tuyển dụng
                               </button>
+                            </div>
+                          }
+
+                          @if (job.status === 'closed') {
+                            <div style="margin-top: 12px; padding: 12px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-secondary);">
+                              <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px;">
+                                <span class="material-icons-round" style="font-size: 18px;">warning</span> Công việc không hoàn thành
+                              </strong>
+                              <p style="margin: 6px 0 0 0;">Bạn đã không thực hiện Check-in / Check-out trong thời gian quy định. Công việc bị đánh dấu là không hoàn thành.</p>
                             </div>
                           }
 
@@ -751,12 +769,14 @@ import Tesseract from 'tesseract.js';
                                 <span><i class="material-icons-round" style="font-size:14px">location_on</i> {{ job.location || 'Từ xa' }}</span>
                               </div>
                             </div>
-                            @if (job.myAppStatus === 0 || job.myAppStatus === 'Applied') {
+                            @if (job.myAppStatus === 3 || job.myAppStatus === 'Rejected') {
+                              <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2);">Không trúng tuyển</span>
+                            } @else if (job.status === 'in_progress' || job.status === 'completed' || job.status === 'closed') {
+                              <span class="badge" style="background: rgba(156, 163, 175, 0.15); color: #6B7280; border: 1px solid rgba(156, 163, 175, 0.3); padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Quá hạn ứng tuyển</span>
+                            } @else if (job.myAppStatus === 0 || job.myAppStatus === 'Applied') {
                               <span class="badge badge-success">Đã nộp</span>
                             } @else if (job.myAppStatus === 1 || job.myAppStatus === 'Interviewing') {
                               <span class="badge badge-warning">Đang phỏng vấn</span>
-                            } @else if (job.myAppStatus === 3 || job.myAppStatus === 'Rejected') {
-                              <span class="badge badge-danger">Bị từ chối</span>
                             } @else {
                               <span class="badge badge-success">Đã nộp</span>
                             }
@@ -1628,6 +1648,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   withdrawMessage = signal('');
   isSubmittingWithdraw = signal(false);
   selectedJobToComplete = signal<Job | null>(null);
+
+  formatUtcTime(timeStr?: string): Date | null {
+    if (!timeStr) return null;
+    return new Date(timeStr.endsWith('Z') ? timeStr : timeStr + 'Z');
+  }
 
   selectedJobToReport = signal<Job | null>(null);
   reportReason = signal('');
