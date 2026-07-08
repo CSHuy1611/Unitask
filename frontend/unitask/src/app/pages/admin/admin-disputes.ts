@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
 import { ToastService } from '../../services/toast.service';
+import { AdminSearchService } from '../../services/admin-search.service';
 import { API_BASE_URL } from '../../config/api.config';
 import { Job } from '../../models/job.model';
 
@@ -45,7 +46,25 @@ interface DisputeItem {
               </button>
             </div>
 
-            @if (disputes().length === 0) {
+            @if (isLoading() && filteredDisputes().length === 0) {
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Công việc (Job)</th>
+                      <th>Lương ký quỹ</th>
+                      <th>Nhà tuyển dụng</th>
+                      <th>Sinh viên thực hiện</th>
+                      <th>Ngày tranh chấp</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="6"><div class="skeleton skeleton-card"></div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            } @else if (filteredDisputes().length === 0) {
               <div class="empty-state text-center p-12" style="text-align:center; padding:48px 0; color:var(--text-muted)">
                 <span class="material-icons-round" style="font-size:64px; opacity:0.5; margin-bottom:16px; display:block">gavel</span>
                 <p>Hiện không có tranh chấp công việc nào cần giải quyết. Hệ thống đang hoạt động ổn định!</p>
@@ -64,7 +83,7 @@ interface DisputeItem {
                     </tr>
                   </thead>
                   <tbody>
-                    @for (d of disputes(); track d.id) {
+                    @for (d of filteredDisputes(); track d.id) {
                       <tr>
                         <td>
                           <div class="job-title-col">
@@ -118,8 +137,8 @@ interface DisputeItem {
 
     <!-- Detail & Evidence Modal -->
     @if (selectedDispute()) {
-      <div class="modal-overlay animate-fade-in" (click)="selectedDispute.set(null)">
-        <div class="modal-content glass-card p-6" (click)="$event.stopPropagation()" style="width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-backdrop" (click)="selectedDispute.set(null)">
+        <div class="modal-panel p-6" (click)="$event.stopPropagation()" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
           <div class="modal-header d-flex justify-between items-center mb-6" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; border-bottom:1px solid var(--border-light); padding-bottom:12px">
             <h3 style="font-size:1.35rem; font-weight:800; display:flex; align-items:center; gap:8px">
               <span class="material-icons-round" style="color:var(--primary-light)">gavel</span> Chi tiết tranh chấp #{{ selectedDispute()?.id }}
@@ -203,8 +222,8 @@ interface DisputeItem {
     }
 
     @if (showConfirmResolveModal()) {
-      <div class="modal-overlay animate-fade-in" style="z-index:1100">
-        <div class="modal-content glass-card p-6" style="width: 100%; max-width: 480px; text-align: center;">
+      <div class="modal-backdrop" style="z-index:1100">
+        <div class="modal-panel p-6" style="max-width: 480px; text-align: center;">
           <span class="material-icons-round text-warning" style="font-size:64px; margin-bottom:16px; color:#F59E0B">warning</span>
           <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận phân xử tranh chấp</h3>
           <p style="color:var(--text-secondary); margin-bottom:24px; font-size: 0.95rem;">
@@ -387,6 +406,7 @@ export class AdminDisputesComponent implements OnInit {
   auth = inject(AuthService);
   private jobService = inject(JobService);
   private toast = inject(ToastService);
+  private searchService = inject(AdminSearchService);
 
   disputes = signal<DisputeItem[]>([]);
   selectedDispute = signal<DisputeItem | null>(null);
@@ -400,6 +420,21 @@ export class AdminDisputesComponent implements OnInit {
   showConfirmResolveModal = signal(false);
   resolveWinner = signal<'Student' | 'Employer' | null>(null);
   pendingResolveJobId = signal<number | null>(null);
+
+  filteredDisputes = computed(() => {
+    let list = this.disputes();
+    const query = this.searchService.searchQuery().toLowerCase().trim();
+    if (query) {
+      list = list.filter((d: any) => 
+        (d.title || '').toLowerCase().includes(query) ||
+        (d.employerName || '').toLowerCase().includes(query) ||
+        (d.employerEmail || '').toLowerCase().includes(query) ||
+        (d.studentName || '').toLowerCase().includes(query) ||
+        (d.studentEmail || '').toLowerCase().includes(query)
+      );
+    }
+    return list;
+  });
 
   ngOnInit() {
     if (this.auth.isAdmin()) {

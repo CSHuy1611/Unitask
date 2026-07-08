@@ -29,6 +29,8 @@ namespace UniTask.Business.Services
                 totalUsers = await _context.Users.CountAsync(),
                 totalStudents = await _context.StudentProfiles.CountAsync(),
                 totalEmployers = await _context.EmployerProfiles.CountAsync(),
+                totalBusinessEmployers = await _context.EmployerProfiles.CountAsync(ep => ep.Type == EmployerType.Business),
+                totalHouseholdEmployers = await _context.EmployerProfiles.CountAsync(ep => ep.Type == EmployerType.SmallBusinessHousehold),
                 totalJobs = await _context.Jobs.CountAsync(),
                 totalRevenue = await _context.Transactions
                     .Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.PostingFee || t.Type == TransactionType.SubscriptionFee)
@@ -132,6 +134,7 @@ namespace UniTask.Business.Services
                     companyName = u.EmployerProfile?.Company?.Name ?? "",
                     createdAt = u.CreatedAt.ToString("yyyy-MM-dd"),
                     reliabilityScore = u.StudentProfile?.ReliabilityScore ?? 100,
+                    employerType = u.EmployerProfile != null ? (int?)u.EmployerProfile.Type : null,
                     isFlagged = u.IsFlagged,
                     flagReason = u.FlagReason ?? ""
                 })
@@ -230,6 +233,7 @@ namespace UniTask.Business.Services
             var rawWithdrawals = await _context.Transactions
                 .Include(t => t.Wallet)
                 .ThenInclude(w => w.User)
+                    .ThenInclude(u => u.EmployerProfile)
                 .Where(t => t.Type == TransactionType.Withdrawal)
                 .OrderBy(t => t.Description != null && t.Description.StartsWith("[Completed]"))
                 .ThenBy(t => t.Description != null && t.Description.StartsWith("[Processing]"))
@@ -289,8 +293,10 @@ namespace UniTask.Business.Services
                         description = cleanDesc,
                         status = status,
                         createdAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
-                        userName = t.Wallet?.User?.FullName ?? "Sinh viên",
-                        userEmail = t.Wallet?.User?.Email ?? ""
+                        userName = t.Wallet?.User?.FullName ?? "N/A",
+                        userEmail = t.Wallet?.User?.Email ?? "",
+                        userRole = t.Wallet?.User?.UserType == UserType.Student ? "student" : "employer",
+                        employerType = t.Wallet?.User?.EmployerProfile != null ? (int?)t.Wallet.User.EmployerProfile.Type : null
                     };
                 })
                 .ToList();
@@ -699,8 +705,8 @@ namespace UniTask.Business.Services
                 {
                     Id = t.Id,
                     WalletId = t.WalletId,
-                    FullName = t.Wallet.User.FullName,
-                    Email = t.Wallet.User.Email,
+                    FullName = t.Wallet != null && t.Wallet.User != null ? t.Wallet.User.FullName : "N/A",
+                    Email = t.Wallet != null && t.Wallet.User != null ? t.Wallet.User.Email : "",
                     Amount = t.Amount,
                     Type = t.Type,
                     Description = t.Description,
@@ -740,7 +746,9 @@ namespace UniTask.Business.Services
             string currencyFormat = "_-* #,##0 ₫_-;-* #,##0 ₫_-;_-* \"-\"?? ₫_-;_-@_-";
 
             Action<ClosedXML.Excel.IXLWorksheet, int, string> formatTable = (sheet, startRow, tableName) => {
-                var range = sheet.Range(startRow, 1, sheet.LastRowUsed().RowNumber(), sheet.LastColumnUsed().ColumnNumber());
+                var lastRow = sheet.LastRowUsed()?.RowNumber() ?? 1;
+                var lastCol = sheet.LastColumnUsed()?.ColumnNumber() ?? 1;
+                var range = sheet.Range(startRow, 1, lastRow, lastCol);
                 var table = range.CreateTable(tableName);
                 table.Theme = ClosedXML.Excel.XLTableTheme.TableStyleLight9;
                 table.ShowAutoFilter = true;
@@ -919,7 +927,7 @@ namespace UniTask.Business.Services
             var userIdsWithJobs = await jobQuery.Select(j => j.EmployerId).Distinct().ToListAsync();
 
             var allActiveIds = userIdsWithTx.Union(userIdsWithJobs).ToList();
-            var activeUsers = await _context.Users.Include(u => u.Wallet).Where(u => allActiveIds.Contains(u.Id)).ToListAsync();
+            var activeUsers = await _context.Users.Include(u => u.Wallet).Include(u => u.EmployerProfile).Where(u => allActiveIds.Contains(u.Id)).ToListAsync();
 
             for (int i = 0; i < activeUsers.Count; i++)
             {
@@ -927,7 +935,11 @@ namespace UniTask.Business.Services
                 int row = i + 2;
                 activeSheet.Cell(row, 1).Value = u.FullName;
                 activeSheet.Cell(row, 2).Value = u.Email;
-                activeSheet.Cell(row, 3).Value = u.UserType == UserType.Student ? "Sinh viên" : "Nhà tuyển dụng";
+                activeSheet.Cell(row, 3).Value = u.UserType == UserType.Student 
+                    ? "Sinh viên" 
+                    : (u.EmployerProfile?.Type == EmployerType.SmallBusinessHousehold 
+                        ? "Hộ kinh doanh" 
+                        : "Doanh nghiệp");
                 
                 var uTx = transactions.Where(t => t.Wallet.UserId == u.Id).ToList();
                 var userDeposit = uTx.Where(t => t.Type == TransactionType.Deposit && !(t.Description != null && t.Description.Contains("[PAYOS_PENDING]"))).Sum(t => t.Amount);
@@ -960,7 +972,7 @@ namespace UniTask.Business.Services
             var rawQuery = _context.Transactions
                 .Include(t => t.Wallet)
                     .ThenInclude(w => w.User)
-                .Where(t => t.Type == TransactionType.Deposit && !t.Description.Contains("[PAYOS_PENDING]"))
+                .Where(t => t.Type == TransactionType.Deposit && (t.Description == null || !t.Description.Contains("[PAYOS_PENDING]")))
                 .OrderByDescending(t => t.CreatedAt);
 
             var totalCount = await rawQuery.CountAsync();
@@ -973,8 +985,8 @@ namespace UniTask.Business.Services
                     id = t.Id,
                     amount = t.Amount,
                     createdAt = t.CreatedAt,
-                    userFullName = t.Wallet.User.FullName,
-                    userEmail = t.Wallet.User.Email,
+                    userFullName = t.Wallet != null && t.Wallet.User != null ? t.Wallet.User.FullName : "N/A",
+                    userEmail = t.Wallet != null && t.Wallet.User != null ? t.Wallet.User.Email : "",
                     counterAccountBankName = t.CounterAccountBankName,
                     counterAccountName = t.CounterAccountName,
                     counterAccountNumber = t.CounterAccountNumber
