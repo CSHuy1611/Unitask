@@ -277,6 +277,11 @@ namespace UniTask.Business.Services
             if (application == null || application.Job.EmployerId != employerId) return false;
             if (application.Status == ApplicationStatus.Completed && application.EscrowReleaseDate != null) return false;
             
+            if (!application.CheckInTime.HasValue || !application.CheckOutTime.HasValue)
+            {
+                throw new InvalidOperationException("Sinh viên chưa hoàn thành quá trình Check-in và Check-out nên chưa thể nghiệm thu.");
+            }
+            
             application.Status = ApplicationStatus.Completed;
             application.EscrowReleaseDate = DateTime.UtcNow;
 

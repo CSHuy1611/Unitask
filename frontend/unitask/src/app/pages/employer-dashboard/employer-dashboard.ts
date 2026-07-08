@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
+﻿import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -738,9 +738,13 @@ import { Subscription } from 'rxjs';
                                 Check-out
                               </button>
                             </div>
-                            <!-- Approve -->
+                                                        <!-- Approve -->
                             <button (click)="appToApprove.set(app)"
-                                    style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background: white; color: #111; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                    [disabled]="!app.checkInTime || !app.checkOutTime"
+                                    [style.opacity]="(!app.checkInTime || !app.checkOutTime) ? '0.5' : '1'"
+                                    [style.cursor]="(!app.checkInTime || !app.checkOutTime) ? 'not-allowed' : 'pointer'"
+                                    [title]="(!app.checkInTime || !app.checkOutTime) ? 'Sinh viên cần hoàn thành Check-in và Check-out trước khi nghiệm thu' : ''"
+                                    style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background: white; color: #111; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                               <span class="material-icons-round" style="font-size: 20px;">verified</span>
                               Nghiệm thu công việc
                             </button>
@@ -2274,3 +2278,4 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     });
   }
 }
+
