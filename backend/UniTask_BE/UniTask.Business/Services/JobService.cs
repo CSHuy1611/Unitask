@@ -24,6 +24,8 @@ namespace UniTask.Business.Services
         {
             var query = _context.Jobs
                 .Include(j => j.Company)
+                .Include(j => j.Employer)
+                    .ThenInclude(u => u.EmployerProfile)
                 .Include(j => j.Tags)
                 .Include(j => j.Requirements)
                 .Include(j => j.Benefits)
@@ -92,6 +94,8 @@ namespace UniTask.Business.Services
         {
             var job = await _context.Jobs
                 .Include(j => j.Company)
+                .Include(j => j.Employer)
+                    .ThenInclude(u => u.EmployerProfile)
                 .Include(j => j.Requirements)
                 .Include(j => j.Benefits)
                 .Include(j => j.Tags)
@@ -215,6 +219,9 @@ namespace UniTask.Business.Services
                 IsRemote = dto.IsRemote,
                 RequiredReliabilityScore = dto.RequiredReliabilityScore,
                 HeadCount = dto.HeadCount,
+                WorkStartTime = dto.WorkStartTime,
+                WorkEndTime = dto.WorkEndTime,
+                WorkDays = dto.WorkDays,
                 Status = DataAcesss.Entities.Enums.JobStatus.Open,
                 Tags = dto.Tags.Select(t => new JobTag { TagName = t }).ToList(),
                 Requirements = dto.Requirements.Select(r => new JobRequirement { Content = r }).ToList(),
@@ -314,6 +321,10 @@ namespace UniTask.Business.Services
             job.Type = dto.Type;
             job.Category = dto.Category;
             job.SalaryText = dto.SalaryRange.Any() ? string.Join("-", dto.SalaryRange) : (dto.Salary ?? dto.SalaryText);
+            
+            job.WorkStartTime = dto.WorkStartTime;
+            job.WorkEndTime = dto.WorkEndTime;
+            job.WorkDays = dto.WorkDays;
             job.Budget = dto.Budget;
             job.Commission = dto.Commission;
             job.Deadline = dto.Deadline;
@@ -590,6 +601,10 @@ namespace UniTask.Business.Services
                 CompanyLocation = j.Company?.Location,
                 CompanyWebsite = j.Company?.Website,
                 IsCompanyPremium = isCompanyPremium,
+                WorkStartTime = j.WorkStartTime,
+                WorkEndTime = j.WorkEndTime,
+                WorkDays = j.WorkDays,
+                EmployerType = j.Employer?.EmployerProfile != null ? (int)j.Employer.EmployerProfile.Type : 0,
                 Tags = j.Tags?.Select(t => t.TagName).ToList() ?? new List<string>(),
                 Requirements = j.Requirements?.Select(r => r.Content).ToList() ?? new List<string>(),
                 Benefits = j.Benefits?.Select(b => b.Content).ToList() ?? new List<string>()

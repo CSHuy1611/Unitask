@@ -34,6 +34,11 @@ import { Job } from '../../models/job.model';
                       <span class="meta-item">
                         <span class="material-icons-round">business</span>
                         {{ job()!.company }}
+                        @if (job()!.employerType === 1) {
+                          <span class="badge badge-warning" style="font-size: 10px; padding: 2px 6px; margin-left: 4px;">🏠 Hộ KD</span>
+                        } @else {
+                          <span class="badge badge-primary" style="font-size: 10px; padding: 2px 6px; margin-left: 4px;">🏢 Doanh nghiệp</span>
+                        }
                         @if (job()!.isCompanyPremium) {
                           <span class="premium-badge" title="Nhà tuyển dụng Premium">
                             <span class="material-icons-round" style="font-size: 14px;">workspace_premium</span>
@@ -48,6 +53,12 @@ import { Job } from '../../models/job.model';
                         <span class="material-icons-round">schedule</span>
                         {{ job()!.type }}
                       </span>
+                      @if (job()!.workStartTime && job()!.workEndTime) {
+                        <span class="meta-item" style="color: var(--primary-light);">
+                          <span class="material-icons-round">access_time</span>
+                          {{ job()!.workStartTime }} - {{ job()!.workEndTime }} ({{ job()!.workDays }})
+                        </span>
+                      }
                     </div>
                   </div>
                 </div>

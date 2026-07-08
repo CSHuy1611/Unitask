@@ -21,6 +21,11 @@ export interface Job {
   isUrgent?: boolean;
   isRemote?: boolean;
   
+  workStartTime?: string;
+  workEndTime?: string;
+  workDays?: string;
+  employerType?: number;
+  
   // Phase 4: Escrow & Completion Tracking
   budget?: number;
   commission?: number;

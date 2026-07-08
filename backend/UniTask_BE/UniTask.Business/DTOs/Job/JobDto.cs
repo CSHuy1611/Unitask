@@ -25,6 +25,11 @@ namespace UniTask.Business.DTOs.Job
         public JobStatus Status { get; set; }
         public int HeadCount { get; set; } = 1;
 
+        public TimeSpan? WorkStartTime { get; set; }
+        public TimeSpan? WorkEndTime { get; set; }
+        public string? WorkDays { get; set; }
+        public int EmployerType { get; set; }
+
         // ===== Dispute Fields =====
         public string? DisputeReason { get; set; }
         public string? EmployerEvidenceText { get; set; }

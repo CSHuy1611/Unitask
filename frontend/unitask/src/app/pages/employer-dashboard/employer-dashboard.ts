@@ -1,4 +1,4 @@
-﻿import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -148,7 +148,7 @@ import { Subscription } from 'rxjs';
                   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Loại hình</label>
-                      <select class="form-select" [(ngModel)]="formData.type" name="type">
+                      <select class="form-select" [(ngModel)]="formData.type" (ngModelChange)="onTypeChange($event)" name="type">
                         <option>Thực tập</option>
                         <option>Part-time</option>
                         <option>Freelance</option>
@@ -164,6 +164,22 @@ import { Subscription } from 'rxjs';
                       <label class="form-label">Địa điểm <span style="color: #EF4444">*</span></label>
                       <input type="text" class="form-input" placeholder="VD: TP. Hồ Chí Minh" [(ngModel)]="formData.location" name="location" required>
                       @if (formErrors['location']) { <span class="error-text">{{ formErrors['location'] }}</span> }
+                    </div>
+                  </div>
+                  
+                  <!-- Work Schedule Fields -->
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px;">
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Giờ bắt đầu (VD: 08:00)</label>
+                      <input type="time" class="form-input" [(ngModel)]="formData.workStartTime" name="workStartTime">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Giờ kết thúc (VD: 17:00)</label>
+                      <input type="time" class="form-input" [(ngModel)]="formData.workEndTime" name="workEndTime">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                      <label class="form-label">Ngày làm việc</label>
+                      <input type="text" class="form-input" placeholder="VD: Thứ 2 - Thứ 6" [(ngModel)]="formData.workDays" name="workDays">
                     </div>
                   </div>
                 </div>
@@ -397,7 +413,10 @@ import { Subscription } from 'rxjs';
                       <div class="job-meta">
                         <span>📍 {{ job.location }}</span>
                         <span>💰 {{ job.salary }}</span>
-                        <span>⏰ {{ job.type }}</span>
+                        <span>⏱️ {{ job.type }}</span>
+                        @if (job.workStartTime && job.workEndTime) {
+                          <span style="color: var(--primary-light);">⏰ {{ job.workStartTime }} - {{ job.workEndTime }} ({{ job.workDays }})</span>
+                        }
                         <span>📅 Hạn: {{ job.deadline }}</span>
                       </div>
                     </div>
@@ -1733,6 +1752,9 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       category: '',
       location: '',
       headCount: 1,
+      workStartTime: '',
+      workEndTime: '',
+      workDays: '',
       salaryPerPerson: null as number | null,
       budget: null as number | null,
       description: '',
@@ -1763,6 +1785,31 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     this.showPostForm.set(false);
     this.editingJobId.set(null);
     this.postMessage.set('');
+  }
+
+  onTypeChange(type: string) {
+    switch (type) {
+      case 'Thực tập':
+        this.formData.workStartTime = '08:00';
+        this.formData.workEndTime = '17:00';
+        this.formData.workDays = 'Thứ 2 - Thứ 6';
+        break;
+      case 'Part-time':
+        this.formData.workStartTime = '08:00';
+        this.formData.workEndTime = '12:00';
+        this.formData.workDays = 'Thứ 2 - Thứ 6';
+        break;
+      case 'Full-time':
+        this.formData.workStartTime = '08:00';
+        this.formData.workEndTime = '17:30';
+        this.formData.workDays = 'Thứ 2 - Thứ 6';
+        break;
+      case 'Freelance':
+        this.formData.workStartTime = '';
+        this.formData.workEndTime = '';
+        this.formData.workDays = '';
+        break;
+    }
   }
 
   getRounded(value: number): number {
@@ -1805,6 +1852,9 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       deadline: job.deadline,
       isRemote: job.isRemote || false,
       isUrgent: job.isUrgent || false,
+      workStartTime: job.workStartTime || '',
+      workEndTime: job.workEndTime || '',
+      workDays: job.workDays || '',
     };
     this.postMessage.set('');
     this.showPostForm.set(true);
@@ -1912,6 +1962,9 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
         headCount: this.formData.headCount || 1,
+        workStartTime: this.formData.workStartTime,
+        workEndTime: this.formData.workEndTime,
+        workDays: this.formData.workDays,
       } as any).subscribe({
         next: (result) => {
           this.postSuccess.set(result.success);
@@ -1996,6 +2049,9 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
+        workStartTime: this.formData.workStartTime,
+        workEndTime: this.formData.workEndTime,
+        workDays: this.formData.workDays,
       } as any).subscribe({
         next: (result) => {
           this.postSuccess.set(result.success);
