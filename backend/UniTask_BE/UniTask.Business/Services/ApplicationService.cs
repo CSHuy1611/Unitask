@@ -144,10 +144,7 @@ namespace UniTask.Business.Services
 
                 // We NO LONGER auto-reject other applied students. 
                 // They stay as 'Applied' (Waitlist) so the employer can pick them if someone drops out.
-                if (currentAcceptedCount + 1 >= application.Job.HeadCount)
-                {
-                    application.Job.Status = JobStatus.InProgress;
-                }
+                // We ALSO no longer auto-start the job. The Employer must explicitly start it.
             }
             else
             {

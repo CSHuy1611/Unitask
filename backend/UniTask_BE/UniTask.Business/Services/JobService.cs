@@ -123,19 +123,55 @@ namespace UniTask.Business.Services
             var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == employerId);
             if (profile == null || profile.CompanyId == null) return null;
 
+            var user = await _context.Users.FindAsync(employerId);
+
             // ===== Business License Gate =====
             // Employer phải upload giấy phép kinh doanh VÀ được Admin xác minh mới được đăng việc.
-            if (string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+            if (profile.Type == UniTask.DataAcesss.Entities.Enums.EmployerType.Business)
             {
-                throw new InvalidOperationException("Bạn chưa upload giấy phép kinh doanh. Vui lòng cập nhật hồ sơ và upload giấy phép trước khi đăng tin tuyển dụng.");
+                if (string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+                {
+                    throw new InvalidOperationException("Bạn chưa upload giấy phép kinh doanh. Vui lòng cập nhật hồ sơ và upload giấy phép trước khi đăng tin tuyển dụng.");
+                }
+                if (!profile.IsBusinessLicenseVerified)
+                {
+                    throw new InvalidOperationException("Giấy phép kinh doanh của bạn đang chờ Admin xác minh. Bạn chỉ có thể đăng tin sau khi giấy phép được phê duyệt.");
+                }
             }
-            if (!profile.IsBusinessLicenseVerified)
+            else if (profile.Type == UniTask.DataAcesss.Entities.Enums.EmployerType.SmallBusinessHousehold)
             {
-                throw new InvalidOperationException("Giấy phép kinh doanh của bạn đang chờ Admin xác minh. Bạn chỉ có thể đăng tin sau khi giấy phép được phê duyệt.");
+                if (user == null || user.EkycStatus != UniTask.DataAcesss.Entities.Enums.EkycStatus.Verified)
+                {
+                    throw new InvalidOperationException("Tài khoản của bạn chưa được xác thực eKYC. Hộ kinh doanh cần xác minh danh tính trước khi đăng việc.");
+                }
+
+                // Check active jobs count limit (<= 5)
+                var activeJobsCount = await _context.Jobs.CountAsync(j => j.EmployerId == employerId && (j.Status == JobStatus.Open || j.Status == JobStatus.InProgress));
+                if (activeJobsCount >= 5)
+                {
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được đăng tối đa 5 tin tuyển dụng đang hoạt động cùng lúc.");
+                }
+
+                // Check headcount limit (<= 10)
+                if (dto.HeadCount > 10)
+                {
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được tuyển tối đa 10 người cho mỗi công việc.");
+                }
+                
+                // Check job type (No Full-time)
+                if (dto.Type.Contains("Full-time", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được phép đăng các công việc Part-time hoặc Freelance (thời vụ).");
+                }
+                
+                // Check deadline (<= 30 days)
+                if (dto.Deadline.HasValue && (dto.Deadline.Value - DateTime.UtcNow).TotalDays > 30)
+                {
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được phép đăng công việc có hạn chót (deadline) không quá 30 ngày.");
+                }
             }
 
             // Check Blacklist Count
-            var user = await _context.Users.FindAsync(employerId);
             if (user != null && user.BlacklistCount >= 3)
             {
                 throw new InvalidOperationException("Tài khoản của bạn đã bị khóa đăng việc do vi phạm chính sách của hệ thống.");
@@ -229,6 +265,37 @@ namespace UniTask.Business.Services
 
             var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
             return MapToDto(job, isPremium);
+        }
+
+        public async Task<bool> StartJobAsync(int jobId, string employerId)
+        {
+            var job = await _context.Jobs
+                .Include(j => j.Applications)
+                .FirstOrDefaultAsync(j => j.Id == jobId && j.EmployerId == employerId);
+                
+            if (job == null)
+            {
+                throw new InvalidOperationException("Không tìm thấy công việc hoặc bạn không có quyền thao tác.");
+            }
+            
+            if (job.Status != UniTask.DataAcesss.Entities.Enums.JobStatus.Open)
+            {
+                throw new InvalidOperationException("Chỉ có thể bắt đầu công việc khi trạng thái đang mở (Open).");
+            }
+            
+            var currentAcceptedCount = job.Applications.Count(a => 
+                a.Status == UniTask.DataAcesss.Entities.Enums.ApplicationStatus.Accepted || 
+                a.Status == UniTask.DataAcesss.Entities.Enums.ApplicationStatus.Completed || 
+                a.Status == UniTask.DataAcesss.Entities.Enums.ApplicationStatus.Interviewing);
+                
+            if (currentAcceptedCount < job.HeadCount)
+            {
+                throw new InvalidOperationException($"Không thể bắt đầu công việc. Cần phê duyệt đủ {job.HeadCount} sinh viên (hiện có {currentAcceptedCount}).");
+            }
+            
+            job.Status = UniTask.DataAcesss.Entities.Enums.JobStatus.InProgress;
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> UpdateJobAsync(int id, string employerId, JobUpdateDto dto)

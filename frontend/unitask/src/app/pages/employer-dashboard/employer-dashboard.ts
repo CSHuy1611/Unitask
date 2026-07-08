@@ -52,6 +52,7 @@ import { Subscription } from 'rxjs';
                 }
                 <div class="wallet-actions">
                   <a routerLink="/pricing" class="btn btn-primary btn-sm full-width"><span class="material-icons-round">add_circle</span> Nạp tiền / Mua gói</a>
+                  <button type="button" class="btn btn-secondary btn-sm full-width" style="margin-top: 8px;" (click)="quickTopUp()" [disabled]="isToppingUp()"><span class="material-icons-round">bolt</span> Nạp 10,000,000đ (Test)</button>
                   <button class="btn btn-secondary btn-sm full-width" (click)="showTransactions.set(true)"><span class="material-icons-round">history</span> Lịch sử Giao dịch</button>
                 </div>
               </div>
@@ -332,9 +333,15 @@ import { Subscription } from 'rxjs';
                           <li style="margin-bottom: 4px; display: flex; gap: 4px;"><span class="material-icons-round" style="font-size: 14px; color: var(--success);">check</span> Đăng không giới hạn tin</li>
                           @if (pkg.id >= 2) { <li style="margin-bottom: 4px; display: flex; gap: 4px;"><span class="material-icons-round" style="font-size: 14px; color: var(--success);">check</span> Ưu tiên hiển thị top</li> }
                         </ul>
-                        <button class="btn full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)" [disabled]="isProcessingPackage()">
-                          Mua gói
-                        </button>
+                        @if (auth.currentUser()?.employerType === 1) {
+                          <button class="btn full-width" style="background: var(--bg-card); color: var(--text-muted); border: 1px dashed var(--border-color); cursor: not-allowed;" title="Vui lòng nâng cấp lên Doanh nghiệp để mua gói.">
+                            Chỉ dành cho Doanh nghiệp
+                          </button>
+                        } @else {
+                          <button class="btn full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)" [disabled]="isProcessingPackage()">
+                            Mua gói
+                          </button>
+                        }
                       </div>
                     }
                   </div>
@@ -525,11 +532,24 @@ import { Subscription } from 'rxjs';
                       <span class="material-icons-round" style="font-size: 20px; margin-top: 2px;">warning</span>
                       <div>
                         <strong>Lưu ý:</strong> Công việc này cần tuyển <strong>{{ selectedJobForApplicants()?.headCount }}</strong> người. Bạn mới duyệt <strong>{{ selectedJobForApplicants()?.acceptedCount || 0 }}</strong> người.<br>
-                        Sinh viên chỉ có thể bắt đầu làm việc (Check-in) khi bạn đã giao việc cho <strong>ĐỦ</strong> số lượng yêu cầu.
+                        Vui lòng duyệt đủ số lượng ứng viên để có thể bắt đầu công việc.
                         @if (jobApplications().length >= (selectedJobForApplicants()?.headCount || 1)) {
-                          <br><span style="color: var(--success); font-weight: 500;">Bạn đã có đủ số lượng ứng viên đăng ký. Hãy xem xét và giao việc ngay!</span>
+                          <br><span style="color: var(--success); font-weight: 500;">Bạn đã có đủ số lượng ứng viên đăng ký. Hãy xem xét và duyệt ngay!</span>
                         }
                       </div>
+                    </div>
+                  } @else {
+                    <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; color: #10B981; display: flex; align-items: flex-start; gap: 8px; justify-content: space-between;">
+                      <div style="display: flex; gap: 8px;">
+                        <span class="material-icons-round" style="font-size: 20px; margin-top: 2px;">check_circle</span>
+                        <div>
+                          <strong>Hoàn tất!</strong> Bạn đã duyệt đủ <strong>{{ selectedJobForApplicants()?.acceptedCount }}</strong> ứng viên.<br>
+                          Hãy nhấn nút "Bắt đầu công việc" để chuyển trạng thái công việc và sinh viên có thể Check-in.
+                        </div>
+                      </div>
+                      <button class="btn btn-primary" (click)="onStartJob(selectedJobForApplicants()!)">
+                        Bắt đầu công việc
+                      </button>
                     </div>
                   }
                 }
@@ -1425,6 +1445,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   showPostForm = signal(false);
   showTransactions = signal(false);
   isSyncing = signal(false);
+  isToppingUp = signal(false);
   postSuccess = signal(false);
   postMessage = signal('');
   editingJobId = signal<number | null>(null);
@@ -1671,6 +1692,11 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user) return;
 
+    if (user.employerType === 1) {
+      this.toast.error('Vui lòng nâng cấp lên Doanh nghiệp để mua gói dịch vụ.');
+      return;
+    }
+
     if ((user.balance || 0) < pkg.price) {
       this.toast.error('Số dư ví không đủ để mua gói này. Vui lòng nạp thêm tiền!');
       return;
@@ -1739,6 +1765,25 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     return Math.round(value);
   }
 
+  onStartJob(job: Job) {
+    if (!confirm('Bạn có chắc chắn muốn bắt đầu công việc này? Sinh viên sẽ nhận được thông báo để Check-in.')) {
+      return;
+    }
+    
+    this.jobService.startJob(job.id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          // Refresh list of applicants to reflect job status update
+          this.viewApplicants(job);
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Có lỗi xảy ra khi bắt đầu công việc.')
+    });
+  }
+
   onEditJob(job: Job) {
     this.editingJobId.set(job.id);
     this.formData = {
@@ -1764,6 +1809,13 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   onUrgentChange(event: any) {
     const user = this.auth.currentUser();
     if (!user) return;
+
+    if (user.employerType === 1) {
+      setTimeout(() => this.formData.isUrgent = false, 0);
+      this.toast.warning('Tính năng Tuyển gấp chỉ dành cho Doanh nghiệp. Vui lòng vào trang Hồ sơ để nâng cấp!');
+      return;
+    }
+
     const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
     if (this.formData.isUrgent && !hasActivePackage) {
       setTimeout(() => this.formData.isUrgent = false, 0);
@@ -1807,6 +1859,12 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
 
     const user = this.auth.currentUser();
     if (!user) return;
+
+    if (this.formData.isUrgent && user.employerType === 1) {
+      this.formErrors['isUrgent'] = 'Tính năng Tuyển gấp chỉ dành cho Doanh nghiệp!';
+      this.toast.error('Vui lòng vào trang Hồ sơ nâng cấp lên Doanh nghiệp để đăng tin tuyển gấp!');
+      return;
+    }
 
     const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
     if (this.formData.isUrgent && !hasActivePackage) {
@@ -1870,11 +1928,22 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       });
     } else {
       // Create mode
-      if (!user.businessLicenseUrl || !user.isBusinessLicenseVerified) {
-        this.postSuccess.set(false);
-        this.postMessage.set('Giấy phép kinh doanh của bạn chưa được xác thực. Vui lòng cập nhật Giấy phép kinh doanh (có chứa MST) trong mục Hồ sơ và chờ hệ thống xác nhận trước khi đăng tin.');
-        this.toast.error('Vui lòng xác thực Giấy phép kinh doanh trước khi đăng tin!');
-        return;
+      if (user.employerType === 1) {
+        // Household Business needs eKYC verified
+        if (user.ekycStatus !== 'verified') {
+          this.postSuccess.set(false);
+          this.postMessage.set('Tài khoản của bạn chưa được xác thực eKYC (Căn cước công dân). Vui lòng xác thực trong mục Hồ sơ trước khi đăng tin.');
+          this.toast.error('Vui lòng xác thực eKYC trước khi đăng tin!');
+          return;
+        }
+      } else {
+        // Business needs Business License verified
+        if (!user.businessLicenseUrl || !user.isBusinessLicenseVerified) {
+          this.postSuccess.set(false);
+          this.postMessage.set('Giấy phép kinh doanh của bạn chưa được xác thực. Vui lòng cập nhật Giấy phép kinh doanh (có chứa MST) trong mục Hồ sơ và chờ hệ thống xác nhận trước khi đăng tin.');
+          this.toast.error('Vui lòng xác thực Giấy phép kinh doanh trước khi đăng tin!');
+          return;
+        }
       }
 
       const budget = this.formData.budget || 0;
@@ -2185,6 +2254,22 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       error: () => {
         this.toast.error('Lỗi khi đồng bộ giao dịch.');
         this.isSyncing.set(false);
+      }
+    });
+  }
+
+  quickTopUp() {
+    this.isToppingUp.set(true);
+    this.http.post(`${API_BASE_URL}/wallet/quick-topup`, {}).subscribe({
+      next: (res: any) => {
+        this.toast.success(res.message || 'Nạp tiền thành công');
+        this.auth.fetchBalance().subscribe();
+        this.isToppingUp.set(false);
+      },
+      error: (err) => {
+        this.toast.error('Lỗi nạp tiền');
+        console.error(err);
+        this.isToppingUp.set(false);
       }
     });
   }

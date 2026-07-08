@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Http;
+using UniTask.DataAcesss.Entities.Enums;
 
 namespace UniTask.Business.DTOs.Profile
 {
     public class EmployerProfileUpdateDto
     {
+        public EmployerType? EmployerType { get; set; }
         public string? FullName { get; set; }
         public string? PhoneNumber { get; set; }
         public string? Position { get; set; }

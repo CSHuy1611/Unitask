@@ -30,6 +30,7 @@ export interface User {
   dateOfBirth?: string;
 
   // Employer fields
+  employerType?: number; // 0: Business, 1: Household
   companyId?: number;
   companyName?: string;
   companyIndustry?: string;

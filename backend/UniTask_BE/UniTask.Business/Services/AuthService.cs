@@ -92,111 +92,61 @@ namespace UniTask.Business.Services
                     return new AuthResponse { IsSuccess = false, Message = "Tên công ty là bắt buộc khi đăng ký tài khoản Doanh nghiệp." };
                 }
 
-                if (string.IsNullOrWhiteSpace(request.TaxCode))
+                if (!string.IsNullOrWhiteSpace(request.TaxCode))
                 {
-                    return new AuthResponse { IsSuccess = false, Message = "Mã số thuế là bắt buộc khi đăng ký tài khoản Doanh nghiệp." };
-                }
-
-                var taxCode = request.TaxCode.Trim();
-                // Validate Vietnamese Tax Code format: 10 or 13 digits
-                if (!System.Text.RegularExpressions.Regex.IsMatch(taxCode, @"^\d{10}(\d{3})?$"))
-                {
-                    return new AuthResponse { IsSuccess = false, Message = "Mã số thuế không đúng định dạng. Phải gồm 10 hoặc 13 chữ số." };
-                }
-
-                // Check TaxCode uniqueness
-                var existingUserByTax = await _context.EmployerProfiles
-                    .Include(ep => ep.Company)
-                    .Include(ep => ep.User)
-                    .FirstOrDefaultAsync(ep => ep.Company != null && ep.Company.TaxCode == taxCode);
-
-                if (existingUserByTax != null)
-                {
-                    // If the existing user is exactly the one trying to register (Email match) AND they are unconfirmed, we allow it to pass!
-                    if (existingUserByTax.User.Email == request.Email && !existingUserByTax.User.EmailConfirmed)
+                    var taxCode = request.TaxCode.Trim();
+                    // Validate Vietnamese Tax Code format: 10 or 13 digits
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(taxCode, @"^\d{10}(\d{3})?$"))
                     {
-                        // Allow resend OTP
+                        return new AuthResponse { IsSuccess = false, Message = "Mã số thuế không đúng định dạng. Phải gồm 10 hoặc 13 chữ số." };
                     }
-                    else
-                    {
-                        return new AuthResponse { IsSuccess = false, Message = "Mã số thuế này đã được đăng ký trước đó trong hệ thống. Vui lòng kiểm tra lại." };
-                    }
-                }
 
-                // LẦN KIỂM TRA MỨC ĐỘ 3: EXTERNAL API (VietQR)
-                try
-                {
-                    using var client = new HttpClient();
-                    // Set timeout to avoid hanging the registration process
-                    client.Timeout = TimeSpan.FromSeconds(5);
-                    var response = await client.GetAsync($"https://api.vietqr.io/v2/business/{taxCode}");
-                    
-                    var content = await response.Content.ReadAsStringAsync();
-                    using var json = System.Text.Json.JsonDocument.Parse(content);
-                    if (json.RootElement.TryGetProperty("code", out var codeElement))
+                    // Check TaxCode uniqueness
+                    var existingUserByTax = await _context.EmployerProfiles
+                        .Include(ep => ep.Company)
+                        .Include(ep => ep.User)
+                        .FirstOrDefaultAsync(ep => ep.Company != null && ep.Company.TaxCode == taxCode);
+
+                    if (existingUserByTax != null)
                     {
-                        var code = codeElement.GetString();
-                        if (code != "00")
+                        // If the existing user is exactly the one trying to register (Email match) AND they are unconfirmed, we allow it to pass!
+                        if (existingUserByTax.User.Email == request.Email && !existingUserByTax.User.EmailConfirmed)
                         {
-                            var desc = json.RootElement.TryGetProperty("desc", out var descElem) ? descElem.GetString() : "Không xác định";
-                            return new AuthResponse { IsSuccess = false, Message = $"Mã số thuế không hợp lệ hoặc không tồn tại (Hệ thống Thuế Quốc gia báo: {desc})." };
+                            // Allow resend OTP
                         }
-                        
-                        if (json.RootElement.TryGetProperty("data", out var dataElement) && dataElement.ValueKind != System.Text.Json.JsonValueKind.Null)
+                        else
                         {
-                            if (dataElement.TryGetProperty("status", out var statusElement))
-                            {
-                                var status = statusElement.GetString();
-                                if (status != null && (status.ToLower().Contains("ngừng") || status.ToLower().Contains("đóng") || status.ToLower().Contains("tạm nghỉ")))
-                                {
-                                    return new AuthResponse { IsSuccess = false, Message = $"Mã số thuế này không thể đăng ký vì tình trạng hiện tại là: {status}." };
-                                }
-                            }
+                            return new AuthResponse { IsSuccess = false, Message = "Mã số thuế này đã được đăng ký trước đó trong hệ thống. Vui lòng kiểm tra lại." };
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    System.Console.WriteLine($"[TaxCode Verification API] Error: {ex.Message}");
-                    // Nếu API lỗi (timeout/sập), cho phép đăng ký qua Cấp 1+2 (Fallback thủ công bằng ảnh Giấy phép KD sau).
-                }
 
-                // LẦN KIỂM TRA MỨC ĐỘ 4: AI/OCR (Đọc ảnh giấy phép kinh doanh)
-                if (!string.IsNullOrWhiteSpace(request.BusinessLicenseUrl))
-                {
+                    // LẦN KIỂM TRA MỨC ĐỘ 3: EXTERNAL API (VietQR)
                     try
                     {
-                        using var ocrClient = new HttpClient();
-                        ocrClient.Timeout = TimeSpan.FromSeconds(15);
-                        var ocrUrl = $"https://api.ocr.space/parse/imageurl?apikey=helloworld&url={Uri.EscapeDataString(request.BusinessLicenseUrl)}";
-                        var ocrResponse = await ocrClient.GetAsync(ocrUrl);
+                        using var client = new HttpClient();
+                        // Set timeout to avoid hanging the registration process
+                        client.Timeout = TimeSpan.FromSeconds(5);
+                        var response = await client.GetAsync($"https://api.vietqr.io/v2/business/{taxCode}");
                         
-                        if (ocrResponse.IsSuccessStatusCode)
+                        var content = await response.Content.ReadAsStringAsync();
+                        using var json = System.Text.Json.JsonDocument.Parse(content);
+                        if (json.RootElement.TryGetProperty("code", out var codeElement))
                         {
-                            var ocrContent = await ocrResponse.Content.ReadAsStringAsync();
-                            using var ocrJson = System.Text.Json.JsonDocument.Parse(ocrContent);
-                            var ocrExitCode = ocrJson.RootElement.GetProperty("OCRExitCode").GetInt32();
-                            
-                            // OCR.space returns ExitCode 1 or 2 for success
-                            if (ocrExitCode == 1 || ocrExitCode == 2)
+                            var code = codeElement.GetString();
+                            if (code != "00")
                             {
-                                var parsedResults = ocrJson.RootElement.GetProperty("ParsedResults");
-                                if (parsedResults.GetArrayLength() > 0)
+                                var desc = json.RootElement.TryGetProperty("desc", out var descElem) ? descElem.GetString() : "Không xác định";
+                                return new AuthResponse { IsSuccess = false, Message = $"Mã số thuế không hợp lệ hoặc không tồn tại (Hệ thống Thuế Quốc gia báo: {desc})." };
+                            }
+                            
+                            if (json.RootElement.TryGetProperty("data", out var dataElement) && dataElement.ValueKind != System.Text.Json.JsonValueKind.Null)
+                            {
+                                if (dataElement.TryGetProperty("status", out var statusElement))
                                 {
-                                    var parsedText = parsedResults[0].GetProperty("ParsedText").GetString();
-                                    if (parsedText != null)
+                                    var status = statusElement.GetString();
+                                    if (status != null && (status.ToLower().Contains("ngừng") || status.ToLower().Contains("đóng") || status.ToLower().Contains("tạm nghỉ")))
                                     {
-                                        // Clean text from spaces, dashes, dots to find exact Tax Code match
-                                        var cleanText = parsedText.Replace(" ", "").Replace("-", "").Replace(".", "").Replace("\n", "").Replace("\r", "");
-                                        if (cleanText.Contains(taxCode))
-                                        {
-                                            isAiApproved = true;
-                                            System.Console.WriteLine($"[AI/OCR] Match Found! Auto-approving {taxCode}");
-                                        }
-                                        else
-                                        {
-                                            return new AuthResponse { IsSuccess = false, Message = "Hệ thống AI không tìm thấy Mã số thuế trên ảnh Giấy phép kinh doanh. Vui lòng tải lên ảnh rõ nét hoặc đúng giấy phép của doanh nghiệp bạn nhập." };
-                                        }
+                                        return new AuthResponse { IsSuccess = false, Message = $"Mã số thuế này không thể đăng ký vì tình trạng hiện tại là: {status}." };
                                     }
                                 }
                             }
@@ -204,8 +154,56 @@ namespace UniTask.Business.Services
                     }
                     catch (Exception ex)
                     {
-                        System.Console.WriteLine($"[AI/OCR Verification] Error: {ex.Message}");
-                        // Continue registration even if OCR fails
+                        System.Console.WriteLine($"[TaxCode Verification API] Error: {ex.Message}");
+                        // Nếu API lỗi (timeout/sập), cho phép đăng ký qua Cấp 1+2 (Fallback thủ công bằng ảnh Giấy phép KD sau).
+                    }
+
+                    // LẦN KIỂM TRA MỨC ĐỘ 4: AI/OCR (Đọc ảnh giấy phép kinh doanh)
+                    if (!string.IsNullOrWhiteSpace(request.BusinessLicenseUrl))
+                    {
+                        try
+                        {
+                            using var ocrClient = new HttpClient();
+                            ocrClient.Timeout = TimeSpan.FromSeconds(15);
+                            var ocrUrl = $"https://api.ocr.space/parse/imageurl?apikey=helloworld&url={Uri.EscapeDataString(request.BusinessLicenseUrl)}";
+                            var ocrResponse = await ocrClient.GetAsync(ocrUrl);
+                            
+                            if (ocrResponse.IsSuccessStatusCode)
+                            {
+                                var ocrContent = await ocrResponse.Content.ReadAsStringAsync();
+                                using var ocrJson = System.Text.Json.JsonDocument.Parse(ocrContent);
+                                var ocrExitCode = ocrJson.RootElement.GetProperty("OCRExitCode").GetInt32();
+                                
+                                // OCR.space returns ExitCode 1 or 2 for success
+                                if (ocrExitCode == 1 || ocrExitCode == 2)
+                                {
+                                    var parsedResults = ocrJson.RootElement.GetProperty("ParsedResults");
+                                    if (parsedResults.GetArrayLength() > 0)
+                                    {
+                                        var parsedText = parsedResults[0].GetProperty("ParsedText").GetString();
+                                        if (parsedText != null)
+                                        {
+                                            // Clean text from spaces, dashes, dots to find exact Tax Code match
+                                            var cleanText = parsedText.Replace(" ", "").Replace("-", "").Replace(".", "").Replace("\n", "").Replace("\r", "");
+                                            if (cleanText.Contains(taxCode))
+                                            {
+                                                isAiApproved = true;
+                                                System.Console.WriteLine($"[AI/OCR] Match Found! Auto-approving {taxCode}");
+                                            }
+                                            else
+                                            {
+                                                return new AuthResponse { IsSuccess = false, Message = "Hệ thống AI không tìm thấy Mã số thuế trên ảnh Giấy phép kinh doanh. Vui lòng tải lên ảnh rõ nét hoặc đúng giấy phép của doanh nghiệp bạn nhập." };
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Console.WriteLine($"[AI/OCR Verification] Error: {ex.Message}");
+                            // Continue registration even if OCR fails
+                        }
                     }
                 }
             }
@@ -336,7 +334,8 @@ namespace UniTask.Business.Services
                         Position = request.Position,
                         BusinessLicenseUrl = request.BusinessLicenseUrl,
                         // AI Approval flag
-                        IsBusinessLicenseVerified = isAiApproved
+                        IsBusinessLicenseVerified = isAiApproved,
+                        Type = EmployerType.SmallBusinessHousehold
                     };
 
                     if (!string.IsNullOrEmpty(request.CompanyName))

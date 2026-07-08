@@ -175,6 +175,14 @@ export class JobService {
     return job.deadline >= today;
   }
 
+  startJob(id: number): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${id}/start`, {}).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã bắt đầu công việc thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi khi bắt đầu công việc.' }))
+    );
+  }
+
   updateJob(id: number, data: Partial<Job>): Observable<{ success: boolean; message: string }> {
     const payload = {
       title: data.title,

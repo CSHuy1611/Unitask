@@ -56,6 +56,24 @@ namespace UniTask.Api.Controllers
             }
         }
 
+        [HttpPost("{id}/start")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> StartJob(int id)
+        {
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            try
+            {
+                var result = await _jobService.StartJobAsync(id, employerId);
+                return Ok(new { message = "Công việc đã được bắt đầu thành công." });
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPut("{id}")]
         [Authorize(Roles = "Employer")]
         public async Task<IActionResult> UpdateJob(int id, [FromBody] JobUpdateDto dto)

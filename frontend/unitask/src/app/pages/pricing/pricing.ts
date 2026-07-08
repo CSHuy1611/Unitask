@@ -77,9 +77,15 @@ import { API_BASE_URL } from '../../config/api.config';
                     <li><span class="material-icons-round" style="color:var(--warning)">workspace_premium</span> Huy hiệu Doanh nghiệp Premium</li>
                   }
                 </ul>
-                <button class="btn btn-lg full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)">
-                  Mua gói ngay
-                </button>
+                @if (auth.currentUser()?.employerType === 1) {
+                  <button class="btn btn-lg full-width" style="background: var(--bg-card); color: var(--text-muted); border: 1px dashed var(--border-color); cursor: not-allowed;" title="Hộ kinh doanh không được hỗ trợ mua gói này. Vui lòng nâng cấp lên Doanh nghiệp.">
+                    Chỉ dành cho Doanh nghiệp
+                  </button>
+                } @else {
+                  <button class="btn btn-lg full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)">
+                    Mua gói ngay
+                  </button>
+                }
               </div>
             }
           </div>
@@ -455,6 +461,11 @@ export class PricingComponent implements OnInit {
     if (!user) {
       this.toast.error('Vui lòng đăng nhập để thực hiện giao dịch.');
       this.router.navigate(['/login']);
+      return;
+    }
+
+    if (user.employerType === 1) {
+      this.toast.error('Hộ kinh doanh không thể mua gói dịch vụ. Vui lòng nâng cấp lên Doanh nghiệp để sử dụng tính năng này.');
       return;
     }
 

@@ -199,6 +199,26 @@ export class AuthService {
     );
   }
 
+  upgradeToBusiness(companyName: string, taxCode: string, file: File): Observable<{ success: boolean; message: string }> {
+    const formData = new FormData();
+    formData.append('CompanyName', companyName);
+    formData.append('TaxCode', taxCode);
+    formData.append('BusinessLicenseFile', file);
+
+    return this.http.post<any>(`${API_BASE_URL}/profile/employer/upgrade`, formData).pipe(
+      tap(() => {
+        const user = this.currentUser();
+        if (user) {
+          const updated = { ...user, employerType: 0, companyName, taxCode };
+          this.currentUser.set(updated);
+          this.saveToStorage(updated);
+        }
+      }),
+      map(res => ({ success: true, message: res.message || 'Nâng cấp Doanh nghiệp thành công!' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Nâng cấp thất bại.' }))
+    );
+  }
+
   // CV upload
   uploadCV(file: File): Observable<{ success: boolean; message: string }> {
     const formData = new FormData();
@@ -359,6 +379,7 @@ export class AuthService {
                 ekycDate: userObj.ekycDate || userObj.EkycDate ? (userObj.ekycDate || userObj.EkycDate).split('T')[0] : user.ekycDate,
                 ekycFrontImage: userObj.ekycFrontImage || userObj.EkycFrontImage || userObj.ekycFrontImageUrl || userObj.EkycFrontImageUrl || user.ekycFrontImage,
                 ekycBackImage: userObj.ekycBackImage || userObj.EkycBackImage || userObj.ekycBackImageUrl || userObj.EkycBackImageUrl || user.ekycBackImage,
+                employerType: res.employerType !== undefined ? res.employerType : (res.EmployerType !== undefined ? res.EmployerType : user.employerType),
                 companyId: companyObj.id || companyObj.Id || res.companyId || user.companyId,
                 companyName: companyObj.name || companyObj.Name || user.companyName,
                 companyIndustry: companyObj.industry || companyObj.Industry || user.companyIndustry,

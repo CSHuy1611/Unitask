@@ -103,6 +103,7 @@ namespace UniTask.Business.Services
                         isFlagged = profile.User.IsFlagged,
                         flagReason = profile.User.FlagReason ?? ""
                     },
+                    employerType = (int)profile.Type,
                     position = profile.Position,
                     company = profile.Company != null ? new
                     {
@@ -221,7 +222,7 @@ namespace UniTask.Business.Services
 
             // Update Profile fields
             if (!string.IsNullOrEmpty(dto.Position)) profile.Position = dto.Position;
-
+            if (dto.EmployerType.HasValue) profile.Type = dto.EmployerType.Value;
             // Update or Create Company info
             if (profile.Company == null)
             {
@@ -326,6 +327,162 @@ namespace UniTask.Business.Services
             }
 
             await _userManager.UpdateAsync(user);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpgradeToBusinessAsync(string userId, UpgradeToBusinessDto dto)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            var profile = await _context.EmployerProfiles.Include(p => p.Company).FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (user == null || profile == null) return false;
+
+            if (profile.Type == UniTask.DataAcesss.Entities.Enums.EmployerType.Business)
+            {
+                throw new InvalidOperationException("Tài khoản của bạn đã là Doanh nghiệp.");
+            }
+
+            var taxCode = dto.TaxCode.Trim();
+
+            // Validate Vietnamese Tax Code format: 10 or 13 digits
+            if (!System.Text.RegularExpressions.Regex.IsMatch(taxCode, @"^\d{10}(\d{3})?$"))
+            {
+                throw new InvalidOperationException("Mã số thuế không đúng định dạng. Phải gồm 10 hoặc 13 chữ số.");
+            }
+
+            // Check TaxCode uniqueness
+            var existingUserByTax = await _context.EmployerProfiles
+                .Include(ep => ep.Company)
+                .FirstOrDefaultAsync(ep => ep.Company != null && ep.Company.TaxCode == taxCode && ep.UserId != userId);
+
+            if (existingUserByTax != null)
+            {
+                throw new InvalidOperationException("Mã số thuế này đã được đăng ký trước đó trong hệ thống.");
+            }
+
+            // MỨC ĐỘ 3: EXTERNAL API (VietQR)
+            try
+            {
+                using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(5);
+                var response = await client.GetAsync($"https://api.vietqr.io/v2/business/{taxCode}");
+                
+                var content = await response.Content.ReadAsStringAsync();
+                using var json = System.Text.Json.JsonDocument.Parse(content);
+                if (json.RootElement.TryGetProperty("code", out var codeElement))
+                {
+                    var code = codeElement.GetString();
+                    if (code != "00")
+                    {
+                        var desc = json.RootElement.TryGetProperty("desc", out var descElem) ? descElem.GetString() : "Không xác định";
+                        throw new InvalidOperationException($"Mã số thuế không hợp lệ hoặc không tồn tại (Hệ thống Thuế Quốc gia báo: {desc}).");
+                    }
+                    
+                    if (json.RootElement.TryGetProperty("data", out var dataElement) && dataElement.ValueKind != System.Text.Json.JsonValueKind.Null)
+                    {
+                        if (dataElement.TryGetProperty("status", out var statusElement))
+                        {
+                            var status = statusElement.GetString();
+                            if (status != null && (status.ToLower().Contains("ngừng") || status.ToLower().Contains("đóng") || status.ToLower().Contains("tạm nghỉ")))
+                            {
+                                throw new InvalidOperationException($"Mã số thuế này không thể đăng ký vì tình trạng hiện tại là: {status}.");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not InvalidOperationException)
+            {
+                System.Console.WriteLine($"[TaxCode Verification API] Error: {ex.Message}");
+            }
+
+            // Upload Business License
+            string businessLicenseUrl = "";
+            try
+            {
+                businessLicenseUrl = await _cloudinaryService.UploadImageAsync(dto.BusinessLicenseFile, "BusinessLicenses");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi khi tải ảnh Giấy phép kinh doanh lên: {ex.Message}");
+            }
+
+            bool isAiApproved = false;
+
+            // MỨC ĐỘ 4: AI/OCR (Đọc ảnh giấy phép kinh doanh)
+            try
+            {
+                using var ocrClient = new HttpClient();
+                ocrClient.Timeout = TimeSpan.FromSeconds(15);
+                var ocrUrl = $"https://api.ocr.space/parse/imageurl?apikey=helloworld&url={Uri.EscapeDataString(businessLicenseUrl)}";
+                var ocrResponse = await ocrClient.GetAsync(ocrUrl);
+                
+                if (ocrResponse.IsSuccessStatusCode)
+                {
+                    var ocrContent = await ocrResponse.Content.ReadAsStringAsync();
+                    using var ocrJson = System.Text.Json.JsonDocument.Parse(ocrContent);
+                    var ocrExitCode = ocrJson.RootElement.GetProperty("OCRExitCode").GetInt32();
+                    
+                    if (ocrExitCode == 1 || ocrExitCode == 2)
+                    {
+                        var parsedResults = ocrJson.RootElement.GetProperty("ParsedResults");
+                        if (parsedResults.GetArrayLength() > 0)
+                        {
+                            var parsedText = parsedResults[0].GetProperty("ParsedText").GetString();
+                            if (parsedText != null)
+                            {
+                                var cleanText = parsedText.Replace(" ", "").Replace("-", "").Replace(".", "").Replace("\n", "").Replace("\r", "");
+                                if (cleanText.Contains(taxCode))
+                                {
+                                    isAiApproved = true;
+                                    System.Console.WriteLine($"[AI/OCR] Match Found! Auto-approving {taxCode}");
+                                }
+                                else
+                                {
+                                    throw new InvalidOperationException("Hệ thống AI không tìm thấy Mã số thuế trên ảnh Giấy phép kinh doanh. Vui lòng tải lên ảnh rõ nét hoặc đúng giấy phép của doanh nghiệp bạn nhập.");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not InvalidOperationException)
+            {
+                System.Console.WriteLine($"[AI/OCR Verification] Error: {ex.Message}");
+                // Nếu OCR lỗi, vẫn có thể bỏ qua hoặc xử lý tiếp. Ở đây ta coi như false nếu lỗi.
+            }
+
+            // If we successfully get here and it's AI approved, we update!
+            if (!isAiApproved)
+            {
+                // Delete uploaded image if rejected
+                var publicId = _cloudinaryService.GetPublicIdFromUrl(businessLicenseUrl);
+                if (publicId != null) await _cloudinaryService.DeleteImageAsync(publicId);
+                throw new InvalidOperationException("Hệ thống AI không thể xác nhận Mã số thuế trên hình ảnh. Xin hãy tải lại ảnh hợp lệ.");
+            }
+
+            if (profile.Company == null)
+            {
+                profile.Company = new Company 
+                { 
+                    Name = dto.CompanyName,
+                    TaxCode = taxCode,
+                    CreatedAt = DateTime.UtcNow 
+                };
+                _context.Companies.Add(profile.Company);
+            }
+            else
+            {
+                profile.Company.Name = dto.CompanyName;
+                profile.Company.TaxCode = taxCode;
+            }
+
+            // Set type to Business
+            profile.Type = UniTask.DataAcesss.Entities.Enums.EmployerType.Business;
+            profile.BusinessLicenseUrl = businessLicenseUrl;
+            profile.IsBusinessLicenseVerified = true;
+
             await _context.SaveChangesAsync();
             return true;
         }

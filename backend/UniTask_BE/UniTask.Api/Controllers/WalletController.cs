@@ -31,6 +31,18 @@ namespace UniTask.Api.Controllers
         }
 
 
+        [HttpPost("quick-topup")]
+        public async Task<IActionResult> QuickTopUp()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var result = await _walletService.QuickTopUpAsync(userId, 10000000); // 10 million
+            if (!result) return BadRequest(new { message = "Failed to top up wallet" });
+
+            return Ok(new { message = "Nạp tiền thành công" });
+        }
+
         [HttpPost("withdraw")]
         public async Task<IActionResult> Withdraw([FromBody] WithdrawRequestDto dto)
         {

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using UniTask.DataAcesss;
 
@@ -11,9 +12,11 @@ using UniTask.DataAcesss;
 namespace UniTask.DataAcesss.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708152521_AddEmployerType")]
+    partial class AddEmployerType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -221,7 +224,7 @@ namespace UniTask.DataAcesss.Migrations
                     b.HasIndex("JobId", "StudentProfileId")
                         .IsUnique();
 
-                    b.ToTable("Applications", (string)null);
+                    b.ToTable("Applications");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.ApplicationUser", b =>
@@ -385,7 +388,7 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Companies", (string)null);
+                    b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.EmployerProfile", b =>
@@ -423,7 +426,7 @@ namespace UniTask.DataAcesss.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("EmployerProfiles", (string)null);
+                    b.ToTable("EmployerProfiles");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.Job", b =>
@@ -547,7 +550,7 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Jobs", (string)null);
+                    b.ToTable("Jobs");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.JobBenefit", b =>
@@ -570,7 +573,7 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.HasIndex("JobId");
 
-                    b.ToTable("JobBenefits", (string)null);
+                    b.ToTable("JobBenefits");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.JobRequirement", b =>
@@ -593,7 +596,7 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.HasIndex("JobId");
 
-                    b.ToTable("JobRequirements", (string)null);
+                    b.ToTable("JobRequirements");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.JobTag", b =>
@@ -616,7 +619,7 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.HasIndex("JobId");
 
-                    b.ToTable("JobTags", (string)null);
+                    b.ToTable("JobTags");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.SavedJob", b =>
@@ -643,7 +646,7 @@ namespace UniTask.DataAcesss.Migrations
                     b.HasIndex("StudentProfileId", "JobId")
                         .IsUnique();
 
-                    b.ToTable("SavedJobs", (string)null);
+                    b.ToTable("SavedJobs");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.ServicePackage", b =>
@@ -677,7 +680,7 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ServicePackages", (string)null);
+                    b.ToTable("ServicePackages");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.StudentProfile", b =>
@@ -734,7 +737,7 @@ namespace UniTask.DataAcesss.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("StudentProfiles", (string)null);
+                    b.ToTable("StudentProfiles");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.Subscription", b =>
@@ -767,7 +770,7 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.HasIndex("UserId", "IsActive");
 
-                    b.ToTable("Subscriptions", (string)null);
+                    b.ToTable("Subscriptions");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.Transaction", b =>
@@ -817,7 +820,7 @@ namespace UniTask.DataAcesss.Migrations
 
                     b.HasIndex("WalletId");
 
-                    b.ToTable("Transactions", (string)null);
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("UniTask.DataAcesss.Entities.Wallet", b =>
@@ -844,7 +847,7 @@ namespace UniTask.DataAcesss.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Wallets", (string)null);
+                    b.ToTable("Wallets");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

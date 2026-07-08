@@ -7,5 +7,7 @@ namespace UniTask.Business.Interfaces
         Task<WalletDto?> GetWalletAsync(string userId);
 
         Task<bool> WithdrawAsync(string userId, WithdrawRequestDto dto);
+        
+        Task<bool> QuickTopUpAsync(string userId, decimal amount);
     }
 }

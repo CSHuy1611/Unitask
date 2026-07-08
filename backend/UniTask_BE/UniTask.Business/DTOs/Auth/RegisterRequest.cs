@@ -31,11 +31,8 @@ namespace UniTask.Business.DTOs.Auth
         public string? Position { get; set; }
 
         /// <summary>
-        /// Mã số thuế doanh nghiệp - Bắt buộc khi đăng ký với tư cách Employer.
-        /// Định dạng chuẩn Việt Nam: 10 hoặc 13 chữ số.
+        /// Mã số thuế doanh nghiệp - Có thể bỏ trống khi đăng ký, sẽ cập nhật sau trong Hồ sơ.
         /// </summary>
-        [RegularExpression(@"^\d{10}(\d{3})?$",
-            ErrorMessage = "Mã số thuế không hợp lệ. Vui lòng nhập 10 hoặc 13 chữ số.")]
         public string? TaxCode { get; set; }
 
         /// <summary>
