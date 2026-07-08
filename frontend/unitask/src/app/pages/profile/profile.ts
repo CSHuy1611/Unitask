@@ -91,10 +91,10 @@ import Tesseract from 'tesseract.js';
                     <span class="material-icons-round">menu_book</span>
                     <span>{{ auth.currentUser()?.major }} - Năm {{ auth.currentUser()?.year }}</span>
                   </div>
-                  <div class="info-row">
+                  <!-- <div class="info-row">
                     <span class="material-icons-round" style="color: var(--warning)">verified_user</span>
                     <span>Điểm tín nhiệm: <strong style="color: var(--warning); font-size: 15px">{{ auth.currentUser()?.reliabilityScore ?? 100 }}</strong> / 100</span>
-                  </div>
+                  </div> -->
                 } @else if (auth.isEmployer()) {
                   <div class="info-row">
                     <span class="material-icons-round">business</span>
@@ -831,7 +831,11 @@ import Tesseract from 'tesseract.js';
               <div class="form-actions d-flex justify-between gap-3">
                 <button type="button" class="btn btn-secondary flex-1" (click)="showWithdrawModal.set(false)">Hủy</button>
                 <button type="submit" class="btn btn-primary flex-1" [disabled]="!withdrawForm.amount || !withdrawForm.bank || !withdrawForm.account || !withdrawForm.name || isSubmittingWithdraw()">
-                  Xác nhận rút tiền
+                  @if (isSubmittingWithdraw()) {
+                    <span class="material-icons-round spinner">autorenew</span> Đang xử lý...
+                  } @else {
+                    Xác nhận rút tiền
+                  }
                 </button>
               </div>
             </form>
@@ -1952,6 +1956,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.isSubmittingWithdraw()) return;
+    this.isSubmittingWithdraw.set(true);
+
     this.auth.withdraw(
       amount,
       this.withdrawForm.bank,
@@ -1959,6 +1966,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.withdrawForm.name
     ).subscribe({
       next: (res) => {
+        this.isSubmittingWithdraw.set(false);
         if (res.success) {
           this.toast.success('Yêu cầu rút tiền thành công! Tiền sẽ được chuyển trong 24h.');
           this.showWithdrawModal.set(false);
@@ -1967,7 +1975,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
           this.toast.error('Có lỗi xảy ra: ' + res.message);
         }
       },
-      error: () => this.toast.error('Lỗi kết nối máy chủ.')
+      error: () => {
+        this.isSubmittingWithdraw.set(false);
+        this.toast.error('Lỗi kết nối máy chủ.');
+      }
     });
   }
 
