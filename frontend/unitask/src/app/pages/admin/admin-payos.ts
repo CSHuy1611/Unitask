@@ -4,6 +4,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { API_BASE_URL } from '../../config/api.config';
+import { AdminSearchService } from '../../services/admin-search.service';
 
 @Component({
   selector: 'app-admin-payos',
@@ -37,12 +38,13 @@ import { API_BASE_URL } from '../../config/api.config';
                 <tbody>
                   @if (isLoading()) {
                     <tr>
-                      <td colspan="6" class="text-center" style="padding: 3rem;">
-                        <span class="material-icons-round spin" style="font-size: 2rem; color: var(--primary)">autorenew</span>
-                        <p style="margin-top: 1rem; color: var(--text-muted)">Đang tải dữ liệu PayOS...</p>
+                      <td colspan="6">
+                        <div class="skeleton skeleton-card" style="height: 60px;"></div>
+                        <div class="skeleton skeleton-card" style="height: 60px; margin-top: 8px;"></div>
+                        <div class="skeleton skeleton-card" style="height: 60px; margin-top: 8px;"></div>
                       </td>
                     </tr>
-                  } @else if (deposits().length === 0) {
+                  } @else if (filteredDeposits().length === 0) {
                     <tr>
                       <td colspan="6" class="text-center" style="padding: 3rem;">
                         <div class="empty-state">
@@ -52,7 +54,7 @@ import { API_BASE_URL } from '../../config/api.config';
                       </td>
                     </tr>
                   } @else {
-                    @for (item of deposits(); track item.id) {
+                    @for (item of filteredDeposits(); track item.id) {
                       <tr class="animate-fade-in-up" [style.animation-delay]="$index * 0.05 + 's'">
                         <td>
                           <div class="font-medium">{{ item.createdAt + 'Z' | date:'dd/MM/yyyy' }}</div>
@@ -136,7 +138,11 @@ import { API_BASE_URL } from '../../config/api.config';
         text-transform: uppercase;
         font-size: 0.85rem;
         letter-spacing: 0.05em;
-        background: rgba(var(--text-color-rgb), 0.02);
+        background: var(--bg-card);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        box-shadow: 0 1px 0 var(--border-light);
       }
       tbody tr {
         transition: all 0.2s ease;
@@ -180,12 +186,28 @@ export class AdminPayosComponent implements OnInit {
   auth = inject(AuthService);
   http = inject(HttpClient);
   toast = inject(ToastService);
+  searchService = inject(AdminSearchService);
   
   deposits = signal<any[]>([]);
   isLoading = signal(false);
   currentPage = signal(1);
   pageSize = 10;
   totalCount = signal(0);
+
+  filteredDeposits = computed(() => {
+    let list = this.deposits();
+    const query = this.searchService.searchQuery().toLowerCase().trim();
+    if (query) {
+      list = list.filter((item: any) => 
+        (item.userFullName || '').toLowerCase().includes(query) ||
+        (item.userEmail || '').toLowerCase().includes(query) ||
+        (item.counterAccountBankName || '').toLowerCase().includes(query) ||
+        (item.counterAccountName || '').toLowerCase().includes(query) ||
+        (item.counterAccountNumber || '').toLowerCase().includes(query)
+      );
+    }
+    return list;
+  });
 
   ngOnInit() {
     this.loadDeposits(1);

@@ -1,4 +1,5 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import Chart from 'chart.js/auto';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -20,43 +21,49 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 
           <!-- Stat Cards -->
           <div class="stats-grid animate-fade-in-up" style="animation-delay:0.1s">
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#4F46E5,#7C3AED)">
-                <span class="material-icons-round">people</span>
+            @if (isLoading()) {
+              <div class="stat-card glass-card skeleton"></div>
+              <div class="stat-card glass-card skeleton"></div>
+              <div class="stat-card glass-card skeleton"></div>
+              <div class="stat-card glass-card skeleton"></div>
+            } @else {
+              <div class="stat-card glass-card">
+                <div class="stat-icon" style="background:linear-gradient(135deg,#4F46E5,#7C3AED)">
+                  <span class="material-icons-round">people</span>
+                </div>
+                <div>
+                  <span class="stat-number">{{ data().summary.totalUsers }}</span>
+                  <span class="stat-label">Tổng người dùng</span>
+                </div>
               </div>
-              <div>
-                <span class="stat-number">{{ data().summary.totalUsers }}</span>
-                <span class="stat-label">Tổng người dùng</span>
+              <div class="stat-card glass-card">
+                <div class="stat-icon" style="background:linear-gradient(135deg,#10B981,#059669)">
+                  <span class="material-icons-round">work</span>
+                </div>
+                <div>
+                  <span class="stat-number">{{ data().summary.totalJobs }}</span>
+                  <span class="stat-label">Tổng việc làm</span>
+                </div>
               </div>
-            </div>
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#10B981,#059669)">
-                <span class="material-icons-round">work</span>
+              <div class="stat-card glass-card">
+                <div class="stat-icon" style="background:linear-gradient(135deg,#0D9488,#14B8A6)">
+                  <span class="material-icons-round">account_balance_wallet</span>
+                </div>
+                <div>
+                  <span class="stat-number">{{ formatCurrency(data().summary.totalDeposits || 0) }}</span>
+                  <span class="stat-label">Dòng tiền nạp vào</span>
+                </div>
               </div>
-              <div>
-                <span class="stat-number">{{ data().summary.totalJobs }}</span>
-                <span class="stat-label">Tổng việc làm</span>
+              <div class="stat-card glass-card">
+                <div class="stat-icon" style="background:linear-gradient(135deg,#6366F1,#4F46E5)">
+                  <span class="material-icons-round">payments</span>
+                </div>
+                <div>
+                  <span class="stat-number">{{ formatCurrency(data().summary.totalRevenue || 0) }}</span>
+                  <span class="stat-label">Doanh thu thực tế</span>
+                </div>
               </div>
-            </div>
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#0D9488,#14B8A6)">
-                <span class="material-icons-round">account_balance_wallet</span>
-              </div>
-              <div>
-                <span class="stat-number">{{ formatCurrency(data().summary.totalDeposits || 0) }}</span>
-                <span class="stat-label">Dòng tiền nạp vào</span>
-              </div>
-            </div>
-            <div class="stat-card glass-card">
-              <div class="stat-icon" style="background:linear-gradient(135deg,#6366F1,#4F46E5)">
-                <span class="material-icons-round">payments</span>
-              </div>
-              <div>
-                <span class="stat-number">{{ formatCurrency(data().summary.totalRevenue || 0) }}</span>
-                <span class="stat-label">Doanh thu thực tế</span>
-              </div>
-            </div>
-
+            }
           </div>
 
           <!-- Revenue Details Row -->
@@ -64,16 +71,8 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
             <!-- Revenue Chart -->
             <div class="chart-section glass-card" style="margin-bottom: 0;">
               <h3><span class="material-icons-round">trending_up</span> Doanh thu 6 tháng gần nhất</h3>
-              <div class="chart-container">
-                @for (item of data().revenueByMonth; track item.month) {
-                  <div class="chart-bar-wrapper">
-                    <div class="chart-value">{{ formatShortCurrency(item.revenue) }}</div>
-                    <div class="chart-bar" [style.height.%]="getBarHeight(item.revenue)">
-                      <div class="chart-bar-fill"></div>
-                    </div>
-                    <div class="chart-label">{{ item.month }}</div>
-                  </div>
-                }
+              <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                <canvas #revenueChart></canvas>
               </div>
             </div>
 
@@ -119,7 +118,6 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
             </div>
           </div>
 
-          <!-- Extra Stats Row -->
           <div class="extra-stats animate-fade-in-up" style="animation-delay:0.18s">
             <div class="mini-stat glass-card">
               <span class="material-icons-round" style="color:#4F46E5">school</span>
@@ -129,17 +127,24 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
               </div>
             </div>
             <div class="mini-stat glass-card">
-              <span class="material-icons-round" style="color:#10B981">business</span>
+              <span class="material-icons-round" style="color:#F59E0B">storefront</span>
               <div>
-                <strong>{{ data().summary.totalEmployers }}</strong>
-                <span>Nhà tuyển dụng</span>
+                <strong>{{ data().summary.totalHouseholdEmployers }}</strong>
+                <span>Hộ kinh doanh</span>
               </div>
             </div>
             <div class="mini-stat glass-card">
-              <span class="material-icons-round" style="color:#F59E0B">verified</span>
+              <span class="material-icons-round" style="color:#10B981">business</span>
               <div>
-                <strong>{{ data().summary.ekycVerified }}</strong>
-                <span>Đã xác thực</span>
+                <strong>{{ data().summary.totalBusinessEmployers }}</strong>
+                <span>Doanh nghiệp</span>
+              </div>
+            </div>
+            <div class="mini-stat glass-card">
+              <span class="material-icons-round" style="color:#EF4444">hourglass_top</span>
+              <div>
+                <strong>{{ data().summary.ekycPending }}</strong>
+                <span>Chờ duyệt eKYC</span>
               </div>
             </div>
             <div class="mini-stat glass-card">
@@ -598,7 +603,7 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
     /* Extra Stats */
     .extra-stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: var(--space-4);
       margin-bottom: var(--space-8);
     }
@@ -728,7 +733,7 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
     }
 
     @media (max-width: 768px) {
-      .stats-grid, .extra-stats { grid-template-columns: 1fr 1fr; }
+      .stats-grid, .extra-stats { grid-template-columns: 1fr 1fr 1fr; }
       .chart-container { height: 160px; }
     }
 
@@ -738,7 +743,10 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
     }
   `]
 })
-export class AdminDashboardComponent implements OnInit, OnDestroy {
+export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('revenueChart') revenueChartRef!: ElementRef;
+  chartInstance: Chart | null = null;
+
   auth = inject(AuthService);
   private http = inject(HttpClient);
   private toast = inject(ToastService);
@@ -755,6 +763,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       ekycPending: 0, 
       totalStudents: 0, 
       totalEmployers: 0, 
+      totalBusinessEmployers: 0,
+      totalHouseholdEmployers: 0,
       ekycVerified: 0, 
       applicationsThisMonth: 0 
     },
@@ -763,6 +773,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   });
 
   maxRevenue = signal(1);
+  isLoading = signal(true);
   editingPackage = signal<any | null>(null);
   packageForm = {
     id: 0,
@@ -791,13 +802,26 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   loadStats() {
+    this.isLoading.set(true);
     this.http.get<any>(`${API_BASE_URL}/admin/dashboard`).subscribe({
       next: (res) => {
         this.data.set(res);
         const revenues = (res.revenueByMonth || []).map((r: any) => r.revenue);
         this.maxRevenue.set(Math.max(...revenues, 1));
+        this.isLoading.set(false);
+        
+        setTimeout(() => {
+          if (!this.chartInstance) {
+            this.initChart();
+          } else {
+            this.updateChart();
+          }
+        }, 100);
       },
-      error: (err) => console.error('Failed to load admin dashboard:', err)
+      error: (err) => {
+        console.error('Failed to load admin dashboard:', err);
+        this.isLoading.set(false);
+      }
     });
   }
 
@@ -944,5 +968,93 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return price.toLocaleString('vi-VN') + 'đ';
     }
     return price + 'đ/tin';
+  }
+
+  ngAfterViewInit() {
+    // Initialization now handled inside loadStats() after data loading.
+  }
+
+  initChart() {
+    if (!this.revenueChartRef) return;
+    const ctx = this.revenueChartRef.nativeElement.getContext('2d');
+    
+    // Create gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.5)'); // primary
+    gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+
+    this.chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: this.data().revenueByMonth.map((item: any) => item.month),
+        datasets: [{
+          label: 'Doanh thu (VND)',
+          data: this.data().revenueByMonth.map((item: any) => item.revenue),
+          borderColor: '#4F46E5',
+          backgroundColor: gradient,
+          borderWidth: 2,
+          pointBackgroundColor: '#7C3AED',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleColor: '#F1F5F9',
+            bodyColor: '#F1F5F9',
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              label: (context) => {
+                let label = context.dataset.label || '';
+                if (label) { label += ': '; }
+                if (context.parsed.y !== null) {
+                  label += new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(context.parsed.y);
+                }
+                return label;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94A3B8', font: { family: 'Inter' } }
+          },
+          y: {
+            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+            ticks: {
+              color: '#94A3B8',
+              font: { family: 'Inter' },
+              callback: (value) => {
+                if (typeof value === 'number') {
+                  if (value >= 1000000) return (value / 1000000) + 'M';
+                  if (value >= 1000) return (value / 1000) + 'K';
+                }
+                return value;
+              }
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+
+  updateChart() {
+    if (this.chartInstance) {
+      this.chartInstance.data.labels = this.data().revenueByMonth.map((item: { month: string }) => item.month);
+      this.chartInstance.data.datasets[0].data = this.data().revenueByMonth.map((item: { revenue: number }) => item.revenue);
+      this.chartInstance.update();
+    }
   }
 }
