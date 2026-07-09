@@ -353,6 +353,8 @@ namespace UniTask.Business.Services
                 JobTitle = a.Job?.Title ?? "",
                 StudentId = a.StudentProfile?.UserId ?? "",
                 StudentName = a.StudentProfile?.User?.FullName ?? "",
+                StudentEmail = a.StudentProfile?.User?.Email,
+                StudentPhone = a.StudentProfile?.User?.PhoneNumber,
                 StudentAvatarUrl = a.StudentProfile?.User?.AvatarUrl,
                 StudentUniversity = a.StudentProfile?.University,
                 StudentMajor = a.StudentProfile?.Major,

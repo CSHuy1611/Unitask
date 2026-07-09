@@ -709,13 +709,7 @@ import { Subscription } from 'rxjs';
                             <span style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">Năm thứ {{ app.studentYear || '?' }}</span>
                           </div>
 
-                          <div style="background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.15); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
-                            <span style="font-size: 0.8rem; color: rgba(245,158,11,0.8); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Điểm GPA</span>
-                            <div style="display: flex; align-items: baseline; gap: 4px;">
-                              <span style="font-size: 1.1rem; color: var(--warning); font-weight: 700;">{{ app.studentGpa ? app.studentGpa.toFixed(2) : '--' }}</span>
-                              <span style="font-size: 0.85rem; color: rgba(245,158,11,0.6);">/ 4.00</span>
-                            </div>
-                          </div>
+                          <!-- GPA info hidden by user request -->
                         </div>
 
                         <!-- Bio Blockquote -->
@@ -824,6 +818,13 @@ import { Subscription } from 'rxjs';
 
                         <!-- Action Buttons -->
                         <div style="display: flex; flex-direction: column; gap: 10px;">
+
+                          <!-- View Student Details button -->
+                          <button (click)="viewStudentDetails(app)"
+                                  style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; background: rgba(16, 185, 129, 0.08); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                            <span class="material-icons-round" style="font-size: 18px;">person</span>
+                            Xem chi tiết
+                          </button>
 
                           <!-- View CV button (always show if exists) -->
                           @if (app.studentCVUrl) {
@@ -1092,6 +1093,111 @@ import { Subscription } from 'rxjs';
                     <div class="text-center p-8 text-muted">
                       <span class="material-icons-round" style="font-size: 48px; opacity: 0.5;">receipt_long</span>
                       <p style="margin-top: 12px;">Chưa có giao dịch nào.</p>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Student Details Modal -->
+          @if (selectedStudentDetails()) {
+            <div class="modal-overlay animate-fade-in">
+              <div class="modal-content glass-card p-6" style="width: 100%; max-width: 650px; max-height: 85vh; overflow-y: auto; text-align: left;">
+                <div class="modal-header d-flex justify-between items-center mb-6">
+                  <h3 style="font-size:1.25rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+                    <span class="material-icons-round text-primary-light">badge</span>
+                    Hồ sơ Sinh viên
+                  </h3>
+                  <button class="btn btn-secondary icon-btn" (click)="selectedStudentDetails.set(null)">
+                    <span class="material-icons-round">close</span>
+                  </button>
+                </div>
+                
+                <div class="student-details-body" style="display: flex; flex-direction: column; gap: 24px;">
+                  <!-- Basic Info -->
+                  <div style="display:flex; gap: 20px; align-items: center; background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg, var(--primary), var(--primary-light)); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:2rem; overflow:hidden;">
+                      @if (selectedStudentDetails()?.studentAvatarUrl) {
+                        <img [src]="selectedStudentDetails()?.studentAvatarUrl" alt="Avatar" style="width:100%; height:100%; object-fit:cover" />
+                      } @else {
+                        {{ selectedStudentDetails()?.studentName ? selectedStudentDetails()?.studentName[0] : 'U' }}
+                      }
+                    </div>
+                    <div style="flex: 1;">
+                      <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; display:flex; align-items:center; gap: 8px;">
+                        {{ selectedStudentDetails()?.studentName }}
+                        @if (selectedStudentDetails()?.studentEkycStatus === 'Verified' || selectedStudentDetails()?.studentEkycStatus === 'verified') {
+                          <span class="material-icons-round" style="font-size:20px; color:var(--success);" title="Đã định danh eKYC">verified</span>
+                        }
+                      </h4>
+                      <p style="color: var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                        <span class="material-icons-round" style="font-size: 16px;">school</span>
+                        {{ selectedStudentDetails()?.studentUniversity || 'Chưa cập nhật trường' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Contact Info (Logic Lựa chọn 2) -->
+                  <div style="background: rgba(var(--primary-rgb), 0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(var(--primary-rgb), 0.1);">
+                    <h5 style="font-weight: 600; margin-bottom: 12px; color: var(--text-primary); display:flex; align-items:center; gap:6px;">
+                      <span class="material-icons-round" style="font-size:18px;">contacts</span>
+                      Thông tin liên lạc
+                    </h5>
+                    
+                    @if (selectedStudentDetails()?.status == 2 || selectedStudentDetails()?.status === 'Accepted' || selectedStudentDetails()?.status === 'accepted' ||
+                         selectedStudentDetails()?.status == 1 || selectedStudentDetails()?.status === 'Interviewing' || selectedStudentDetails()?.status === 'interviewing' ||
+                         selectedStudentDetails()?.status == 5 || selectedStudentDetails()?.status === 'Completed' || selectedStudentDetails()?.status === 'completed') {
+                      <div style="display:flex; flex-direction: column; gap: 12px;">
+                        <div style="display:flex; align-items:center; gap: 12px; color: var(--text-secondary);">
+                          <span class="material-icons-round" style="font-size: 20px; color: var(--primary-light);">email</span>
+                          <span>{{ selectedStudentDetails()?.studentEmail || 'Chưa cập nhật' }}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap: 12px; color: var(--text-secondary);">
+                          <span class="material-icons-round" style="font-size: 20px; color: var(--success);">phone</span>
+                          <span>{{ selectedStudentDetails()?.studentPhone || 'Chưa cập nhật' }}</span>
+                        </div>
+                      </div>
+                    } @else {
+                      <div style="padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; color: var(--warning); display:flex; align-items:center; gap: 8px; font-size: 0.9rem;">
+                        <span class="material-icons-round">lock</span>
+                        Thông tin liên lạc được bảo mật. Vui lòng Giao việc để xem thông tin này.
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Academic & Bio -->
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                      <span style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">Chuyên ngành</span>
+                      <span style="font-weight: 500;">{{ selectedStudentDetails()?.studentMajor || 'Chưa cập nhật' }}</span>
+                    </div>
+                    <div>
+                      <span style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">Năm học</span>
+                      <span style="font-weight: 500;">
+                        Năm {{ selectedStudentDetails()?.studentYear || '?' }} 
+                      </span>
+                    </div>
+                    <!-- Reliability score hidden by user request -->
+                    <div>
+                      <span style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">Kỹ năng</span>
+                      <div style="display:flex; flex-wrap:wrap; gap: 4px;">
+                        @for (skill of selectedStudentDetails()?.studentSkills; track skill) {
+                          <span style="font-size:0.75rem; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px;">{{ skill }}</span>
+                        } @empty {
+                          <span style="color:var(--text-muted); font-size:0.9rem;">Chưa cập nhật</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bio -->
+                  @if (selectedStudentDetails()?.studentBio) {
+                    <div>
+                      <span style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">Giới thiệu bản thân</span>
+                      <div style="padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; font-size: 0.95rem; line-height: 1.5; color: var(--text-secondary);">
+                        {{ selectedStudentDetails()?.studentBio }}
+                      </div>
                     </div>
                   }
                 </div>
@@ -2362,6 +2468,12 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
 
   appToApprove = signal<any | null>(null);
   appToDispute = signal<any | null>(null);
+
+  selectedStudentDetails = signal<any | null>(null);
+
+  viewStudentDetails(app: any) {
+    this.selectedStudentDetails.set(app);
+  }
 
   generateAppOtp(app: any, type: 'checkin' | 'checkout') {
     this.jobService.generateApplicationOtp(app.id, type).subscribe({
