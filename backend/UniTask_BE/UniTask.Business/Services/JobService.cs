@@ -221,6 +221,7 @@ namespace UniTask.Business.Services
                 HeadCount = dto.HeadCount,
                 WorkStartTime = dto.WorkStartTime,
                 WorkEndTime = dto.WorkEndTime,
+                WorkDate = dto.WorkDate,
                 WorkDays = dto.WorkDays,
                 Status = DataAcesss.Entities.Enums.JobStatus.Open,
                 Tags = dto.Tags.Select(t => new JobTag { TagName = t }).ToList(),
@@ -324,6 +325,7 @@ namespace UniTask.Business.Services
             
             job.WorkStartTime = dto.WorkStartTime;
             job.WorkEndTime = dto.WorkEndTime;
+            job.WorkDate = dto.WorkDate;
             job.WorkDays = dto.WorkDays;
             job.Budget = dto.Budget;
             job.Commission = dto.Commission;
@@ -603,6 +605,7 @@ namespace UniTask.Business.Services
                 IsCompanyPremium = isCompanyPremium,
                 WorkStartTime = j.WorkStartTime,
                 WorkEndTime = j.WorkEndTime,
+                WorkDate = j.WorkDate,
                 WorkDays = j.WorkDays,
                 EmployerType = j.Employer?.EmployerProfile != null ? (int)j.Employer.EmployerProfile.Type : 0,
                 Tags = j.Tags?.Select(t => t.TagName).ToList() ?? new List<string>(),

@@ -12,19 +12,19 @@ export interface Toast {
 export class ToastService {
   toasts = signal<Toast[]>([]);
 
-  show(message: string, type: ToastType = 'info') {
+  show(message: string, type: ToastType = 'info', duration: number = 3000) {
     const id = Math.random().toString(36).substring(2, 9);
     this.toasts.update(current => [...current, { id, message, type }]);
 
     setTimeout(() => {
       this.remove(id);
-    }, 3000);
+    }, duration);
   }
 
-  success(message: string) { this.show(message, 'success'); }
-  error(message: string) { this.show(message, 'error'); }
-  warning(message: string) { this.show(message, 'warning'); }
-  info(message: string) { this.show(message, 'info'); }
+  success(message: string, duration?: number) { this.show(message, 'success', duration); }
+  error(message: string, duration?: number) { this.show(message, 'error', duration); }
+  warning(message: string, duration?: number) { this.show(message, 'warning', duration); }
+  info(message: string, duration?: number) { this.show(message, 'info', duration); }
 
   remove(id: string) {
     this.toasts.update(current => current.filter(t => t.id !== id));

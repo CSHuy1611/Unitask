@@ -47,6 +47,8 @@ namespace UniTask.DataAcesss.Entities
         public TimeSpan? WorkStartTime { get; set; }
         public TimeSpan? WorkEndTime { get; set; }
         
+        public DateTime? WorkDate { get; set; }
+        
         [MaxLength(100)]
         public string? WorkDays { get; set; }
         

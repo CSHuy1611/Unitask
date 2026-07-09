@@ -578,9 +578,12 @@ import Tesseract from 'tesseract.js';
                               <a [routerLink]="['/jobs', job.id]" style="text-decoration:none; color:inherit">
                                 <div class="job-title">{{ job.title }}</div>
                               </a>
-                              <div class="job-meta">
+                              <div class="job-meta" style="display: flex; gap: 12px; flex-wrap: wrap;">
                                 <span><i class="material-icons-round" style="font-size:14px">business</i> {{ job.company }}</span>
                                 <span style="color:var(--success)"><i class="material-icons-round" style="font-size:14px">payments</i> {{ job.budget?.toLocaleString('vi-VN') }}đ</span>
+                                @if (job.workStartTime && job.workEndTime) {
+                                  <span style="color:var(--primary-light)"><i class="material-icons-round" style="font-size:14px">access_time</i> {{ formatAmPm(job.workStartTime) }} - {{ formatAmPm(job.workEndTime) }}@if(job.workDate) { ({{ job.workDate | date:'dd/MM/yyyy' }}) }</span>
+                                }
                               </div>
                             </div>
                             @let myApp = getMyApplicationForJob(job.id);
@@ -599,7 +602,7 @@ import Tesseract from 'tesseract.js';
                                 <span class="badge badge-warning">Đang thực hiện</span>
                               }
                             } @else if (job.status === 'pending_confirmation') {
-                              <span class="badge badge-primary">Chờ NTD nghiệm thu</span>
+                              <span class="badge badge-warning">Đang thực hiện</span>
                             } @else if (job.status === 'completed') {
                               <span class="badge badge-success" style="display: flex; align-items: center; gap: 4px;"><i class="material-icons-round" style="font-size:14px">paid</i> Đã nhận lương</span>
                             } @else if (job.status === 'disputed') {
@@ -615,15 +618,7 @@ import Tesseract from 'tesseract.js';
                               </p>
                             </div>
                           }
-                          <!-- Info box when waiting for confirmation -->
-                          @if (job.status === 'pending_confirmation') {
-                            <div style="margin-top: 8px; padding: 10px 14px; background: rgba(59, 130, 246, 0.06); border: 1px dashed rgba(59, 130, 246, 0.25); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: 8px;">
-                              <span class="material-icons-round" style="font-size:18px; color:var(--primary); flex-shrink:0; margin-top:1px">info</span>
-                              <p style="margin:0; font-size:13px; color: var(--text-secondary); line-height:1.5">
-                                Hệ thống sẽ <strong style="color:var(--primary)">tự động nghiệm thu và cộng tiền</strong> vào ví của bạn sau 24h kể từ lúc check-out nếu Nhà tuyển dụng không phản hồi.
-                              </p>
-                            </div>
-                          }
+
                           <!-- Student Application Status for the Job -->
                           @if (job.status === 'in_progress' && myApp) {
                             <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; flex-wrap: wrap;">
@@ -634,13 +629,22 @@ import Tesseract from 'tesseract.js';
                               } @else if (!myApp.checkOutTime) {
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                   <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
-                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ formatUtcTime(myApp.checkInTime) | date:'HH:mm' }})
+                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ formatUtcTime(myApp.checkInTime) | date:'HH:mm dd/MM/yyyy' }})
                                   </span>
                                   <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(myApp.id)">
                                     <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
                                   </button>
                                 </div>
                               }
+                            </div>
+                          }
+                          <!-- Info box when missed schedule -->
+                          @if (job.isMissedSchedule) {
+                            <div style="margin-top: 8px; padding: 10px 14px; background: rgba(239, 68, 68, 0.06); border: 1px dashed rgba(239, 68, 68, 0.25); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: 8px;">
+                              <span class="material-icons-round" style="font-size:18px; color:#EF4444; flex-shrink:0; margin-top:1px">warning</span>
+                              <p style="margin:0; font-size:13px; color: var(--text-secondary); line-height:1.5">
+                                ⚠️ <strong style="color:#EF4444">Bạn đã bỏ lỡ thời gian quy định!</strong> Hệ thống ghi nhận bạn chưa hoàn tất Check-in/Check-out. Vui lòng liên hệ Nhà tuyển dụng ngay lập tức!
+                              </p>
                             </div>
                           }
 
@@ -677,13 +681,30 @@ import Tesseract from 'tesseract.js';
                             @if (job.status === 'completed') {
                               <span class="badge badge-success" style="display: flex; align-items: center; gap: 4px;"><i class="material-icons-round" style="font-size:14px">paid</i> Đã nhận lương</span>
                             } @else if (job.status === 'pending_confirmation') {
-                              <span class="badge badge-primary" style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3);">Chờ NTD nghiệm thu</span>
+                              <span class="badge badge-success" style="display: flex; align-items: center; gap: 4px;"><i class="material-icons-round" style="font-size:14px">paid</i> Đã hoàn thành</span>
                             } @else if (job.status === 'disputed') {
                               <span class="badge badge-danger">Đang tranh chấp</span>
                             } @else if (job.status === 'closed') {
                               <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Chưa hoàn thành</span>
                             }
                           </div>
+                          
+                          @if (job.checkInTime || job.checkOutTime) {
+                            <div style="margin-top: 12px; padding: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg); font-size: 13px; display: flex; flex-direction: column; gap: 6px;">
+                              @if (job.checkInTime) {
+                                <div style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary);">
+                                  <span class="material-icons-round" style="font-size: 16px; color: var(--success);">login</span>
+                                  <strong>Check-in:</strong> {{ formatUtcTime(job.checkInTime) | date:'HH:mm dd/MM/yyyy' }}
+                                </div>
+                              }
+                              @if (job.checkOutTime) {
+                                <div style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary);">
+                                  <span class="material-icons-round" style="font-size: 16px; color: var(--warning);">logout</span>
+                                  <strong>Check-out:</strong> {{ formatUtcTime(job.checkOutTime) | date:'HH:mm dd/MM/yyyy' }}
+                                </div>
+                              }
+                            </div>
+                          }
 
                           @if (job.status === 'completed') {
                             <div class="job-actions" style="justify-content: flex-end;">
@@ -768,10 +789,12 @@ import Tesseract from 'tesseract.js';
                   @if (appliedJobs().length) {
                     <div class="job-list">
                       @for (job of appliedJobs(); track job.id) {
-                        <a [routerLink]="['/jobs', job.id]" class="job-card">
+                        <div class="job-card">
                           <div class="job-card-header">
                             <div>
-                              <div class="job-title">{{ job.title }}</div>
+                              <a [routerLink]="['/jobs', job.id]" style="text-decoration:none; color:inherit">
+                                <div class="job-title">{{ job.title }}</div>
+                              </a>
                               <div class="job-meta">
                                 <span><i class="material-icons-round" style="font-size:14px">business</i> {{ job.company }}</span>
                                 <span><i class="material-icons-round" style="font-size:14px">location_on</i> {{ job.location || 'Từ xa' }}</span>
@@ -789,7 +812,24 @@ import Tesseract from 'tesseract.js';
                               <span class="badge badge-success">Đã nộp</span>
                             }
                           </div>
-                        </a>
+                          @if (job.myAppStatus === 3 || job.myAppStatus === 'Rejected') {
+                            @if (job.rejectReason) {
+                              <div style="margin-top: 12px; padding: 12px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-secondary);">
+                                <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                                  <span class="material-icons-round" style="font-size: 16px;">info</span> Lý do từ chối:
+                                </strong>
+                                <p style="margin: 0; padding-left: 20px;">{{ job.rejectReason }}</p>
+                              </div>
+                            } @else {
+                              <div style="margin-top: 12px; padding: 12px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-secondary);">
+                                <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                                  <span class="material-icons-round" style="font-size: 16px;">info</span> Nhà tuyển dụng đã tìm được ứng viên phù hợp.
+                                </strong>
+                                <p style="margin: 0; padding-left: 20px;">Chúc bạn may mắn lần sau!</p>
+                              </div>
+                            }
+                          }
+                        </div>
                       }
                     </div>
                   } @else {
@@ -1744,6 +1784,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return new Date(timeStr.endsWith('Z') ? timeStr : timeStr + 'Z');
   }
 
+  formatAmPm(timeString: string): string {
+    if (!timeString) return '';
+    const [h, m] = timeString.split(':');
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'CH' : 'SA';
+    hour = hour % 12;
+    hour = hour ? hour : 12; // the hour '0' should be '12'
+    return `${hour.toString().padStart(2, '0')}:${m} ${ampm}`;
+  }
+
   selectedJobToReport = signal<Job | null>(null);
   reportReason = signal('');
   reportEvidenceUrl = signal('');
@@ -1787,11 +1837,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .filter(app => app.status === 2 || app.status === 'Accepted' || app.status === 'accepted')
       .map(app => app.jobId);
 
+    const historyAppJobIds = this.myApplications()
+      .filter(app => app.status === 5 || app.status === 'Completed' || app.status === 'completed')
+      .map(app => app.jobId);
+
     return this.jobService.getAllJobs().filter(j =>
       (j.selectedStudentId === user.id ||
         (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
         acceptedJobIds.includes(j.id)) &&
-      (j.status === 'open' || j.status === 'in_progress' || j.status === 'pending_confirmation')
+      (j.status === 'open' || j.status === 'in_progress' || j.status === 'pending_confirmation') &&
+      !historyAppJobIds.includes(j.id)
     ).filter(j => {
       // Only include 'open' jobs if my application is Accepted for that job
       if (j.status === 'open') {
@@ -1800,10 +1855,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return true;
     }).map(j => {
       const myApp = this.myApplications().find(app => app.jobId === j.id);
+      
+      let isMissedSchedule = false;
+      if (j.status === 'in_progress' && j.workDate && j.workEndTime && (!myApp?.checkInTime || !myApp?.checkOutTime)) {
+        try {
+          const workDateStr = j.workDate.split('T')[0];
+          const endDateTimeStr = `${workDateStr}T${j.workEndTime}`;
+          const endDateTime = new Date(endDateTimeStr);
+          if (endDateTime.getTime() < Date.now()) {
+            isMissedSchedule = true;
+          }
+        } catch (e) {}
+      }
+      
       return {
         ...j,
         checkInTime: myApp?.checkInTime ? (myApp.checkInTime.endsWith('Z') ? myApp.checkInTime : myApp.checkInTime + 'Z') : undefined,
-        checkOutTime: myApp?.checkOutTime ? (myApp.checkOutTime.endsWith('Z') ? myApp.checkOutTime : myApp.checkOutTime + 'Z') : undefined
+        checkOutTime: myApp?.checkOutTime ? (myApp.checkOutTime.endsWith('Z') ? myApp.checkOutTime : myApp.checkOutTime + 'Z') : undefined,
+        isMissedSchedule
       };
     });
   });
@@ -1849,7 +1918,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const myApp = appliedApps.find(app => app.jobId === j.id);
       return {
         ...j,
-        myAppStatus: myApp?.status
+        myAppStatus: myApp?.status,
+        rejectReason: myApp?.rejectReason
       };
     });
   });
@@ -1906,7 +1976,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.signalRService.applicationApprovedOccurred$.subscribe(jobId => {
           const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
           if (hasMyApplication) {
-            this.toast.success('Nhà tuyển dụng vừa Nghiệm thu thành công! Bạn đã nhận được lương vào Ví.');
+            this.toast.success('🎉 Check-out thành công! Tiền công đã được gửi vào ví của bạn. Cảm ơn bạn đã hoàn thành công việc!', 8000);
             this.refreshStudentApplications();
             this.jobService.fetchJobs();
             this.auth.fetchBalance().subscribe();
@@ -2217,7 +2287,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.jobService.studentCheckOutApplication(appId, this.otpInput).subscribe({
       next: (res) => {
         if (res.success) {
-          this.toast.success(res.message);
+          // Xóa dòng hiển thị thông báo "Check-out thành công" từ API,
+          // vì SignalR (applicationApprovedOccurred) sẽ gộp chung và thông báo chi tiết hơn.
           this.showCheckOutModal.set(false);
           this.refreshStudentApplications();
         } else {

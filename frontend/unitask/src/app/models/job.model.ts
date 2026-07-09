@@ -23,6 +23,7 @@ export interface Job {
   
   workStartTime?: string;
   workEndTime?: string;
+  workDate?: string;
   workDays?: string;
   employerType?: number;
   
@@ -48,4 +49,9 @@ export interface Job {
   checkInTime?: string;
   checkOutTime?: string;
   isAppliedByCurrentUser?: boolean;
+  
+  // UI extended fields
+  isMissedSchedule?: boolean;
+  rejectReason?: string;
+  myAppStatus?: any;
 }

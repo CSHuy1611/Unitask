@@ -170,16 +170,19 @@ import { Subscription } from 'rxjs';
                   <!-- Work Schedule Fields -->
                   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px;">
                     <div class="form-group" style="margin: 0;">
-                      <label class="form-label">Giờ bắt đầu (VD: 08:00)</label>
-                      <input type="time" class="form-input" [(ngModel)]="formData.workStartTime" name="workStartTime">
+                      <label class="form-label">Giờ bắt đầu (VD: 08:00) <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
+                      <input type="time" lang="en-US" class="form-input" [(ngModel)]="formData.workStartTime" name="workStartTime">
+                      @if (formErrors['workStartTime']) { <span class="error-text">{{ formErrors['workStartTime'] }}</span> }
                     </div>
                     <div class="form-group" style="margin: 0;">
-                      <label class="form-label">Giờ kết thúc (VD: 17:00)</label>
-                      <input type="time" class="form-input" [(ngModel)]="formData.workEndTime" name="workEndTime">
+                      <label class="form-label">Giờ kết thúc (VD: 17:00) <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
+                      <input type="time" lang="en-US" class="form-input" [(ngModel)]="formData.workEndTime" name="workEndTime">
+                      @if (formErrors['workEndTime']) { <span class="error-text">{{ formErrors['workEndTime'] }}</span> }
                     </div>
                     <div class="form-group" style="margin: 0;">
-                      <label class="form-label">Ngày làm việc</label>
-                      <input type="text" class="form-input" placeholder="VD: Thứ 2 - Thứ 6" [(ngModel)]="formData.workDays" name="workDays">
+                      <label class="form-label">Ngày làm việc <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
+                      <input type="date" class="form-input" [(ngModel)]="formData.workDate" name="workDate">
+                      @if (formErrors['workDate']) { <span class="error-text">{{ formErrors['workDate'] }}</span> }
                     </div>
                   </div>
                 </div>
@@ -415,7 +418,7 @@ import { Subscription } from 'rxjs';
                         <span>💰 {{ job.salary }}</span>
                         <span>⏱️ {{ job.type }}</span>
                         @if (job.workStartTime && job.workEndTime) {
-                          <span style="color: var(--primary-light);">⏰ {{ job.workStartTime }} - {{ job.workEndTime }} ({{ job.workDays }})</span>
+                          <span style="color: var(--primary-light);">⏰ {{ formatAmPm(job.workStartTime) }} - {{ formatAmPm(job.workEndTime) }}@if(job.workDate) { ({{ job.workDate | date:'dd/MM/yyyy' }}) }</span>
                         }
                         <span>📅 Hạn: {{ job.deadline }}</span>
                       </div>
@@ -757,16 +760,6 @@ import { Subscription } from 'rxjs';
                                 Check-out
                               </button>
                             </div>
-                                                        <!-- Approve -->
-                            <button (click)="appToApprove.set(app)"
-                                    [disabled]="!app.checkInTime || !app.checkOutTime"
-                                    [style.opacity]="(!app.checkInTime || !app.checkOutTime) ? '0.5' : '1'"
-                                    [style.cursor]="(!app.checkInTime || !app.checkOutTime) ? 'not-allowed' : 'pointer'"
-                                    [title]="(!app.checkInTime || !app.checkOutTime) ? 'Sinh viên cần hoàn thành Check-in và Check-out trước khi nghiệm thu' : ''"
-                                    style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background: white; color: #111; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                              <span class="material-icons-round" style="font-size: 20px;">verified</span>
-                              Nghiệm thu công việc
-                            </button>
                             <!-- Report violation -->
                             <button (click)="appToDispute.set(app)"
                                     style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; background: transparent; color: #EF4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
@@ -1754,7 +1747,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       headCount: 1,
       workStartTime: '',
       workEndTime: '',
-      workDays: '',
+      workDate: '',
       salaryPerPerson: null as number | null,
       budget: null as number | null,
       description: '',
@@ -1792,22 +1785,18 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       case 'Thực tập':
         this.formData.workStartTime = '08:00';
         this.formData.workEndTime = '17:00';
-        this.formData.workDays = 'Thứ 2 - Thứ 6';
         break;
       case 'Part-time':
         this.formData.workStartTime = '08:00';
         this.formData.workEndTime = '12:00';
-        this.formData.workDays = 'Thứ 2 - Thứ 6';
         break;
       case 'Full-time':
         this.formData.workStartTime = '08:00';
         this.formData.workEndTime = '17:30';
-        this.formData.workDays = 'Thứ 2 - Thứ 6';
         break;
       case 'Freelance':
         this.formData.workStartTime = '';
         this.formData.workEndTime = '';
-        this.formData.workDays = '';
         break;
     }
   }
@@ -1854,7 +1843,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       isUrgent: job.isUrgent || false,
       workStartTime: job.workStartTime || '',
       workEndTime: job.workEndTime || '',
-      workDays: job.workDays || '',
+      workDate: job.workDate ? job.workDate.substring(0, 10) : '',
     };
     this.postMessage.set('');
     this.showPostForm.set(true);
@@ -1889,13 +1878,82 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     if (!this.formData.deadline) { this.formErrors['deadline'] = 'Vui lòng chọn hạn nộp hồ sơ.'; hasError = true; }
     if (!this.formData.headCount || this.formData.headCount < 1) { this.formErrors['headCount'] = 'Số lượng tuyển phải từ 1 trở lên.'; hasError = true; }
     
+    const parseLocalDate = (dateStr: string) => {
+      const [y, m, d] = dateStr.split('-');
+      return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+    };
+
     if (this.formData.deadline) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const deadlineDate = new Date(this.formData.deadline);
+      const deadlineDate = parseLocalDate(this.formData.deadline);
       if (deadlineDate < today) {
         this.formErrors['deadline'] = 'Hạn nộp hồ sơ không được ở trong quá khứ.';
         hasError = true;
+      }
+    }
+
+    const isFreelance = this.formData.type === 'Freelance';
+
+    if (!this.formData.workDate) {
+      if (!isFreelance) {
+        this.formErrors['workDate'] = 'Vui lòng chọn ngày làm việc.';
+        hasError = true;
+      }
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const workDate = parseLocalDate(this.formData.workDate);
+      
+      if (workDate < today) {
+        this.formErrors['workDate'] = 'Ngày làm việc không được ở trong quá khứ.';
+        hasError = true;
+      }
+
+      if (this.formData.deadline) {
+        const deadlineDate = parseLocalDate(this.formData.deadline);
+        if (deadlineDate > workDate) {
+          this.formErrors['deadline'] = 'Hạn nộp hồ sơ không được vượt quá ngày làm việc.';
+          hasError = true;
+        }
+      }
+    }
+
+    if (!this.formData.workStartTime) {
+      if (!isFreelance) {
+        this.formErrors['workStartTime'] = 'Vui lòng nhập giờ bắt đầu.';
+        hasError = true;
+      }
+    }
+    
+    if (!this.formData.workEndTime) {
+      if (!isFreelance) {
+        this.formErrors['workEndTime'] = 'Vui lòng nhập giờ kết thúc.';
+        hasError = true;
+      }
+    }
+
+    if (this.formData.workStartTime && this.formData.workEndTime) {
+      if (this.formData.workStartTime >= this.formData.workEndTime) {
+        this.formErrors['workEndTime'] = 'Giờ kết thúc phải lớn hơn giờ bắt đầu.';
+        hasError = true;
+      }
+      
+      if (this.formData.workDate) {
+        const today = new Date();
+        const workDate = parseLocalDate(this.formData.workDate);
+        if (workDate.toDateString() === today.toDateString()) {
+          const nowHour = today.getHours();
+          const nowMinute = today.getMinutes();
+          const startParts = this.formData.workStartTime.split(':');
+          const startHour = parseInt(startParts[0], 10);
+          const startMinute = parseInt(startParts[1], 10);
+          
+          if (startHour < nowHour || (startHour === nowHour && startMinute < nowMinute)) {
+            this.formErrors['workStartTime'] = 'Giờ bắt đầu không được trong quá khứ so với hiện tại.';
+            hasError = true;
+          }
+        }
       }
     }
 
@@ -1964,7 +2022,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         headCount: this.formData.headCount || 1,
         workStartTime: this.formData.workStartTime,
         workEndTime: this.formData.workEndTime,
-        workDays: this.formData.workDays,
+        workDate: this.formData.workDate,
       } as any).subscribe({
         next: (result) => {
           this.postSuccess.set(result.success);
@@ -2051,7 +2109,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         isUrgent: this.formData.isUrgent,
         workStartTime: this.formData.workStartTime,
         workEndTime: this.formData.workEndTime,
-        workDays: this.formData.workDays,
+        workDate: this.formData.workDate,
       } as any).subscribe({
         next: (result) => {
           this.postSuccess.set(result.success);
@@ -2127,41 +2185,59 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  private signalRService = inject(SignalRService);
+
   private connectSignalR() {
-    const hubUrl = API_BASE_URL.endsWith('/api')
-      ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) + '/hub/dashboard'
-      : '/hub/dashboard';
-
-    this.hubConnection = new HubConnectionBuilder()
-      .withUrl(hubUrl)
-      .withAutomaticReconnect()
-      .build();
-
-    this.hubConnection.on('CheckInSuccess', (appId: number) => {
-      console.log('[SignalR] CheckInSuccess received for appId:', appId);
-      if (this.waitingOtpAppId === appId && this.otpType() === 'checkin') {
-        this.handleOtpSuccess('checkin');
+    this.signalRService.applicationCheckInOccurred$.subscribe(jobId => {
+      // Vì logic cũ sử dụng CheckInSuccess(appId), nhưng backend giờ bắn appId không rõ,
+      // tuy nhiên jobService.fetchJobs() và viewApplicants() đã đủ để update UI.
+      // Ẩn OTP popup nếu đang mở cho job này:
+      if (this.selectedJobForApplicants()?.id === jobId) {
+         if (this.otpType() === 'checkin') {
+           this.handleOtpSuccess('checkin');
+         } else {
+           this.viewApplicants(this.selectedJobForApplicants()!);
+         }
       }
+      this.jobService.fetchJobs();
     });
 
-    this.hubConnection.on('CheckOutSuccess', (appId: number) => {
-      console.log('[SignalR] CheckOutSuccess received for appId:', appId);
-      if (this.waitingOtpAppId === appId && this.otpType() === 'checkout') {
-        this.handleOtpSuccess('checkout');
+    this.signalRService.applicationCheckOutOccurred$.subscribe(jobId => {
+      if (this.selectedJobForApplicants()?.id === jobId) {
+         if (this.otpType() === 'checkout') {
+           this.handleOtpSuccess('checkout');
+         } else {
+           this.viewApplicants(this.selectedJobForApplicants()!);
+         }
       }
+      this.jobService.fetchJobs();
     });
 
-    this.hubConnection.on('JobApplicationAdded', (jobId: number) => {
-      console.log('[SignalR] JobApplicationAdded received for jobId:', jobId);
+    // Thêm listener riêng lẻ nếu employer có Hub event riêng,
+    // Hiện tại employer chỉ cần reload khi status thay đổi hoặc checkin/out.
+    this.signalRService.applicationStatusChanged$.subscribe(jobId => {
       const belongsToEmployer = this.employerJobs().some(j => j.id === jobId);
       if (belongsToEmployer) {
         this.jobService.fetchJobs();
+        if (this.selectedJobForApplicants()?.id === jobId) {
+          this.viewApplicants(this.selectedJobForApplicants()!);
+        }
       }
     });
 
-    this.hubConnection.start()
-      .then(() => console.log('Employer SignalR connection established successfully.'))
-      .catch((err) => console.error('Error starting SignalR connection:', err));
+    this.signalRService.jobApplicationAdded$.subscribe(jobId => {
+      const belongsToEmployer = this.employerJobs().some(j => j.id === jobId);
+      if (belongsToEmployer) {
+        this.jobService.fetchJobs();
+        if (this.selectedJobForApplicants()?.id === jobId) {
+          this.viewApplicants(this.selectedJobForApplicants()!);
+        }
+      }
+    });
+
+    this.signalRService.jobCreated$.subscribe(() => {
+      // nothing for employer
+    });
   }
 
   handleOtpSuccess(type: 'checkin' | 'checkout') {
@@ -2332,6 +2408,16 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         this.isToppingUp.set(false);
       }
     });
+  }
+
+  formatAmPm(timeStr: string): string {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour ? hour : 12;
+    return `${hour}:${m} ${ampm}`;
   }
 }
 

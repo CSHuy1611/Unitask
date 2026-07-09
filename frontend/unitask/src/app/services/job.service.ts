@@ -159,7 +159,10 @@ export class JobService {
       tags: Array.isArray(job.tags) ? job.tags : [],
       isRemote: job.isRemote,
       isUrgent: job.isUrgent,
-      headCount: job.headCount
+      headCount: job.headCount,
+      workStartTime: job.workStartTime ? (job.workStartTime.length === 5 ? job.workStartTime + ':00' : job.workStartTime) : null,
+      workEndTime: job.workEndTime ? (job.workEndTime.length === 5 ? job.workEndTime + ':00' : job.workEndTime) : null,
+      workDate: job.workDate || null
     };
 
     return this.http.post<any>(`${API_BASE_URL}/job`, payload).pipe(
@@ -199,7 +202,10 @@ export class JobService {
       tags: Array.isArray(data.tags) ? data.tags : [],
       isRemote: data.isRemote,
       isUrgent: data.isUrgent,
-      headCount: data.headCount
+      headCount: data.headCount,
+      workStartTime: data.workStartTime ? (data.workStartTime.length === 5 ? data.workStartTime + ':00' : data.workStartTime) : null,
+      workEndTime: data.workEndTime ? (data.workEndTime.length === 5 ? data.workEndTime + ':00' : data.workEndTime) : null,
+      workDate: data.workDate || null
     };
 
     return this.http.put<any>(`${API_BASE_URL}/job/${id}`, payload).pipe(

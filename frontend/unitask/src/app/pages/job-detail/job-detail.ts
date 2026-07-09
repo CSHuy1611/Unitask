@@ -7,11 +7,12 @@ import { AuthService } from '../../services/auth.service';
 import { CompanyService } from '../../services/company.service';
 import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-job-detail',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule],
   template: `
     @if (job()) {
       <section class="detail-page">
@@ -56,7 +57,7 @@ import { Job } from '../../models/job.model';
                       @if (job()!.workStartTime && job()!.workEndTime) {
                         <span class="meta-item" style="color: var(--primary-light);">
                           <span class="material-icons-round">access_time</span>
-                          {{ job()!.workStartTime }} - {{ job()!.workEndTime }} ({{ job()!.workDays }})
+                          {{ formatAmPm(job()!.workStartTime!) }} - {{ formatAmPm(job()!.workEndTime!) }}@if(job()!.workDate) { ({{ job()!.workDate | date:'dd/MM/yyyy' }}) }
                         </span>
                       }
                     </div>
@@ -167,6 +168,24 @@ import { Job } from '../../models/job.model';
                       <span class="info-value">{{ job()!.deadline }}</span>
                     </div>
                   </div>
+                  @if (job()!.workStartTime && job()!.workEndTime) {
+                    <div class="info-item">
+                      <span class="material-icons-round">schedule</span>
+                      <div>
+                        <span class="info-label">Ca làm việc</span>
+                        <span class="info-value">{{ formatAmPm(job()!.workStartTime!) }} - {{ formatAmPm(job()!.workEndTime!) }}</span>
+                      </div>
+                    </div>
+                  }
+                  @if (job()!.workDate) {
+                    <div class="info-item">
+                      <span class="material-icons-round">event_available</span>
+                      <div>
+                        <span class="info-label">Ngày làm việc</span>
+                        <span class="info-value">{{ job()!.workDate | date:'dd/MM/yyyy' }}</span>
+                      </div>
+                    </div>
+                  }
                   <div class="info-item">
                     <span class="material-icons-round">visibility</span>
                     <div>
@@ -624,5 +643,15 @@ export class JobDetailComponent implements OnInit {
     } else {
       this.router.navigate(['/jobs']);
     }
+  }
+
+  formatAmPm(timeStr: string): string {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour ? hour : 12;
+    return `${hour}:${m} ${ampm}`;
   }
 }

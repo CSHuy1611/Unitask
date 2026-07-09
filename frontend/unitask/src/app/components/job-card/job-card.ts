@@ -1,5 +1,6 @@
 import { Component, input, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { DatePipe } from '@angular/common';
 import { Job } from '../../models/job.model';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
@@ -8,7 +9,7 @@ import { ToastService } from '../../services/toast.service';
 @Component({
   selector: 'app-job-card',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, DatePipe],
   template: `
     <a [routerLink]="['/jobs', job().id]" class="job-card glass-card" [class.premium-card]="job().isCompanyPremium">
       <div class="card-header">
@@ -50,7 +51,10 @@ import { ToastService } from '../../services/toast.service';
         @if (job().workStartTime && job().workEndTime) {
           <span class="info-item" style="color: var(--primary-light);">
             <span class="material-icons-round">access_time</span>
-            {{ job().workStartTime }} - {{ job().workEndTime }}
+            {{ formatAmPm(job().workStartTime!) }} - {{ formatAmPm(job().workEndTime!) }}
+            @if (job().workDate) {
+              ({{ job().workDate | date:'dd/MM/yyyy' }})
+            }
           </span>
         }
         @if (job().isRemote) {
@@ -280,11 +284,23 @@ export class JobCardComponent {
   getTimeAgo(): string {
     const now = new Date();
     const posted = new Date(this.job().postedDate);
-    const diffDays = Math.floor((now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return 'Hôm nay';
-    if (diffDays === 1) return 'Hôm qua';
-    if (diffDays < 7) return `${diffDays} ngày trước`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`;
-    return `${Math.floor(diffDays / 30)} tháng trước`;
+    const diffInMs = now.getTime() - posted.getTime();
+    const minutes = Math.floor(diffInMs / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    return days > 0 ? `${days} ngày trước` : 
+           hours > 0 ? `${hours} giờ trước` : 
+           minutes > 0 ? `${minutes} phút trước` : 'Vừa xong';
+  }
+
+  formatAmPm(timeStr: string): string {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour ? hour : 12;
+    return `${hour}:${m} ${ampm}`;
   }
 }

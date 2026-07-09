@@ -26,6 +26,7 @@ namespace UniTask.Business.DTOs.Job
 
         public TimeSpan? WorkStartTime { get; set; }
         public TimeSpan? WorkEndTime { get; set; }
+        public DateTime? WorkDate { get; set; }
         public string? WorkDays { get; set; }
 
         public List<string> Tags { get; set; } = new();
