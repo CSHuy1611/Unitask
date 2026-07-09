@@ -146,10 +146,10 @@ import Tesseract from 'tesseract.js';
                 </div>
               }
 
-              @if (auth.currentUser()?.employerType === 1) {
+              @if (auth.currentUser()?.employerType === 1 || (auth.currentUser()?.employerType === 0 && !auth.currentUser()?.isBusinessLicenseVerified)) {
                 <button class="btn btn-warning full-width" style="margin-top:var(--space-5); background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; font-weight: 600;" (click)="showUpgradeModal.set(true)">
                   <span class="material-icons-round" style="font-size:18px">upgrade</span>
-                  Nâng cấp Doanh nghiệp
+                  {{ auth.currentUser()?.employerType === 1 ? 'Nâng cấp Doanh nghiệp' : 'Xác thực lại GPKD' }}
                 </button>
               }
               <button class="btn btn-secondary full-width" [style.marginTop]="auth.currentUser()?.employerType === 1 ? 'var(--space-3)' : 'var(--space-5)'" (click)="toggleEditMode()">
@@ -255,6 +255,18 @@ import Tesseract from 'tesseract.js';
                           <label class="form-label">Quy mô</label>
                           <input type="text" class="form-input" [(ngModel)]="editForm.companySize" name="companySize" placeholder="VD: 5-10 nhân viên, Cá nhân">
                         </div>
+                        @if (editForm.employerType === 0) {
+                          <div class="form-group">
+                            <label class="form-label">Mã số thuế</label>
+                            <input type="text" class="form-input" [(ngModel)]="editForm.taxCode" name="taxCode" placeholder="VD: 0101234567">
+                            @if (isTaxCodeChanged()) {
+                              <span style="font-size: 11px; color: var(--warning); margin-top: 4px; display: block; font-weight: bold;">
+                                <span class="material-icons-round" style="font-size: 12px; vertical-align: middle; margin-right: 2px;">warning</span>
+                                Lưu ý: Thay đổi Mã số thuế sẽ yêu cầu bạn phải xác thực lại Giấy phép kinh doanh.
+                              </span>
+                            }
+                          </div>
+                        }
                       </div>
                       
                       <div class="form-row">
@@ -853,7 +865,7 @@ import Tesseract from 'tesseract.js';
         <div class="modal-overlay animate-fade-in">
           <div class="modal-content glass-card p-6" style="width: 100%; max-width: 500px;">
             <div class="modal-header d-flex justify-between items-center mb-4">
-              <h3 style="font-size:1.25rem; font-weight:700; color: var(--warning)">Nâng cấp Doanh nghiệp</h3>
+              <h3 style="font-size:1.25rem; font-weight:700; color: var(--warning)">{{ auth.currentUser()?.employerType === 1 ? 'Nâng cấp Doanh nghiệp' : 'Xác thực lại GPKD' }}</h3>
               <button class="btn btn-secondary icon-btn" (click)="showUpgradeModal.set(false)" [disabled]="upgradeUploading()">
                 <span class="material-icons-round">close</span>
               </button>
@@ -862,7 +874,7 @@ import Tesseract from 'tesseract.js';
             <div class="modal-body">
               <div class="alert alert-warning mb-4" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #b45309">
                 <span class="material-icons-round" style="color: #f59e0b">info</span>
-                Sau khi nâng cấp, bạn sẽ có thể mua các gói dịch vụ cao cấp và tuyển dụng không giới hạn.
+                {{ auth.currentUser()?.employerType === 1 ? 'Sau khi nâng cấp, bạn sẽ có thể mua các gói dịch vụ cao cấp và tuyển dụng không giới hạn.' : 'Vui lòng tải lên Giấy phép kinh doanh mới để xác thực lại Mã số thuế của bạn.' }}
               </div>
               
               @if (upgradeError()) {
@@ -913,7 +925,7 @@ import Tesseract from 'tesseract.js';
                     @if (upgradeUploading()) {
                       <span class="spinner" style="border-top-color: white"></span> Đang xử lý...
                     } @else {
-                      Xác nhận nâng cấp
+                      {{ auth.currentUser()?.employerType === 1 ? 'Xác nhận nâng cấp' : 'Gửi xác thực' }}
                     }
                   </button>
                 </div>
@@ -1960,6 +1972,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     taxCode: ''
   };
 
+  isTaxCodeChanged(): boolean {
+    return this.editForm.employerType === 0 && this.editForm.taxCode !== (this.auth.currentUser()?.taxCode || '');
+  }
+
   constructor() {
   }
 
@@ -2502,10 +2518,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       if (registeredTaxCode && cleanText.includes(registeredTaxCode)) {
         isVerified = true;
-        this.licenseUploadStatus.set('Hệ thống AI đã tìm thấy thông tin trùng khớp! Đang hoàn tất tải lên...');
+        this.licenseUploadStatus.set('Hệ thống đã tìm thấy thông tin trùng khớp! Đang hoàn tất tải lên...');
       } else {
         // Fallback: If AI fails to read the tax code due to blurry image, let it upload but keep unverified for manual review
-        this.licenseUploadStatus.set('Xác thực tự động không thành công do ảnh mờ hoặc thông tin không hợp lệ. Đang chuyển sang chờ xét duyệt thủ công...');
+        this.licenseUploadStatus.set('Xác thực tự động không thành công do ảnh mờ hoặc thông tin không hợp lệ. Vui lòng xác thực lại...');
       }
 
       // 2. Upload file
