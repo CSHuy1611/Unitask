@@ -584,6 +584,9 @@ import Tesseract from 'tesseract.js';
                                 @if (job.workStartTime && job.workEndTime) {
                                   <span style="color:var(--primary-light)"><i class="material-icons-round" style="font-size:14px">access_time</i> {{ formatAmPm(job.workStartTime) }} - {{ formatAmPm(job.workEndTime) }}@if(job.workDate) { ({{ job.workDate | date:'dd/MM/yyyy' }}) }</span>
                                 }
+                                @if (job.workDays) {
+                                  <span style="color:var(--warning)"><i class="material-icons-round" style="font-size:14px">calendar_month</i> {{ job.workDays }}</span>
+                                }
                               </div>
                             </div>
                             @let myApp = getMyApplicationForJob(job.id);

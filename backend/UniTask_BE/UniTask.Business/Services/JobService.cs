@@ -185,7 +185,18 @@ namespace UniTask.Business.Services
             var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
             var hasActivePackage = await _context.Subscriptions
                 .AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow);
-            decimal postingFee = hasActivePackage ? 0 : 2000;
+            
+            bool isFirstThreeHouseholdJobs = false;
+            if (profile.Type == UniTask.DataAcesss.Entities.Enums.EmployerType.SmallBusinessHousehold)
+            {
+                int totalJobsCreated = await _context.Jobs.CountAsync(j => j.EmployerId == employerId);
+                if (totalJobsCreated < 3)
+                {
+                    isFirstThreeHouseholdJobs = true;
+                }
+            }
+
+            decimal postingFee = (hasActivePackage || isFirstThreeHouseholdJobs) ? 0 : 2000;
             
             // Round all currency values to whole numbers (VND integers) to prevent float discrepancies
             var roundedBudget = Math.Round(dto.Budget, 0, MidpointRounding.AwayFromZero);
@@ -195,11 +206,17 @@ namespace UniTask.Business.Services
             
             if (wallet == null || wallet.Balance < totalCost)
             {
-                throw new InvalidOperationException("Insufficient wallet balance to create this job.");
+                throw new InvalidOperationException("Số dư ví không đủ để đăng công việc này. Vui lòng nạp thêm tiền.");
             }
 
             // Deduct from wallet
             wallet.Balance -= totalCost;
+
+            var jobTags = dto.Tags.Select(t => new JobTag { TagName = t }).ToList();
+            if (isFirstThreeHouseholdJobs)
+            {
+                jobTags.Add(new JobTag { TagName = "Miễn phí" });
+            }
 
             var job = new Job
             {
@@ -224,7 +241,7 @@ namespace UniTask.Business.Services
                 WorkDate = dto.WorkDate,
                 WorkDays = dto.WorkDays,
                 Status = DataAcesss.Entities.Enums.JobStatus.Open,
-                Tags = dto.Tags.Select(t => new JobTag { TagName = t }).ToList(),
+                Tags = jobTags,
                 Requirements = dto.Requirements.Select(r => new JobRequirement { Content = r }).ToList(),
                 Benefits = dto.Benefits.Select(b => new JobBenefit { Content = b }).ToList()
             };

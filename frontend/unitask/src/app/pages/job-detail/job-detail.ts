@@ -177,6 +177,15 @@ import { CommonModule } from '@angular/common';
                       </div>
                     </div>
                   }
+                  @if (job()!.workDays) {
+                    <div class="info-item">
+                      <span class="material-icons-round">calendar_month</span>
+                      <div>
+                        <span class="info-label">Lịch làm việc</span>
+                        <span class="info-value">{{ job()!.workDays }}</span>
+                      </div>
+                    </div>
+                  }
                   @if (job()!.workDate) {
                     <div class="info-item">
                       <span class="material-icons-round">event_available</span>

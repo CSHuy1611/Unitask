@@ -469,6 +469,9 @@ export class RegisterComponent implements OnDestroy {
       next: (result) => {
         this.loading.set(false);
         if (result.success) {
+          if (this.activeRole() === 'employer') {
+            localStorage.setItem('justRegisteredEmployer', 'true');
+          }
           this.successMsg.set(result.message);
           setTimeout(() => this.router.navigate(['/login']), 1500);
         } else {

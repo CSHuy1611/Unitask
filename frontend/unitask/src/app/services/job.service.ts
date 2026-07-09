@@ -113,7 +113,11 @@ export class JobService {
       checkInTime: dto.checkInTime,
       checkOutTime: dto.checkOutTime,
       isCompanyPremium: dto.isCompanyPremium || false,
-      isAppliedByCurrentUser: dto.isAppliedByCurrentUser || false
+      isAppliedByCurrentUser: dto.isAppliedByCurrentUser || false,
+      workStartTime: dto.workStartTime,
+      workEndTime: dto.workEndTime,
+      workDate: dto.workDate,
+      workDays: dto.workDays
     };
   }
 
@@ -162,7 +166,8 @@ export class JobService {
       headCount: job.headCount,
       workStartTime: job.workStartTime ? (job.workStartTime.length === 5 ? job.workStartTime + ':00' : job.workStartTime) : null,
       workEndTime: job.workEndTime ? (job.workEndTime.length === 5 ? job.workEndTime + ':00' : job.workEndTime) : null,
-      workDate: job.workDate || null
+      workDate: job.workDate || null,
+      workDays: job.workDays || null
     };
 
     return this.http.post<any>(`${API_BASE_URL}/job`, payload).pipe(
@@ -205,7 +210,8 @@ export class JobService {
       headCount: data.headCount,
       workStartTime: data.workStartTime ? (data.workStartTime.length === 5 ? data.workStartTime + ':00' : data.workStartTime) : null,
       workEndTime: data.workEndTime ? (data.workEndTime.length === 5 ? data.workEndTime + ':00' : data.workEndTime) : null,
-      workDate: data.workDate || null
+      workDate: data.workDate || null,
+      workDays: data.workDays || null
     };
 
     return this.http.put<any>(`${API_BASE_URL}/job/${id}`, payload).pipe(

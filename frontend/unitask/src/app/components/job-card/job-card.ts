@@ -57,6 +57,12 @@ import { ToastService } from '../../services/toast.service';
             }
           </span>
         }
+        @if (job().workDays) {
+          <span class="info-item" style="color: var(--warning);">
+            <span class="material-icons-round">calendar_month</span>
+            {{ job().workDays }}
+          </span>
+        }
         @if (job().isRemote) {
           <span class="info-item remote">
             <span class="material-icons-round">wifi</span>

@@ -14,7 +14,7 @@ namespace UniTask.DataAcesss.Entities
         [Key]
         public int Id { get; set; }
 
-        public EmployerType Type { get; set; } = EmployerType.Business;
+        public EmployerType Type { get; set; } = EmployerType.SmallBusinessHousehold;
 
         // FK to ApplicationUser
         [Required]
