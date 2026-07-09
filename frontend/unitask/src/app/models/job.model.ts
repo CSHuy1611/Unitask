@@ -49,6 +49,7 @@ export interface Job {
   checkInTime?: string;
   checkOutTime?: string;
   isAppliedByCurrentUser?: boolean;
+  isNew?: boolean;
   
   // UI extended fields
   isMissedSchedule?: boolean;

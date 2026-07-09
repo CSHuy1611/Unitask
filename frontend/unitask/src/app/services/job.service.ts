@@ -86,7 +86,7 @@ export class JobService {
       requirements: Array.isArray(dto.requirements) ? dto.requirements : (typeof dto.requirements === 'string' ? dto.requirements.split(/\r?\n|\\n/) : []),
       benefits: Array.isArray(dto.benefits) ? dto.benefits : (typeof dto.benefits === 'string' ? dto.benefits.split(/\r?\n|\\n/) : []),
       tags: typeof dto.tags === 'string' ? dto.tags.split(',') : (dto.tags || []),
-      postedDate: dto.postedDate || dto.createdAt || new Date().toISOString(),
+      postedDate: dto.postedDate ? (dto.postedDate.endsWith('Z') ? dto.postedDate : dto.postedDate + 'Z') : (dto.createdAt || new Date().toISOString()),
       deadline: dto.deadline ? dto.deadline.split('T')[0] : '',
       views: dto.views || 0,
       applications: dto.applicationsCount || 0,
@@ -113,7 +113,8 @@ export class JobService {
       checkInTime: dto.checkInTime,
       checkOutTime: dto.checkOutTime,
       isCompanyPremium: dto.isCompanyPremium || false,
-      isAppliedByCurrentUser: dto.isAppliedByCurrentUser || false
+      isAppliedByCurrentUser: dto.isAppliedByCurrentUser || false,
+      isNew: dto.isNew || false
     };
   }
 
