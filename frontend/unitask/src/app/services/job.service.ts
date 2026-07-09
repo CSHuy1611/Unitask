@@ -86,7 +86,7 @@ export class JobService {
       requirements: Array.isArray(dto.requirements) ? dto.requirements : (typeof dto.requirements === 'string' ? dto.requirements.split(/\r?\n|\\n/) : []),
       benefits: Array.isArray(dto.benefits) ? dto.benefits : (typeof dto.benefits === 'string' ? dto.benefits.split(/\r?\n|\\n/) : []),
       tags: typeof dto.tags === 'string' ? dto.tags.split(',') : (dto.tags || []),
-      postedDate: dto.createdAt ? dto.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+      postedDate: dto.postedDate || dto.createdAt || new Date().toISOString(),
       deadline: dto.deadline ? dto.deadline.split('T')[0] : '',
       views: dto.views || 0,
       applications: dto.applicationsCount || 0,
@@ -223,10 +223,15 @@ export class JobService {
     );
   }
 
-  // Phase 5: Escrow & Application Flow
   applyJob(jobId: number, coverLetter: string = ''): Observable<{ success: boolean; message: string }> {
     return this.http.post<any>(`${API_BASE_URL}/application/${jobId}`, { coverLetter }).pipe(
-      tap(() => this.fetchJobs()),
+      tap(() => {
+        // Optimistic UI update
+        const currentJobs = this.allJobsSignal();
+        const updatedJobs = currentJobs.map(j => j.id === jobId ? { ...j, isAppliedByCurrentUser: true } : j);
+        this.allJobsSignal.set(updatedJobs);
+        this.fetchJobs();
+      }),
       map(() => ({ success: true, message: 'Đã ứng tuyển thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Ứng tuyển thất bại. Bạn có thể đã ứng tuyển rồi.' }))
     );

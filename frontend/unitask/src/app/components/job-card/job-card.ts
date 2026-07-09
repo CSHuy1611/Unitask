@@ -30,7 +30,7 @@ import { ToastService } from '../../services/toast.service';
               </span>
             }
           </span>
-          <span class="posted-date">{{ getTimeAgo() }}</span>
+          <span class="posted-date">Đã đăng: {{ job().postedDate | date:'dd/MM/yyyy HH:mm' }}</span>
         </div>
         @if (job().isUrgent) {
           <span class="badge badge-danger urgent-badge">🔥 Urgent</span>
@@ -92,7 +92,7 @@ import { ToastService } from '../../services/toast.service';
               Đã đủ người
             </button>
           } @else {
-            <button class="btn btn-primary btn-sm" (click)="applyForJob($event)" [disabled]="hasApplied()">
+            <button [class]="hasApplied() ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'" (click)="applyForJob($event)" [disabled]="hasApplied()">
               {{ hasApplied() ? 'Đã ứng tuyển' : 'Ứng tuyển ngay' }}
             </button>
           }
@@ -228,8 +228,7 @@ export class JobCardComponent {
   toast = inject(ToastService);
 
   hasApplied() {
-    const user = this.auth.currentUser();
-    return user && this.job().applicants?.includes(user.id);
+    return this.job().isAppliedByCurrentUser || false;
   }
 
   applyForJob(event: Event) {
@@ -279,19 +278,6 @@ export class JobCardComponent {
       'linear-gradient(135deg, #D0021B, #EF4444)',
     ];
     return colors[(this.job().companyId - 1) % colors.length];
-  }
-
-  getTimeAgo(): string {
-    const now = new Date();
-    const posted = new Date(this.job().postedDate);
-    const diffInMs = now.getTime() - posted.getTime();
-    const minutes = Math.floor(diffInMs / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    return days > 0 ? `${days} ngày trước` : 
-           hours > 0 ? `${hours} giờ trước` : 
-           minutes > 0 ? `${minutes} phút trước` : 'Vừa xong';
   }
 
   formatAmPm(timeStr: string): string {

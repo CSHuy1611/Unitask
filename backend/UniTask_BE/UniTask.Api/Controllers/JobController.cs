@@ -21,7 +21,8 @@ namespace UniTask.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetJobs([FromQuery] JobFilterDto filter)
         {
-            var jobs = await _jobService.GetJobsAsync(filter);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var jobs = await _jobService.GetJobsAsync(filter, currentUserId);
             return Ok(jobs);
         }
 

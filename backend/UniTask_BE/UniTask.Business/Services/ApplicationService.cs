@@ -246,11 +246,13 @@ namespace UniTask.Business.Services
             application.CheckOutOtp = null; // Clear OTP
             
             await _context.SaveChangesAsync();
-            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", application.JobId);
-            await _hubContext.Clients.All.SendAsync("CheckOutSuccess", application.Id);
 
             // Auto-Approve Completion immediately
             await ApproveCompletionAsync(application.Id, application.Job.EmployerId);
+
+            // Broadcast AFTER both checkout and approval are saved in DB
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", application.JobId);
+            await _hubContext.Clients.All.SendAsync("CheckOutSuccess", application.Id);
 
             return true;
         }

@@ -43,6 +43,30 @@ export class App implements OnInit, OnDestroy {
     );
 
     this.subscriptions.add(
+      this.signalRService.applicationStatusChanged$.subscribe(() => {
+        this.jobService.fetchJobs();
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.applicationCheckInOccurred$.subscribe(() => {
+        this.jobService.fetchJobs();
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.applicationCheckOutOccurred$.subscribe(() => {
+        this.jobService.fetchJobs();
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.jobApplicationAdded$.subscribe(() => {
+        this.jobService.fetchJobs();
+      })
+    );
+
+    this.subscriptions.add(
       this.signalRService.transactionOccurred$.subscribe(() => {
         // Tự động load lại số dư ví nếu có biến động
         if (this.authService.isLoggedIn()) {

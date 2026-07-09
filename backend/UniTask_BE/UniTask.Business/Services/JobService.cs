@@ -20,7 +20,7 @@ namespace UniTask.Business.Services
             _hubContext = hubContext;
         }
 
-        public async Task<IEnumerable<JobDto>> GetJobsAsync(JobFilterDto filter)
+        public async Task<IEnumerable<JobDto>> GetJobsAsync(JobFilterDto filter, string? currentUserId = null)
         {
             var query = _context.Jobs
                 .Include(j => j.Company)
@@ -87,7 +87,22 @@ namespace UniTask.Business.Services
                 .Distinct()
                 .ToListAsync();
 
-            return jobs.Select(j => MapToDto(j, premiumEmployers.Contains(j.EmployerId)));
+            var result = jobs.Select(j => MapToDto(j, premiumEmployers.Contains(j.EmployerId))).ToList();
+
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var appliedJobIds = await _context.Applications
+                    .Where(a => a.StudentProfile.UserId == currentUserId)
+                    .Select(a => a.JobId)
+                    .ToListAsync();
+
+                foreach (var dto in result)
+                {
+                    dto.IsAppliedByCurrentUser = appliedJobIds.Contains(dto.Id);
+                }
+            }
+
+            return result;
         }
 
         public async Task<JobDto?> GetJobByIdAsync(int id, string? currentUserId = null)
@@ -303,6 +318,7 @@ namespace UniTask.Business.Services
             
             job.Status = UniTask.DataAcesss.Entities.Enums.JobStatus.InProgress;
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
             return true;
         }
 
@@ -480,6 +496,7 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", id);
             return true;
         }
 
@@ -496,6 +513,7 @@ namespace UniTask.Business.Services
             job.DisputedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", id);
 
             // Broadcast real-time event to Admin Dashboard
             await _hubContext.Clients.All.SendAsync("TransactionOccurred");
@@ -668,6 +686,8 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckInOccurred", jobId);
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
             return true;
         }
 
@@ -695,6 +715,8 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", jobId);
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
             return true;
         }
 
@@ -746,6 +768,7 @@ namespace UniTask.Business.Services
                 }
 
                 await _context.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
                 return true;
             }
 
