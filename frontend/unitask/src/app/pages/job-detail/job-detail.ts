@@ -36,9 +36,9 @@ import { CommonModule } from '@angular/common';
                         <span class="material-icons-round">business</span>
                         {{ job()!.company }}
                         @if (job()!.employerType === 1) {
-                          <span class="badge badge-warning" style="font-size: 10px; padding: 2px 6px; margin-left: 4px;">🏠 Hộ KD</span>
+                          <span class="soft-badge soft-badge-warning" style="margin-left: 4px;">🏠 Hộ KD</span>
                         } @else {
-                          <span class="badge badge-primary" style="font-size: 10px; padding: 2px 6px; margin-left: 4px;">🏢 Doanh nghiệp</span>
+                          <span class="soft-badge soft-badge-primary" style="margin-left: 4px;">🏢 Doanh nghiệp</span>
                         }
                         @if (job()!.isCompanyPremium) {
                           <span class="premium-badge" title="Nhà tuyển dụng Premium">
@@ -66,14 +66,16 @@ import { CommonModule } from '@angular/common';
 
                 <div class="badges-row">
                   @if (job()!.isUrgent) {
-                    <span class="badge badge-danger">🔥 Tuyển gấp</span>
+                    <span class="soft-badge soft-badge-danger">🔥 Tuyển gấp</span>
                   }
                   @if (job()!.isRemote) {
-                    <span class="badge badge-success">🌐 Remote</span>
+                    <span class="soft-badge soft-badge-success">🌐 Remote</span>
                   }
-                  @for (tag of job()!.tags; track tag) {
-                    <span class="badge badge-primary">{{ tag }}</span>
-                  }
+                  <div class="header-tags">
+                    @for (tag of job()!.tags; track tag) {
+                      <span class="soft-badge soft-badge-primary">{{ tag }}</span>
+                    }
+                  </div>
                 </div>
               </div>
 

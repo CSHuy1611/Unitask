@@ -118,6 +118,7 @@ export class JobService {
       workEndTime: dto.workEndTime,
       workDate: dto.workDate,
       workDays: dto.workDays,
+      employerType: dto.employerType,
       isNew: dto.isNew || false
     };
   }
