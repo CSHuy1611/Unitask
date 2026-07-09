@@ -1977,45 +1977,41 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       this.subscriptions.add(
         this.signalRService.applicationApprovedOccurred$.subscribe(jobId => {
-          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
-          if (hasMyApplication) {
-            this.toast.success('🎉 Check-out thành công! Tiền công đã được gửi vào ví của bạn. Cảm ơn bạn đã hoàn thành công việc!', 8000);
-            this.refreshStudentApplications();
-            this.jobService.fetchJobs();
-            this.auth.fetchBalance().subscribe();
+          this.jobService.fetchJobs();
+          if (this.auth.isStudent()) {
+            this.jobService.getMyApplications().subscribe({
+              next: (apps) => {
+                this.myApplications.set(apps);
+                const myApp = apps.find(app => Number(app.jobId) === Number(jobId));
+                if (myApp && (myApp.status === 5 || myApp.status === 'Completed' || myApp.status === 'completed')) {
+                  this.toast.success('🎉 Check-out thành công! Tiền công đã được gửi vào ví của bạn. Cảm ơn bạn đã hoàn thành công việc!', 8000);
+                  this.auth.fetchBalance().subscribe();
+                }
+              },
+              error: (err) => console.error('Failed to load student applications:', err)
+            });
           }
         })
       );
 
       this.subscriptions.add(
         this.signalRService.applicationCheckInOccurred$.subscribe(jobId => {
-          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
-          if (hasMyApplication) {
-            // Không hiện toast ở đây vì submitCheckIn() đã hiện rồi
-            this.refreshStudentApplications();
-            this.jobService.fetchJobs();
-          }
+          this.refreshStudentApplications();
+          this.jobService.fetchJobs();
         })
       );
 
       this.subscriptions.add(
         this.signalRService.applicationCheckOutOccurred$.subscribe(jobId => {
-          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
-          if (hasMyApplication) {
-            // Không hiện toast ở đây vì submitCheckOut() đã hiện rồi
-            this.refreshStudentApplications();
-            this.jobService.fetchJobs();
-          }
+          this.refreshStudentApplications();
+          this.jobService.fetchJobs();
         })
       );
 
       this.subscriptions.add(
         this.signalRService.applicationStatusChanged$.subscribe(jobId => {
-          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
-          if (hasMyApplication) {
-            this.refreshStudentApplications();
-            this.jobService.fetchJobs();
-          }
+          this.refreshStudentApplications();
+          this.jobService.fetchJobs();
         })
       );
 

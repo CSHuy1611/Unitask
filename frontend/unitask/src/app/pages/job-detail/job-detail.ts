@@ -57,7 +57,7 @@ import { CommonModule } from '@angular/common';
                       @if (job()!.workStartTime && job()!.workEndTime) {
                         <span class="meta-item" style="color: var(--primary-light);">
                           <span class="material-icons-round">access_time</span>
-                          {{ formatAmPm(job()!.workStartTime!) }} - {{ formatAmPm(job()!.workEndTime!) }}@if(job()!.workDate) { ({{ job()!.workDate | date:'dd/MM/yyyy' }}) }
+                          Ca: {{ formatAmPm(job()!.workStartTime!) }} - {{ formatAmPm(job()!.workEndTime!) }}@if(job()!.workDate) { | Ngày: {{ job()!.workDate | date:'dd/MM/yyyy' }} }
                         </span>
                       }
                     </div>
@@ -158,7 +158,7 @@ import { CommonModule } from '@angular/common';
                     <span class="material-icons-round">calendar_today</span>
                     <div>
                       <span class="info-label">Ngày đăng</span>
-                      <span class="info-value">{{ job()!.postedDate }}</span>
+                      <span class="info-value">{{ job()!.postedDate | date:'dd/MM/yyyy HH:mm' }}</span>
                     </div>
                   </div>
                   <div class="info-item">

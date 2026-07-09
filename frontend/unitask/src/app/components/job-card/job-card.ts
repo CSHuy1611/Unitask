@@ -12,6 +12,11 @@ import { ToastService } from '../../services/toast.service';
   imports: [RouterLink, DatePipe],
   template: `
     <a [routerLink]="['/jobs', job().id]" class="job-card glass-card" [class.premium-card]="job().isCompanyPremium">
+      @if (job().isNew) {
+        <div class="new-ribbon">
+          Mới
+        </div>
+      }
       <div class="card-header">
         <div class="company-logo" [class.premium-avatar-glow]="job().isCompanyPremium" [style.background]="getLogoGradient()">
           {{ job().companyLogo }}
@@ -30,10 +35,10 @@ import { ToastService } from '../../services/toast.service';
               </span>
             }
           </span>
-          <span class="posted-date">{{ getTimeAgo() }}</span>
+          <span class="posted-date">Đã đăng: {{ job().postedDate | date:'dd/MM/yyyy HH:mm' }}</span>
         </div>
         @if (job().isUrgent) {
-          <span class="badge badge-danger urgent-badge">🔥 Urgent</span>
+          <span class="badge badge-danger urgent-badge" style="margin: 0;">🔥 Urgent</span>
         }
       </div>
 
@@ -98,7 +103,7 @@ import { ToastService } from '../../services/toast.service';
               Đã đủ người
             </button>
           } @else {
-            <button class="btn btn-primary btn-sm" (click)="applyForJob($event)" [disabled]="hasApplied()">
+            <button [class]="hasApplied() ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'" (click)="applyForJob($event)" [disabled]="hasApplied()">
               {{ hasApplied() ? 'Đã ứng tuyển' : 'Ứng tuyển ngay' }}
             </button>
           }
@@ -108,6 +113,8 @@ import { ToastService } from '../../services/toast.service';
   `,
   styles: [`
     .job-card {
+      position: relative;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       gap: var(--space-4);
@@ -115,6 +122,23 @@ import { ToastService } from '../../services/toast.service';
       color: inherit;
       cursor: pointer;
       transition: all 0.3s;
+    }
+
+    .new-ribbon {
+      position: absolute;
+      top: 10px;
+      right: -28px;
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 3px 26px;
+      transform: rotate(45deg);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      z-index: 5;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      text-align: center;
     }
 
     .job-card.premium-card {
@@ -234,8 +258,7 @@ export class JobCardComponent {
   toast = inject(ToastService);
 
   hasApplied() {
-    const user = this.auth.currentUser();
-    return user && this.job().applicants?.includes(user.id);
+    return this.job().isAppliedByCurrentUser || false;
   }
 
   applyForJob(event: Event) {
@@ -285,19 +308,6 @@ export class JobCardComponent {
       'linear-gradient(135deg, #D0021B, #EF4444)',
     ];
     return colors[(this.job().companyId - 1) % colors.length];
-  }
-
-  getTimeAgo(): string {
-    const now = new Date();
-    const posted = new Date(this.job().postedDate);
-    const diffInMs = now.getTime() - posted.getTime();
-    const minutes = Math.floor(diffInMs / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    return days > 0 ? `${days} ngày trước` : 
-           hours > 0 ? `${hours} giờ trước` : 
-           minutes > 0 ? `${minutes} phút trước` : 'Vừa xong';
   }
 
   formatAmPm(timeStr: string): string {

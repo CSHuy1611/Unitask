@@ -1971,6 +1971,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         if (res.success) {
           this.toast.success(res.message);
           // Refresh list of applicants to reflect job status update
+          job.status = 'in_progress';
           this.viewApplicants(job);
         } else {
           this.toast.error(res.message);
@@ -2386,7 +2387,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       // Vì logic cũ sử dụng CheckInSuccess(appId), nhưng backend giờ bắn appId không rõ,
       // tuy nhiên jobService.fetchJobs() và viewApplicants() đã đủ để update UI.
       // Ẩn OTP popup nếu đang mở cho job này:
-      if (this.selectedJobForApplicants()?.id === jobId) {
+      if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
          if (this.otpType() === 'checkin') {
            this.handleOtpSuccess('checkin');
          } else {
@@ -2397,7 +2398,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     });
 
     this.signalRService.applicationCheckOutOccurred$.subscribe(jobId => {
-      if (this.selectedJobForApplicants()?.id === jobId) {
+      if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
          if (this.otpType() === 'checkout') {
            this.handleOtpSuccess('checkout');
          } else {
@@ -2410,20 +2411,30 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     // Thêm listener riêng lẻ nếu employer có Hub event riêng,
     // Hiện tại employer chỉ cần reload khi status thay đổi hoặc checkin/out.
     this.signalRService.applicationStatusChanged$.subscribe(jobId => {
-      const belongsToEmployer = this.employerJobs().some(j => j.id === jobId);
+      const belongsToEmployer = this.employerJobs().some(j => Number(j.id) === Number(jobId));
       if (belongsToEmployer) {
         this.jobService.fetchJobs();
-        if (this.selectedJobForApplicants()?.id === jobId) {
+        if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
           this.viewApplicants(this.selectedJobForApplicants()!);
         }
       }
     });
 
     this.signalRService.jobApplicationAdded$.subscribe(jobId => {
-      const belongsToEmployer = this.employerJobs().some(j => j.id === jobId);
+      const belongsToEmployer = this.employerJobs().some(j => Number(j.id) === Number(jobId));
       if (belongsToEmployer) {
         this.jobService.fetchJobs();
-        if (this.selectedJobForApplicants()?.id === jobId) {
+        if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
+          this.viewApplicants(this.selectedJobForApplicants()!);
+        }
+      }
+    });
+
+    this.signalRService.applicationApprovedOccurred$.subscribe(jobId => {
+      const belongsToEmployer = this.employerJobs().some(j => Number(j.id) === Number(jobId));
+      if (belongsToEmployer) {
+        this.jobService.fetchJobs();
+        if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
           this.viewApplicants(this.selectedJobForApplicants()!);
         }
       }

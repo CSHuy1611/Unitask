@@ -20,7 +20,7 @@ namespace UniTask.Business.Services
             _hubContext = hubContext;
         }
 
-        public async Task<IEnumerable<JobDto>> GetJobsAsync(JobFilterDto filter)
+        public async Task<IEnumerable<JobDto>> GetJobsAsync(JobFilterDto filter, string? currentUserId = null)
         {
             var query = _context.Jobs
                 .Include(j => j.Company)
@@ -73,21 +73,60 @@ namespace UniTask.Business.Services
                 query = query.Where(j => j.Tags.Any(t => filter.Tags.Contains(t.TagName)));
             }
 
-            // Sorting and Pagination
-            query = query.OrderByDescending(j => j.IsUrgent).ThenByDescending(j => j.PostedDate);
-            
-            var skip = (filter.Page - 1) * filter.PageSize;
-            var jobs = await query.Skip(skip).Take(filter.PageSize).ToListAsync();
+            // Fetch matching jobs first
+            var allMatchingJobs = await query.ToListAsync();
 
-            var employerIds = jobs.Select(j => j.EmployerId).Distinct().ToList();
-            var premiumEmployers = await _context.Subscriptions
+            // Fetch active subscriptions to map package durations
+            var activeSubscriptions = await _context.Subscriptions
                 .Include(s => s.Package)
-                .Where(s => employerIds.Contains(s.UserId) && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12)
-                .Select(s => s.UserId)
-                .Distinct()
+                .Where(s => s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null)
+                .Select(s => new { s.UserId, s.Package.DurationMonths })
                 .ToListAsync();
 
-            return jobs.Select(j => MapToDto(j, premiumEmployers.Contains(j.EmployerId)));
+            var subscriptionMap = activeSubscriptions
+                .GroupBy(s => s.UserId)
+                .ToDictionary(g => g.Key, g => g.Max(s => s.DurationMonths));
+
+            // Sort in-memory to prevent SQL Server memory grant errors (Error 8657) under constrained container memory limits
+            // Prioritize Open jobs, then VIP package duration (12m > 6m > 3m > 0m), then Urgent, then PostedDate
+            var sortedJobs = allMatchingJobs
+                .Select(j => {
+                    subscriptionMap.TryGetValue(j.EmployerId, out int duration);
+                    return new { Job = j, Duration = duration };
+                })
+                .OrderByDescending(x => x.Job.Status == JobStatus.Open)
+                .ThenByDescending(x => x.Duration)
+                .ThenByDescending(x => x.Job.IsUrgent)
+                .ThenByDescending(x => x.Job.PostedDate)
+                .Select(x => x.Job)
+                .ToList();
+
+            // Pagination
+            var skip = (filter.Page - 1) * filter.PageSize;
+            var jobs = sortedJobs.Skip(skip).Take(filter.PageSize).ToList();
+
+            // Get premium employers (duration >= 3 months)
+            var premiumEmployers = subscriptionMap
+                .Where(kvp => kvp.Value >= 3)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            var result = jobs.Select(j => MapToDto(j, premiumEmployers.Contains(j.EmployerId))).ToList();
+
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var appliedJobIds = await _context.Applications
+                    .Where(a => a.StudentProfile.UserId == currentUserId)
+                    .Select(a => a.JobId)
+                    .ToListAsync();
+
+                foreach (var dto in result)
+                {
+                    dto.IsAppliedByCurrentUser = appliedJobIds.Contains(dto.Id);
+                }
+            }
+
+            return result;
         }
 
         public async Task<JobDto?> GetJobByIdAsync(int id, string? currentUserId = null)
@@ -111,7 +150,7 @@ namespace UniTask.Business.Services
                 await _context.SaveChangesAsync();
             }
 
-            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == job.EmployerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
+            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == job.EmployerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 3);
 
             var dto = MapToDto(job, isPremium);
             if (!string.IsNullOrEmpty(currentUserId))
@@ -288,7 +327,7 @@ namespace UniTask.Business.Services
             // Broadcast real-time event to Admin Dashboard
             await _hubContext.Clients.All.SendAsync("JobCreated");
 
-            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
+            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 3);
             return MapToDto(job, isPremium);
         }
 
@@ -320,6 +359,7 @@ namespace UniTask.Business.Services
             
             job.Status = UniTask.DataAcesss.Entities.Enums.JobStatus.InProgress;
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
             return true;
         }
 
@@ -497,6 +537,7 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", id);
             return true;
         }
 
@@ -513,6 +554,7 @@ namespace UniTask.Business.Services
             job.DisputedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", id);
 
             // Broadcast real-time event to Admin Dashboard
             await _hubContext.Clients.All.SendAsync("TransactionOccurred");
@@ -587,7 +629,7 @@ namespace UniTask.Business.Services
                 SalaryRange = salaryRange,
                 Budget = j.Budget,
                 Commission = j.Commission,
-                PostedDate = j.PostedDate,
+                PostedDate = DateTime.SpecifyKind(j.PostedDate, DateTimeKind.Utc),
                 Deadline = j.Deadline,
                 Views = j.Views,
                 ApplicationsCount = j.ApplicationsCount,
@@ -620,6 +662,7 @@ namespace UniTask.Business.Services
                 CompanyLocation = j.Company?.Location,
                 CompanyWebsite = j.Company?.Website,
                 IsCompanyPremium = isCompanyPremium,
+                IsNew = (DateTime.UtcNow - j.PostedDate).TotalHours <= 24,
                 WorkStartTime = j.WorkStartTime,
                 WorkEndTime = j.WorkEndTime,
                 WorkDate = j.WorkDate,
@@ -685,6 +728,8 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckInOccurred", jobId);
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
             return true;
         }
 
@@ -712,6 +757,8 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", jobId);
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
             return true;
         }
 
@@ -763,6 +810,7 @@ namespace UniTask.Business.Services
                 }
 
                 await _context.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
                 return true;
             }
 
