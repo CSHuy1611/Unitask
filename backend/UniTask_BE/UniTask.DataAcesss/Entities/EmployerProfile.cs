@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
+using UniTask.DataAcesss.Entities.Enums;
+
 namespace UniTask.DataAcesss.Entities
 {
     /// <summary>
@@ -11,6 +13,8 @@ namespace UniTask.DataAcesss.Entities
     {
         [Key]
         public int Id { get; set; }
+
+        public EmployerType Type { get; set; } = EmployerType.SmallBusinessHousehold;
 
         // FK to ApplicationUser
         [Required]

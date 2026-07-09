@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { API_BASE_URL } from '../../config/api.config';
+import { AdminSearchService } from '../../services/admin-search.service';
 
 interface Withdrawal {
   id: number;
@@ -16,6 +17,8 @@ interface Withdrawal {
   accountName: string;
   fullDescription: string;
   status?: 'pending' | 'processing' | 'completed';
+  userRole?: string;
+  employerType?: number | null;
 }
 
 @Component({
@@ -27,7 +30,7 @@ interface Withdrawal {
 
           <div class="dashboard-header animate-fade-in-up">
             <h1>Quản lý <span class="gradient-text">Duyệt rút tiền</span></h1>
-            <p>Xử lý yêu cầu giải ngân tài khoản của Sinh viên</p>
+            <p>Xử lý yêu cầu giải ngân tài khoản người dùng</p>
           </div>
 
           <!-- Summary Cards -->
@@ -88,34 +91,47 @@ interface Withdrawal {
               </div>
             </div>
 
-            @if (filteredWithdrawals().length === 0) {
-              <div class="empty-state">
-                <span class="material-icons-round">account_balance_wallet</span>
-                <p>Không tìm thấy yêu cầu rút tiền nào.</p>
-              </div>
-            } @else {
-              <div class="table-wrapper">
-                <table class="data-table">
-                  <thead>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Người dùng</th>
+                    <th>Số tiền rút</th>
+                    <th>Ngân hàng</th>
+                    <th>Số tài khoản</th>
+                    <th>Chủ tài khoản</th>
+                    <th>Thời gian y/c</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (isLoading() && filteredWithdrawals().length === 0) {
                     <tr>
-                      <th>Sinh viên</th>
-                      <th>Số tiền rút</th>
-                      <th>Ngân hàng</th>
-                      <th>Số tài khoản</th>
-                      <th>Chủ tài khoản</th>
-                      <th>Thời gian y/c</th>
-                      <th>Trạng thái</th>
-                      <th>Thao tác</th>
+                      <td colspan="8">
+                        <div class="skeleton skeleton-card"></div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
+                  } @else if (filteredWithdrawals().length === 0) {
+                    <tr>
+                      <td colspan="8">
+                        <div class="empty-state" style="padding: 40px; border: none;">
+                          <span class="material-icons-round">account_balance_wallet</span>
+                          <p>Không tìm thấy yêu cầu rút tiền nào.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  } @else {
                     @for (w of filteredWithdrawals(); track w.id) {
                       <tr>
-                        <!-- Sinh viên -->
+                        <!-- Người dùng -->
                         <td>
                           <div class="student-info">
                             <span class="student-name">{{ w.userName }}</span>
                             <span class="student-email">{{ w.userEmail }}</span>
+                            <span class="role-tag" [style.color]="w.userRole === 'student' ? '#3B82F6' : (w.employerType === 1 ? '#F59E0B' : '#10B981')" [style.borderColor]="w.userRole === 'student' ? 'rgba(59,130,246,0.3)' : (w.employerType === 1 ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)')">
+                              {{ w.userRole === 'student' ? 'Sinh viên' : (w.employerType === 1 ? 'Hộ KD' : 'Doanh nghiệp') }}
+                            </span>
                           </div>
                         </td>
 
@@ -188,28 +204,28 @@ interface Withdrawal {
                         </td>
                       </tr>
                     }
-                  </tbody>
-                </table>
+                  }
+                </tbody>
+              </table>
+            </div>
+            
+            @if (hasMore()) {
+              <div style="text-align: center; margin-top: var(--space-6); margin-bottom: var(--space-2);">
+                <button class="btn btn-secondary btn-sm" (click)="loadMore()" [disabled]="isLoading()" style="display: inline-flex; align-items: center; gap: 8px;">
+                  @if (isLoading()) {
+                    <span class="material-icons-round spinner-icon" style="font-size:16px;">sync</span> Đang tải...
+                  } @else {
+                    <span class="material-icons-round" style="font-size:16px;">expand_more</span> Tải thêm
+                  }
+                </button>
               </div>
-              @if (hasMore()) {
-                <div style="text-align: center; margin-top: var(--space-6); margin-bottom: var(--space-2);">
-                  <button class="btn btn-secondary btn-sm" (click)="loadMore()" [disabled]="isLoading()" style="display: inline-flex; align-items: center; gap: 8px;">
-                    @if (isLoading()) {
-                      <span class="material-icons-round spinner-icon" style="font-size:16px;">sync</span> Đang tải...
-                    } @else {
-                      <span class="material-icons-round" style="font-size:16px;">expand_more</span> Tải thêm
-                    }
-                  </button>
-                </div>
-              }
             }
           </div>
-        </div>
 
     <!-- Confirm Modal -->
     @if (selectedWithdrawal()) {
-      <div class="modal-overlay animate-fade-in" (click)="selectedWithdrawal.set(null)">
-        <div class="modal-content glass-card p-6" (click)="$event.stopPropagation()" style="width: 100%; max-width: 480px; text-align: center;">
+      <div class="modal-backdrop" (click)="selectedWithdrawal.set(null)">
+        <div class="modal-panel p-6" (click)="$event.stopPropagation()" style="text-align: center;">
           <span class="material-icons-round text-green" style="font-size:64px; margin-bottom:16px">account_balance</span>
           <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:12px">Xác nhận chuyển tiền thành công</h3>
           
@@ -458,6 +474,17 @@ interface Withdrawal {
       color: var(--text-muted);
     }
 
+    .role-tag {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: var(--radius-full);
+      border: 1px solid transparent;
+      width: fit-content;
+    }
+
     .withdraw-amount {
       color: #EF4444;
       font-weight: 800;
@@ -564,17 +591,12 @@ interface Withdrawal {
       margin-bottom: var(--space-4);
     }
 
-    /* Modal Overlay & Content */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
-      display: flex; align-items: center; justify-content: center; z-index: 1000;
-    }
-
-    .modal-content {
+    .data-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
       background: var(--bg-card);
-      border-radius: var(--radius-xl);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      box-shadow: 0 1px 0 var(--border-light);
     }
 
     .payout-summary p {
@@ -596,6 +618,7 @@ export class AdminWithdrawalsComponent implements OnInit {
   auth = inject(AuthService);
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  private searchService = inject(AdminSearchService);
 
   withdrawals = signal<Withdrawal[]>([]);
   activeFilter = signal<'all' | 'pending' | 'processing' | 'completed'>('all');
@@ -616,11 +639,21 @@ export class AdminWithdrawalsComponent implements OnInit {
   totalWithdrawalsCount = signal<number>(0);
 
   filteredWithdrawals = computed(() => {
-    const list = this.withdrawals();
-    const filter = this.activeFilter();
-    if (filter === 'pending') return list.filter(w => w.status === 'pending');
-    if (filter === 'processing') return list.filter(w => w.status === 'processing');
-    if (filter === 'completed') return list.filter(w => w.status === 'completed');
+    let list = this.withdrawals();
+    if (this.activeFilter() !== 'all') {
+      list = list.filter(w => w.status === this.activeFilter());
+    }
+    
+    const query = this.searchService.searchQuery().toLowerCase().trim();
+    if (query) {
+      list = list.filter((w: any) => 
+        (w.userName || '').toLowerCase().includes(query) ||
+        (w.userEmail || '').toLowerCase().includes(query) ||
+        (w.accountName || '').toLowerCase().includes(query) ||
+        (w.accountNo || '').toLowerCase().includes(query)
+      );
+    }
+    
     return list;
   });
 
@@ -714,13 +747,15 @@ export class AdminWithdrawalsComponent implements OnInit {
       id: tx.id,
       amount: tx.amount,
       createdAt: tx.createdAt,
-      userName: tx.userName || 'Sinh viên',
+      userName: tx.userName || 'N/A',
       userEmail: tx.userEmail || '',
       status,
       bank,
       accountNo,
       accountName,
-      fullDescription: cleanDesc
+      fullDescription: cleanDesc,
+      userRole: tx.userRole,
+      employerType: tx.employerType
     };
   }
 

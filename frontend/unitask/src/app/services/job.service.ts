@@ -86,7 +86,7 @@ export class JobService {
       requirements: Array.isArray(dto.requirements) ? dto.requirements : (typeof dto.requirements === 'string' ? dto.requirements.split(/\r?\n|\\n/) : []),
       benefits: Array.isArray(dto.benefits) ? dto.benefits : (typeof dto.benefits === 'string' ? dto.benefits.split(/\r?\n|\\n/) : []),
       tags: typeof dto.tags === 'string' ? dto.tags.split(',') : (dto.tags || []),
-      postedDate: dto.createdAt ? dto.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+      postedDate: dto.postedDate ? (dto.postedDate.endsWith('Z') ? dto.postedDate : dto.postedDate + 'Z') : (dto.createdAt || new Date().toISOString()),
       deadline: dto.deadline ? dto.deadline.split('T')[0] : '',
       views: dto.views || 0,
       applications: dto.applicationsCount || 0,
@@ -113,7 +113,13 @@ export class JobService {
       checkInTime: dto.checkInTime,
       checkOutTime: dto.checkOutTime,
       isCompanyPremium: dto.isCompanyPremium || false,
-      isAppliedByCurrentUser: dto.isAppliedByCurrentUser || false
+      isAppliedByCurrentUser: dto.isAppliedByCurrentUser || false,
+      workStartTime: dto.workStartTime,
+      workEndTime: dto.workEndTime,
+      workDate: dto.workDate,
+      workDays: dto.workDays,
+      employerType: dto.employerType,
+      isNew: dto.isNew || false
     };
   }
 
@@ -159,7 +165,11 @@ export class JobService {
       tags: Array.isArray(job.tags) ? job.tags : [],
       isRemote: job.isRemote,
       isUrgent: job.isUrgent,
-      headCount: job.headCount
+      headCount: job.headCount,
+      workStartTime: job.workStartTime ? (job.workStartTime.length === 5 ? job.workStartTime + ':00' : job.workStartTime) : null,
+      workEndTime: job.workEndTime ? (job.workEndTime.length === 5 ? job.workEndTime + ':00' : job.workEndTime) : null,
+      workDate: job.workDate || null,
+      workDays: job.workDays || null
     };
 
     return this.http.post<any>(`${API_BASE_URL}/job`, payload).pipe(
@@ -173,6 +183,14 @@ export class JobService {
     if (!job.deadline) return true;
     const today = new Date().toISOString().split('T')[0];
     return job.deadline >= today;
+  }
+
+  startJob(id: number): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${API_BASE_URL}/job/${id}/start`, {}).pipe(
+      tap(() => this.fetchJobs()),
+      map(() => ({ success: true, message: 'Đã bắt đầu công việc thành công.' })),
+      catchError(err => of({ success: false, message: err.error?.message || 'Lỗi khi bắt đầu công việc.' }))
+    );
   }
 
   updateJob(id: number, data: Partial<Job>): Observable<{ success: boolean; message: string }> {
@@ -191,7 +209,11 @@ export class JobService {
       tags: Array.isArray(data.tags) ? data.tags : [],
       isRemote: data.isRemote,
       isUrgent: data.isUrgent,
-      headCount: data.headCount
+      headCount: data.headCount,
+      workStartTime: data.workStartTime ? (data.workStartTime.length === 5 ? data.workStartTime + ':00' : data.workStartTime) : null,
+      workEndTime: data.workEndTime ? (data.workEndTime.length === 5 ? data.workEndTime + ':00' : data.workEndTime) : null,
+      workDate: data.workDate || null,
+      workDays: data.workDays || null
     };
 
     return this.http.put<any>(`${API_BASE_URL}/job/${id}`, payload).pipe(
@@ -209,10 +231,15 @@ export class JobService {
     );
   }
 
-  // Phase 5: Escrow & Application Flow
   applyJob(jobId: number, coverLetter: string = ''): Observable<{ success: boolean; message: string }> {
     return this.http.post<any>(`${API_BASE_URL}/application/${jobId}`, { coverLetter }).pipe(
-      tap(() => this.fetchJobs()),
+      tap(() => {
+        // Optimistic UI update
+        const currentJobs = this.allJobsSignal();
+        const updatedJobs = currentJobs.map(j => j.id === jobId ? { ...j, isAppliedByCurrentUser: true } : j);
+        this.allJobsSignal.set(updatedJobs);
+        this.fetchJobs();
+      }),
       map(() => ({ success: true, message: 'Đã ứng tuyển thành công.' })),
       catchError(err => of({ success: false, message: err.error?.message || 'Ứng tuyển thất bại. Bạn có thể đã ứng tuyển rồi.' }))
     );

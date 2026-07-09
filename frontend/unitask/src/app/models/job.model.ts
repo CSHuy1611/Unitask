@@ -21,6 +21,12 @@ export interface Job {
   isUrgent?: boolean;
   isRemote?: boolean;
   
+  workStartTime?: string;
+  workEndTime?: string;
+  workDate?: string;
+  workDays?: string;
+  employerType?: number;
+  
   // Phase 4: Escrow & Completion Tracking
   budget?: number;
   commission?: number;
@@ -43,4 +49,10 @@ export interface Job {
   checkInTime?: string;
   checkOutTime?: string;
   isAppliedByCurrentUser?: boolean;
+  isNew?: boolean;
+  
+  // UI extended fields
+  isMissedSchedule?: boolean;
+  rejectReason?: string;
+  myAppStatus?: any;
 }

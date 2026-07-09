@@ -24,6 +24,11 @@ namespace UniTask.Business.DTOs.Job
         [Range(1, 100)]
         public int HeadCount { get; set; } = 1;
 
+        public TimeSpan? WorkStartTime { get; set; }
+        public TimeSpan? WorkEndTime { get; set; }
+        public DateTime? WorkDate { get; set; }
+        public string? WorkDays { get; set; }
+
         public List<string> Tags { get; set; } = new();
         public List<string> Requirements { get; set; } = new();
         public List<string> Benefits { get; set; } = new();

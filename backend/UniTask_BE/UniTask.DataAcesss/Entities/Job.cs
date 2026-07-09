@@ -43,6 +43,15 @@ namespace UniTask.DataAcesss.Entities
         [MaxLength(100)]
         public string Type { get; set; } = "Part-time";
 
+        // ===== Work Schedule Fields =====
+        public TimeSpan? WorkStartTime { get; set; }
+        public TimeSpan? WorkEndTime { get; set; }
+        
+        public DateTime? WorkDate { get; set; }
+        
+        [MaxLength(100)]
+        public string? WorkDays { get; set; }
+        
         /// <summary>
         /// Danh mục công việc: Marketing & Content, IT & Công nghệ, v.v.
         /// </summary>

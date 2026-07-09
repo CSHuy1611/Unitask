@@ -7,11 +7,12 @@ import { AuthService } from '../../services/auth.service';
 import { CompanyService } from '../../services/company.service';
 import { ToastService } from '../../services/toast.service';
 import { Job } from '../../models/job.model';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-job-detail',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule],
   template: `
     @if (job()) {
       <section class="detail-page">
@@ -34,6 +35,11 @@ import { Job } from '../../models/job.model';
                       <span class="meta-item">
                         <span class="material-icons-round">business</span>
                         {{ job()!.company }}
+                        @if (job()!.employerType === 1) {
+                          <span class="soft-badge soft-badge-warning" style="margin-left: 4px;">🏠 Hộ KD</span>
+                        } @else {
+                          <span class="soft-badge soft-badge-primary" style="margin-left: 4px;">🏢 Doanh nghiệp</span>
+                        }
                         @if (job()!.isCompanyPremium) {
                           <span class="premium-badge" title="Nhà tuyển dụng Premium">
                             <span class="material-icons-round" style="font-size: 14px;">workspace_premium</span>
@@ -48,20 +54,28 @@ import { Job } from '../../models/job.model';
                         <span class="material-icons-round">schedule</span>
                         {{ job()!.type }}
                       </span>
+                      @if (job()!.workStartTime && job()!.workEndTime) {
+                        <span class="meta-item" style="color: var(--primary-light);">
+                          <span class="material-icons-round">access_time</span>
+                          Ca: {{ formatAmPm(job()!.workStartTime!) }} - {{ formatAmPm(job()!.workEndTime!) }}@if(job()!.workDate) { | Ngày: {{ job()!.workDate | date:'dd/MM/yyyy' }} }
+                        </span>
+                      }
                     </div>
                   </div>
                 </div>
 
                 <div class="badges-row">
                   @if (job()!.isUrgent) {
-                    <span class="badge badge-danger">🔥 Tuyển gấp</span>
+                    <span class="soft-badge soft-badge-danger">🔥 Tuyển gấp</span>
                   }
                   @if (job()!.isRemote) {
-                    <span class="badge badge-success">🌐 Remote</span>
+                    <span class="soft-badge soft-badge-success">🌐 Remote</span>
                   }
-                  @for (tag of job()!.tags; track tag) {
-                    <span class="badge badge-primary">{{ tag }}</span>
-                  }
+                  <div class="header-tags">
+                    @for (tag of job()!.tags; track tag) {
+                      <span class="soft-badge soft-badge-primary">{{ tag }}</span>
+                    }
+                  </div>
                 </div>
               </div>
 
@@ -146,7 +160,7 @@ import { Job } from '../../models/job.model';
                     <span class="material-icons-round">calendar_today</span>
                     <div>
                       <span class="info-label">Ngày đăng</span>
-                      <span class="info-value">{{ job()!.postedDate }}</span>
+                      <span class="info-value">{{ job()!.postedDate | date:'dd/MM/yyyy HH:mm' }}</span>
                     </div>
                   </div>
                   <div class="info-item">
@@ -156,6 +170,33 @@ import { Job } from '../../models/job.model';
                       <span class="info-value">{{ job()!.deadline }}</span>
                     </div>
                   </div>
+                  @if (job()!.workStartTime && job()!.workEndTime) {
+                    <div class="info-item">
+                      <span class="material-icons-round">schedule</span>
+                      <div>
+                        <span class="info-label">Ca làm việc</span>
+                        <span class="info-value">{{ formatAmPm(job()!.workStartTime!) }} - {{ formatAmPm(job()!.workEndTime!) }}</span>
+                      </div>
+                    </div>
+                  }
+                  @if (job()!.workDays) {
+                    <div class="info-item">
+                      <span class="material-icons-round">calendar_month</span>
+                      <div>
+                        <span class="info-label">Lịch làm việc</span>
+                        <span class="info-value">{{ job()!.workDays }}</span>
+                      </div>
+                    </div>
+                  }
+                  @if (job()!.workDate) {
+                    <div class="info-item">
+                      <span class="material-icons-round">event_available</span>
+                      <div>
+                        <span class="info-label">Ngày làm việc</span>
+                        <span class="info-value">{{ job()!.workDate | date:'dd/MM/yyyy' }}</span>
+                      </div>
+                    </div>
+                  }
                   <div class="info-item">
                     <span class="material-icons-round">visibility</span>
                     <div>
@@ -613,5 +654,15 @@ export class JobDetailComponent implements OnInit {
     } else {
       this.router.navigate(['/jobs']);
     }
+  }
+
+  formatAmPm(timeStr: string): string {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour ? hour : 12;
+    return `${hour}:${m} ${ampm}`;
   }
 }

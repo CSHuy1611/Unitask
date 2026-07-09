@@ -20,10 +20,12 @@ namespace UniTask.Business.Services
             _hubContext = hubContext;
         }
 
-        public async Task<IEnumerable<JobDto>> GetJobsAsync(JobFilterDto filter)
+        public async Task<IEnumerable<JobDto>> GetJobsAsync(JobFilterDto filter, string? currentUserId = null)
         {
             var query = _context.Jobs
                 .Include(j => j.Company)
+                .Include(j => j.Employer)
+                    .ThenInclude(u => u.EmployerProfile)
                 .Include(j => j.Tags)
                 .Include(j => j.Requirements)
                 .Include(j => j.Benefits)
@@ -71,27 +73,68 @@ namespace UniTask.Business.Services
                 query = query.Where(j => j.Tags.Any(t => filter.Tags.Contains(t.TagName)));
             }
 
-            // Sorting and Pagination
-            query = query.OrderByDescending(j => j.IsUrgent).ThenByDescending(j => j.PostedDate);
-            
-            var skip = (filter.Page - 1) * filter.PageSize;
-            var jobs = await query.Skip(skip).Take(filter.PageSize).ToListAsync();
+            // Fetch matching jobs first
+            var allMatchingJobs = await query.ToListAsync();
 
-            var employerIds = jobs.Select(j => j.EmployerId).Distinct().ToList();
-            var premiumEmployers = await _context.Subscriptions
+            // Fetch active subscriptions to map package durations
+            var activeSubscriptions = await _context.Subscriptions
                 .Include(s => s.Package)
-                .Where(s => employerIds.Contains(s.UserId) && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12)
-                .Select(s => s.UserId)
-                .Distinct()
+                .Where(s => s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null)
+                .Select(s => new { s.UserId, s.Package.DurationMonths })
                 .ToListAsync();
 
-            return jobs.Select(j => MapToDto(j, premiumEmployers.Contains(j.EmployerId)));
+            var subscriptionMap = activeSubscriptions
+                .GroupBy(s => s.UserId)
+                .ToDictionary(g => g.Key, g => g.Max(s => s.DurationMonths));
+
+            // Sort in-memory to prevent SQL Server memory grant errors (Error 8657) under constrained container memory limits
+            // Prioritize Open jobs, then VIP package duration (12m > 6m > 3m > 0m), then Urgent, then PostedDate
+            var sortedJobs = allMatchingJobs
+                .Select(j => {
+                    subscriptionMap.TryGetValue(j.EmployerId, out int duration);
+                    return new { Job = j, Duration = duration };
+                })
+                .OrderByDescending(x => x.Job.Status == JobStatus.Open)
+                .ThenByDescending(x => x.Duration)
+                .ThenByDescending(x => x.Job.IsUrgent)
+                .ThenByDescending(x => x.Job.PostedDate)
+                .Select(x => x.Job)
+                .ToList();
+
+            // Pagination
+            var skip = (filter.Page - 1) * filter.PageSize;
+            var jobs = sortedJobs.Skip(skip).Take(filter.PageSize).ToList();
+
+            // Get premium employers (duration >= 3 months)
+            var premiumEmployers = subscriptionMap
+                .Where(kvp => kvp.Value >= 3)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            var result = jobs.Select(j => MapToDto(j, premiumEmployers.Contains(j.EmployerId))).ToList();
+
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var appliedJobIds = await _context.Applications
+                    .Where(a => a.StudentProfile.UserId == currentUserId)
+                    .Select(a => a.JobId)
+                    .ToListAsync();
+
+                foreach (var dto in result)
+                {
+                    dto.IsAppliedByCurrentUser = appliedJobIds.Contains(dto.Id);
+                }
+            }
+
+            return result;
         }
 
         public async Task<JobDto?> GetJobByIdAsync(int id, string? currentUserId = null)
         {
             var job = await _context.Jobs
                 .Include(j => j.Company)
+                .Include(j => j.Employer)
+                    .ThenInclude(u => u.EmployerProfile)
                 .Include(j => j.Requirements)
                 .Include(j => j.Benefits)
                 .Include(j => j.Tags)
@@ -107,7 +150,7 @@ namespace UniTask.Business.Services
                 await _context.SaveChangesAsync();
             }
 
-            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == job.EmployerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
+            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == job.EmployerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 3);
 
             var dto = MapToDto(job, isPremium);
             if (!string.IsNullOrEmpty(currentUserId))
@@ -123,19 +166,55 @@ namespace UniTask.Business.Services
             var profile = await _context.EmployerProfiles.FirstOrDefaultAsync(p => p.UserId == employerId);
             if (profile == null || profile.CompanyId == null) return null;
 
+            var user = await _context.Users.FindAsync(employerId);
+
             // ===== Business License Gate =====
             // Employer phải upload giấy phép kinh doanh VÀ được Admin xác minh mới được đăng việc.
-            if (string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+            if (profile.Type == UniTask.DataAcesss.Entities.Enums.EmployerType.Business)
             {
-                throw new InvalidOperationException("Bạn chưa upload giấy phép kinh doanh. Vui lòng cập nhật hồ sơ và upload giấy phép trước khi đăng tin tuyển dụng.");
+                if (string.IsNullOrEmpty(profile.BusinessLicenseUrl))
+                {
+                    throw new InvalidOperationException("Bạn chưa upload giấy phép kinh doanh. Vui lòng cập nhật hồ sơ và upload giấy phép trước khi đăng tin tuyển dụng.");
+                }
+                if (!profile.IsBusinessLicenseVerified)
+                {
+                    throw new InvalidOperationException("Giấy phép kinh doanh của bạn đang chờ Admin xác minh. Bạn chỉ có thể đăng tin sau khi giấy phép được phê duyệt.");
+                }
             }
-            if (!profile.IsBusinessLicenseVerified)
+            else if (profile.Type == UniTask.DataAcesss.Entities.Enums.EmployerType.SmallBusinessHousehold)
             {
-                throw new InvalidOperationException("Giấy phép kinh doanh của bạn đang chờ Admin xác minh. Bạn chỉ có thể đăng tin sau khi giấy phép được phê duyệt.");
+                if (user == null || user.EkycStatus != UniTask.DataAcesss.Entities.Enums.EkycStatus.Verified)
+                {
+                    throw new InvalidOperationException("Tài khoản của bạn chưa được xác thực eKYC. Hộ kinh doanh cần xác minh danh tính trước khi đăng việc.");
+                }
+
+                // Check active jobs count limit (<= 5)
+                var activeJobsCount = await _context.Jobs.CountAsync(j => j.EmployerId == employerId && (j.Status == JobStatus.Open || j.Status == JobStatus.InProgress));
+                if (activeJobsCount >= 5)
+                {
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được đăng tối đa 5 tin tuyển dụng đang hoạt động cùng lúc.");
+                }
+
+                // Check headcount limit (<= 10)
+                if (dto.HeadCount > 10)
+                {
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được tuyển tối đa 10 người cho mỗi công việc.");
+                }
+                
+                // Check job type (No Full-time)
+                if (dto.Type.Contains("Full-time", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được phép đăng các công việc Part-time hoặc Freelance (thời vụ).");
+                }
+                
+                // Check deadline (<= 30 days)
+                if (dto.Deadline.HasValue && (dto.Deadline.Value - DateTime.UtcNow).TotalDays > 30)
+                {
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được phép đăng công việc có hạn chót (deadline) không quá 30 ngày.");
+                }
             }
 
             // Check Blacklist Count
-            var user = await _context.Users.FindAsync(employerId);
             if (user != null && user.BlacklistCount >= 3)
             {
                 throw new InvalidOperationException("Tài khoản của bạn đã bị khóa đăng việc do vi phạm chính sách của hệ thống.");
@@ -145,7 +224,18 @@ namespace UniTask.Business.Services
             var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == employerId);
             var hasActivePackage = await _context.Subscriptions
                 .AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow);
-            decimal postingFee = hasActivePackage ? 0 : 2000;
+            
+            bool isFirstThreeHouseholdJobs = false;
+            if (profile.Type == UniTask.DataAcesss.Entities.Enums.EmployerType.SmallBusinessHousehold)
+            {
+                int totalJobsCreated = await _context.Jobs.CountAsync(j => j.EmployerId == employerId);
+                if (totalJobsCreated < 3)
+                {
+                    isFirstThreeHouseholdJobs = true;
+                }
+            }
+
+            decimal postingFee = (hasActivePackage || isFirstThreeHouseholdJobs) ? 0 : 2000;
             
             // Round all currency values to whole numbers (VND integers) to prevent float discrepancies
             var roundedBudget = Math.Round(dto.Budget, 0, MidpointRounding.AwayFromZero);
@@ -155,11 +245,17 @@ namespace UniTask.Business.Services
             
             if (wallet == null || wallet.Balance < totalCost)
             {
-                throw new InvalidOperationException("Insufficient wallet balance to create this job.");
+                throw new InvalidOperationException("Số dư ví không đủ để đăng công việc này. Vui lòng nạp thêm tiền.");
             }
 
             // Deduct from wallet
             wallet.Balance -= totalCost;
+
+            var jobTags = dto.Tags.Select(t => new JobTag { TagName = t }).ToList();
+            if (isFirstThreeHouseholdJobs)
+            {
+                jobTags.Add(new JobTag { TagName = "Miễn phí" });
+            }
 
             var job = new Job
             {
@@ -179,8 +275,12 @@ namespace UniTask.Business.Services
                 IsRemote = dto.IsRemote,
                 RequiredReliabilityScore = dto.RequiredReliabilityScore,
                 HeadCount = dto.HeadCount,
+                WorkStartTime = dto.WorkStartTime,
+                WorkEndTime = dto.WorkEndTime,
+                WorkDate = dto.WorkDate,
+                WorkDays = dto.WorkDays,
                 Status = DataAcesss.Entities.Enums.JobStatus.Open,
-                Tags = dto.Tags.Select(t => new JobTag { TagName = t }).ToList(),
+                Tags = jobTags,
                 Requirements = dto.Requirements.Select(r => new JobRequirement { Content = r }).ToList(),
                 Benefits = dto.Benefits.Select(b => new JobBenefit { Content = b }).ToList()
             };
@@ -227,8 +327,40 @@ namespace UniTask.Business.Services
             // Broadcast real-time event to Admin Dashboard
             await _hubContext.Clients.All.SendAsync("JobCreated");
 
-            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 12);
+            var isPremium = await _context.Subscriptions.Include(s => s.Package).AnyAsync(s => s.UserId == employerId && s.IsActive && s.EndDate > DateTime.UtcNow && s.Package != null && s.Package.DurationMonths >= 3);
             return MapToDto(job, isPremium);
+        }
+
+        public async Task<bool> StartJobAsync(int jobId, string employerId)
+        {
+            var job = await _context.Jobs
+                .Include(j => j.Applications)
+                .FirstOrDefaultAsync(j => j.Id == jobId && j.EmployerId == employerId);
+                
+            if (job == null)
+            {
+                throw new InvalidOperationException("Không tìm thấy công việc hoặc bạn không có quyền thao tác.");
+            }
+            
+            if (job.Status != UniTask.DataAcesss.Entities.Enums.JobStatus.Open)
+            {
+                throw new InvalidOperationException("Chỉ có thể bắt đầu công việc khi trạng thái đang mở (Open).");
+            }
+            
+            var currentAcceptedCount = job.Applications.Count(a => 
+                a.Status == UniTask.DataAcesss.Entities.Enums.ApplicationStatus.Accepted || 
+                a.Status == UniTask.DataAcesss.Entities.Enums.ApplicationStatus.Completed || 
+                a.Status == UniTask.DataAcesss.Entities.Enums.ApplicationStatus.Interviewing);
+                
+            if (currentAcceptedCount < job.HeadCount)
+            {
+                throw new InvalidOperationException($"Không thể bắt đầu công việc. Cần phê duyệt đủ {job.HeadCount} sinh viên (hiện có {currentAcceptedCount}).");
+            }
+            
+            job.Status = UniTask.DataAcesss.Entities.Enums.JobStatus.InProgress;
+            await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
+            return true;
         }
 
         public async Task<bool> UpdateJobAsync(int id, string employerId, JobUpdateDto dto)
@@ -247,6 +379,11 @@ namespace UniTask.Business.Services
             job.Type = dto.Type;
             job.Category = dto.Category;
             job.SalaryText = dto.SalaryRange.Any() ? string.Join("-", dto.SalaryRange) : (dto.Salary ?? dto.SalaryText);
+            
+            job.WorkStartTime = dto.WorkStartTime;
+            job.WorkEndTime = dto.WorkEndTime;
+            job.WorkDate = dto.WorkDate;
+            job.WorkDays = dto.WorkDays;
             job.Budget = dto.Budget;
             job.Commission = dto.Commission;
             job.Deadline = dto.Deadline;
@@ -400,6 +537,7 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", id);
             return true;
         }
 
@@ -416,6 +554,7 @@ namespace UniTask.Business.Services
             job.DisputedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", id);
 
             // Broadcast real-time event to Admin Dashboard
             await _hubContext.Clients.All.SendAsync("TransactionOccurred");
@@ -490,7 +629,7 @@ namespace UniTask.Business.Services
                 SalaryRange = salaryRange,
                 Budget = j.Budget,
                 Commission = j.Commission,
-                PostedDate = j.PostedDate,
+                PostedDate = DateTime.SpecifyKind(j.PostedDate, DateTimeKind.Utc),
                 Deadline = j.Deadline,
                 Views = j.Views,
                 ApplicationsCount = j.ApplicationsCount,
@@ -523,6 +662,12 @@ namespace UniTask.Business.Services
                 CompanyLocation = j.Company?.Location,
                 CompanyWebsite = j.Company?.Website,
                 IsCompanyPremium = isCompanyPremium,
+                IsNew = (DateTime.UtcNow - j.PostedDate).TotalHours <= 24,
+                WorkStartTime = j.WorkStartTime,
+                WorkEndTime = j.WorkEndTime,
+                WorkDate = j.WorkDate,
+                WorkDays = j.WorkDays,
+                EmployerType = j.Employer?.EmployerProfile != null ? (int)j.Employer.EmployerProfile.Type : 0,
                 Tags = j.Tags?.Select(t => t.TagName).ToList() ?? new List<string>(),
                 Requirements = j.Requirements?.Select(r => r.Content).ToList() ?? new List<string>(),
                 Benefits = j.Benefits?.Select(b => b.Content).ToList() ?? new List<string>()
@@ -583,6 +728,8 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckInOccurred", jobId);
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
             return true;
         }
 
@@ -610,6 +757,8 @@ namespace UniTask.Business.Services
             }
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", jobId);
+            await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
             return true;
         }
 
@@ -661,6 +810,7 @@ namespace UniTask.Business.Services
                 }
 
                 await _context.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", jobId);
                 return true;
             }
 

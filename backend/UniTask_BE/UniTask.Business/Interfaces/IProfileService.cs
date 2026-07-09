@@ -7,6 +7,7 @@ namespace UniTask.Business.Interfaces
         Task<object?> GetProfileAsync(string userId);
         Task<bool> UpdateStudentProfileAsync(string userId, StudentProfileUpdateDto dto);
         Task<bool> UpdateEmployerProfileAsync(string userId, EmployerProfileUpdateDto dto);
+        Task<bool> UpgradeToBusinessAsync(string userId, UpgradeToBusinessDto dto);
         Task<bool> UpdateEkycAsync(string userId, EkycUpdateDto dto);
         Task<bool> UpdateAdminProfileAsync(string userId, AdminProfileUpdateDto dto);
         Task<object?> DecryptUserIdentityAsync(string userId);

@@ -24,6 +24,7 @@ namespace UniTask.Business.DTOs.Application
         public int StudentReliabilityScore { get; set; }
 
         public ApplicationStatus Status { get; set; }
+        public string? RejectReason { get; set; }
         public DateTime AppliedDate { get; set; }
 
         public DateTime? CheckInTime { get; set; }

@@ -102,21 +102,14 @@ import { AuthService } from '../../services/auth.service';
               <!-- Employer fields -->
               @if (activeRole() === 'employer') {
                 <div class="form-group">
-                  <label class="form-label">Tên công ty</label>
+                  <label class="form-label">Tên công ty / Hộ kinh doanh</label>
                   <input type="text" class="form-input" placeholder="VD: FPT Software"
                          [(ngModel)]="companyName" name="companyName">
                 </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">Chức vụ</label>
-                    <input type="text" class="form-input" placeholder="VD: HR Manager"
-                           [(ngModel)]="position" name="position">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Mã số thuế</label>
-                    <input type="text" class="form-input" placeholder="VD: 0101234567"
-                           [(ngModel)]="taxCode" name="taxCode">
-                  </div>
+                <div class="form-group">
+                  <label class="form-label">Chức vụ</label>
+                  <input type="text" class="form-input" placeholder="VD: HR Manager"
+                         [(ngModel)]="position" name="position">
                 </div>
               }
 
@@ -393,7 +386,6 @@ export class RegisterComponent implements OnDestroy {
   // Employer
   companyName = '';
   position = '';
-  taxCode = '';
   
   // OTP
   otpCode = '';
@@ -430,11 +422,7 @@ export class RegisterComponent implements OnDestroy {
     }
 
     this.loading.set(true);
-    if (this.activeRole() === 'employer') {
-      this.loadingText.set('Đang tra cứu Mã số thuế...');
-    } else {
-      this.loadingText.set('Đang xử lý...');
-    }
+    this.loadingText.set('Đang xử lý...');
 
     this.auth.register({
       role: this.activeRole(),
@@ -447,17 +435,13 @@ export class RegisterComponent implements OnDestroy {
       year: this.year,
       companyName: this.companyName,
       position: this.position,
-      taxCode: this.taxCode,
+      taxCode: '',
     }).subscribe({
       next: (result) => {
         this.loading.set(false);
         this.loadingText.set('Đang xử lý...');
         if (result.success) {
-          if (this.activeRole() === 'employer') {
-            this.successMsg.set('Tra cứu Mã số thuế hợp lệ! Đăng ký thành công. Vui lòng kiểm tra Email để nhận mã OTP.');
-          } else {
-            this.successMsg.set('Đăng ký thành công! Vui lòng kiểm tra Email để nhận mã OTP.');
-          }
+          this.successMsg.set('Đăng ký thành công! Vui lòng kiểm tra Email để nhận mã OTP.');
           this.step.set('otp');
           this.startCountdown();
         } else {
@@ -485,6 +469,9 @@ export class RegisterComponent implements OnDestroy {
       next: (result) => {
         this.loading.set(false);
         if (result.success) {
+          if (this.activeRole() === 'employer') {
+            localStorage.setItem('justRegisteredEmployer', 'true');
+          }
           this.successMsg.set(result.message);
           setTimeout(() => this.router.navigate(['/login']), 1500);
         } else {
@@ -523,7 +510,7 @@ export class RegisterComponent implements OnDestroy {
       year: this.year,
       companyName: this.companyName,
       position: this.position,
-      taxCode: this.taxCode,
+      taxCode: '',
     }).subscribe({
       next: (result) => {
         this.loading.set(false);

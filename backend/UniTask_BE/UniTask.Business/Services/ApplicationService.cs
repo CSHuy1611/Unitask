@@ -142,11 +142,19 @@ namespace UniTask.Business.Services
 
                 application.Status = status;
 
-                // We NO LONGER auto-reject other applied students. 
-                // They stay as 'Applied' (Waitlist) so the employer can pick them if someone drops out.
+                // Nếu số lượng hiện tại (đã cộng ứng viên vừa được nhận) bằng HeadCount -> Đã tuyển đủ
                 if (currentAcceptedCount + 1 >= application.Job.HeadCount)
                 {
-                    application.Job.Status = JobStatus.InProgress;
+                    // Lấy tất cả các ứng viên đang chờ của job này và Reject họ
+                    var pendingApplications = await _context.Applications
+                        .Where(a => a.JobId == application.JobId && a.Id != applicationId && a.Status == ApplicationStatus.Applied)
+                        .ToListAsync();
+
+                    foreach (var pendingApp in pendingApplications)
+                    {
+                        pendingApp.Status = ApplicationStatus.Rejected;
+                        pendingApp.RejectReason = "Đã tìm được ứng viên phù hợp chúc bạn may mắn lần sau";
+                    }
                 }
             }
             else
@@ -237,13 +245,15 @@ namespace UniTask.Business.Services
             application.CheckOutTime = DateTime.UtcNow;
             application.CheckOutOtp = null; // Clear OTP
             
-            application.Job.Status = JobStatus.PendingConfirmation;
-            
             await _context.SaveChangesAsync();
-            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", application.JobId);
 
-            // Notify employer via SignalR
+            // Auto-Approve Completion immediately
+            await ApproveCompletionAsync(application.Id, application.Job.EmployerId);
+
+            // Broadcast AFTER both checkout and approval are saved in DB
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", application.JobId);
             await _hubContext.Clients.All.SendAsync("CheckOutSuccess", application.Id);
+
             return true;
         }
 
@@ -279,6 +289,11 @@ namespace UniTask.Business.Services
 
             if (application == null || application.Job.EmployerId != employerId) return false;
             if (application.Status == ApplicationStatus.Completed && application.EscrowReleaseDate != null) return false;
+            
+            if (!application.CheckInTime.HasValue || !application.CheckOutTime.HasValue)
+            {
+                throw new InvalidOperationException("Sinh viên chưa hoàn thành quá trình Check-in và Check-out nên chưa thể nghiệm thu.");
+            }
             
             application.Status = ApplicationStatus.Completed;
             application.EscrowReleaseDate = DateTime.UtcNow;
@@ -349,6 +364,7 @@ namespace UniTask.Business.Services
                 StudentGpa = a.StudentProfile?.GPA,
                 StudentReliabilityScore = a.StudentProfile?.ReliabilityScore ?? 100,
                 Status = a.Status,
+                RejectReason = a.RejectReason,
                 AppliedDate = a.AppliedDate,
                 CheckInTime = a.CheckInTime,
                 CheckOutTime = a.CheckOutTime,

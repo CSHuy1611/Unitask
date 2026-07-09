@@ -73,7 +73,13 @@ import { API_BASE_URL } from '../../config/api.config';
                 </thead>
                 <tbody>
                   @if (isLoading()) {
-                    <tr><td colspan="6" class="text-center py-8">Đang tải dữ liệu...</td></tr>
+                    <tr>
+                      <td colspan="6">
+                        <div class="skeleton skeleton-card" style="height: 60px;"></div>
+                        <div class="skeleton skeleton-card" style="height: 60px; margin-top: 8px;"></div>
+                        <div class="skeleton skeleton-card" style="height: 60px; margin-top: 8px;"></div>
+                      </td>
+                    </tr>
                   } @else if (transactions().length === 0) {
                     <tr><td colspan="6" class="text-center py-8">Chưa có giao dịch nào</td></tr>
                   } @else {
@@ -167,7 +173,11 @@ import { API_BASE_URL } from '../../config/api.config';
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      background: rgba(255,255,255,0.02);
+      background: var(--bg-card);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      box-shadow: 0 1px 0 var(--border-light);
     }
 
     .data-table tr:last-child td {

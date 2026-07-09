@@ -91,10 +91,10 @@ import Tesseract from 'tesseract.js';
                     <span class="material-icons-round">menu_book</span>
                     <span>{{ auth.currentUser()?.major }} - Năm {{ auth.currentUser()?.year }}</span>
                   </div>
-                  <div class="info-row">
+                  <!-- <div class="info-row">
                     <span class="material-icons-round" style="color: var(--warning)">verified_user</span>
                     <span>Điểm tín nhiệm: <strong style="color: var(--warning); font-size: 15px">{{ auth.currentUser()?.reliabilityScore ?? 100 }}</strong> / 100</span>
-                  </div>
+                  </div> -->
                 } @else if (auth.isEmployer()) {
                   <div class="info-row">
                     <span class="material-icons-round">business</span>
@@ -146,7 +146,13 @@ import Tesseract from 'tesseract.js';
                 </div>
               }
 
-              <button class="btn btn-secondary full-width" style="margin-top:var(--space-5)" (click)="toggleEditMode()">
+              @if (auth.currentUser()?.employerType === 1) {
+                <button class="btn btn-warning full-width" style="margin-top:var(--space-5); background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; font-weight: 600;" (click)="showUpgradeModal.set(true)">
+                  <span class="material-icons-round" style="font-size:18px">upgrade</span>
+                  Nâng cấp Doanh nghiệp
+                </button>
+              }
+              <button class="btn btn-secondary full-width" [style.marginTop]="auth.currentUser()?.employerType === 1 ? 'var(--space-3)' : 'var(--space-5)'" (click)="toggleEditMode()">
                 <span class="material-icons-round" style="font-size:18px">edit</span>
                 {{ isEditing() ? 'Đóng chỉnh sửa' : 'Chỉnh sửa hồ sơ' }}
               </button>
@@ -230,40 +236,36 @@ import Tesseract from 'tesseract.js';
                           <input type="text" class="form-input" [(ngModel)]="editForm.position" name="position" required placeholder="VD: Giám đốc nhân sự, CEO, Recruiter">
                         </div>
                         <div class="form-group">
-                          <label class="form-label">Tên công ty *</label>
-                          <input type="text" class="form-input" [(ngModel)]="editForm.companyName" name="companyName" required placeholder="VD: Studio Ánh Sáng">
+                          <label class="form-label">{{ auth.currentUser()?.employerType === 1 ? 'Tên Hộ kinh doanh *' : 'Tên công ty *' }}</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.companyName" name="companyName" required [placeholder]="auth.currentUser()?.employerType === 1 ? 'VD: Cửa hàng tiện lợi 24h' : 'VD: Studio Ánh Sáng'">
                         </div>
                       </div>
                       <div class="form-row">
-                        <div class="form-group">
-                          <label class="form-label">Mã số thuế</label>
-                          <input type="text" class="form-input" [(ngModel)]="editForm.taxCode" name="taxCode" placeholder="VD: 0101234567">
-                          <small class="text-muted" style="font-size: 11px; display: block; margin-top: 4px;">* Lưu ý: Nếu thay đổi MST, bạn sẽ phải tải lên lại ảnh Giấy phép kinh doanh mới để xác thực.</small>
-                        </div>
                         <div class="form-group">
                           <label class="form-label">Lĩnh vực hoạt động</label>
-                          <input type="text" class="form-input" [(ngModel)]="editForm.companyIndustry" name="companyIndustry" placeholder="VD: Nhiếp ảnh / Media, Thời trang">
+                          <input type="text" class="form-input" [(ngModel)]="editForm.companyIndustry" name="companyIndustry" placeholder="VD: Nhiếp ảnh / Media, Thời trang, F&B">
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label">Địa chỉ công ty/hộ kinh doanh</label>
+                          <input type="text" class="form-input" [(ngModel)]="editForm.companyLocation" name="companyLocation" placeholder="VD: Quận 9, TP. HCM">
                         </div>
                       </div>
                       <div class="form-row">
                         <div class="form-group">
-                          <label class="form-label">Quy mô công ty</label>
+                          <label class="form-label">Quy mô</label>
                           <input type="text" class="form-input" [(ngModel)]="editForm.companySize" name="companySize" placeholder="VD: 5-10 nhân viên, Cá nhân">
                         </div>
                       </div>
+                      
                       <div class="form-row">
-                        <div class="form-group">
-                          <label class="form-label">Địa chỉ công ty</label>
-                          <input type="text" class="form-input" [(ngModel)]="editForm.companyLocation" name="companyLocation" placeholder="VD: Quận 9, TP. HCM">
-                        </div>
-                        <div class="form-group">
-                          <label class="form-label">Website công ty</label>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                          <label class="form-label">Website</label>
                           <input type="text" class="form-input" [(ngModel)]="editForm.companyWebsite" name="companyWebsite" placeholder="VD: https://company.com">
                         </div>
                       </div>
                       <div class="form-group">
-                        <label class="form-label">Giới thiệu về công ty</label>
-                        <textarea class="form-textarea" rows="3" [(ngModel)]="editForm.companyDescription" name="companyDescription" placeholder="Mô tả ngắn gọn về công ty của bạn..."></textarea>
+                        <label class="form-label">Giới thiệu</label>
+                        <textarea class="form-textarea" rows="3" [(ngModel)]="editForm.companyDescription" name="companyDescription" placeholder="Mô tả ngắn gọn..."></textarea>
                       </div>
                     }
                     <div class="form-actions">
@@ -279,12 +281,12 @@ import Tesseract from 'tesseract.js';
               <!-- Company Info Section (Employer only) -->
               @if (auth.isEmployer()) {
                 <div class="cv-section glass-card animate-fade-in-up" style="animation-delay:0.1s">
-                  <h3><span class="material-icons-round">business</span> Thông tin công ty / doanh nghiệp</h3>
+                  <h3><span class="material-icons-round">business</span> {{ auth.currentUser()?.employerType === 1 ? 'Thông tin Hộ kinh doanh' : 'Thông tin công ty / doanh nghiệp' }}</h3>
                   
                   <div style="display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-4);">
                     <div class="grid-2-cols">
                       <div>
-                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Tên công ty</span>
+                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">{{ auth.currentUser()?.employerType === 1 ? 'Tên Hộ kinh doanh' : 'Tên công ty' }}</span>
                         <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companyName || 'Chưa cập nhật' }}</strong>
                       </div>
                       <div>
@@ -294,10 +296,12 @@ import Tesseract from 'tesseract.js';
                     </div>
                     
                     <div class="grid-2-cols">
-                      <div>
-                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Quy mô</span>
-                        <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companySize || 'Chưa cập nhật' }}</strong>
-                      </div>
+                      @if (auth.currentUser()?.employerType !== 1) {
+                        <div>
+                          <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Quy mô</span>
+                          <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companySize || 'Chưa cập nhật' }}</strong>
+                        </div>
+                      }
                       <div>
                         <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Địa chỉ</span>
                         <strong style="color: var(--text-primary); font-size: 15px;">{{ auth.currentUser()?.companyLocation || 'Chưa cập nhật' }}</strong>
@@ -305,10 +309,12 @@ import Tesseract from 'tesseract.js';
                     </div>
                     
                     <div class="grid-2-cols">
-                      <div>
-                        <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Mã số thuế</span>
-                        <strong style="color: var(--success); font-size: 15px;">{{ auth.currentUser()?.taxCode || 'Chưa cập nhật' }}</strong>
-                      </div>
+                      @if (auth.currentUser()?.employerType !== 1) {
+                        <div>
+                          <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Mã số thuế</span>
+                          <strong style="color: var(--success); font-size: 15px;">{{ auth.currentUser()?.taxCode || 'Chưa cập nhật' }}</strong>
+                        </div>
+                      }
                       <div>
                         <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Website</span>
                         @if (auth.currentUser()?.companyWebsite && auth.currentUser()?.companyWebsite !== '#') {
@@ -320,48 +326,50 @@ import Tesseract from 'tesseract.js';
                     </div>
                     
                     <div>
-                      <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Giới thiệu công ty</span>
+                      <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Giới thiệu</span>
                       <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin: 0; background: rgba(255,255,255,0.03); padding: var(--space-3); border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
-                        {{ auth.currentUser()?.companyDescription || 'Chưa cập nhật giới thiệu chi tiết về công ty.' }}
+                        {{ auth.currentUser()?.companyDescription || 'Chưa cập nhật giới thiệu chi tiết.' }}
                       </p>
                     </div>
 
-                    <div style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px dashed var(--border-color);">
-                      <h4 style="margin-bottom: var(--space-3);"><span class="material-icons-round" style="vertical-align: middle; font-size: 18px;">verified</span> Giấy phép kinh doanh</h4>
-                      
-                      @if (auth.currentUser()?.businessLicenseUrl) {
-                        <div class="cv-uploaded" style="margin-bottom: var(--space-3);">
-                          <div class="cv-file-info">
-                            <span class="material-icons-round cv-file-icon" style="color: var(--primary-light);">receipt_long</span>
-                            <div>
-                              <strong>Giấy phép kinh doanh (Đã tải lên)</strong>
-                              <span class="cv-date">Trạng thái: 
-                                @if (auth.currentUser()?.isBusinessLicenseVerified) {
-                                  <strong style="color: var(--success);">Đã xác thực thành công</strong>
-                                } @else {
-                                  <strong style="color: var(--warning);">Đang chờ hoặc không hợp lệ</strong>
-                                }
-                              </span>
+                    @if (auth.currentUser()?.employerType !== 1) {
+                      <div style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px dashed var(--border-color);">
+                        <h4 style="margin-bottom: var(--space-3);"><span class="material-icons-round" style="vertical-align: middle; font-size: 18px;">verified</span> Giấy phép kinh doanh</h4>
+                        
+                        @if (auth.currentUser()?.businessLicenseUrl) {
+                          <div class="cv-uploaded" style="margin-bottom: var(--space-3);">
+                            <div class="cv-file-info">
+                              <span class="material-icons-round cv-file-icon" style="color: var(--primary-light);">receipt_long</span>
+                              <div>
+                                <strong>Giấy phép kinh doanh (Đã tải lên)</strong>
+                                <span class="cv-date">Trạng thái: 
+                                  @if (auth.currentUser()?.isBusinessLicenseVerified) {
+                                    <strong style="color: var(--success);">Đã xác thực thành công</strong>
+                                  } @else {
+                                    <strong style="color: var(--warning);">Đang chờ hoặc không hợp lệ</strong>
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                            <div class="cv-actions">
+                              <a [href]="auth.currentUser()?.businessLicenseUrl" target="_blank" class="btn btn-secondary btn-sm">Xem chi tiết</a>
                             </div>
                           </div>
-                          <div class="cv-actions">
-                            <a [href]="auth.currentUser()?.businessLicenseUrl" target="_blank" class="btn btn-secondary btn-sm">Xem chi tiết</a>
-                          </div>
-                        </div>
-                      }
-                      
-                      <div class="upload-area" (click)="licenseInput.click()" [class.disabled]="licenseUploading()" style="min-height: 120px;">
-                        @if (licenseUploading()) {
-                          <div class="upload-spinner"></div>
-                          <p><strong>{{ licenseUploadStatus() }}</strong></p>
-                        } @else {
-                          <span class="material-icons-round upload-icon" style="font-size: 32px; color: var(--primary-light);">add_photo_alternate</span>
-                          <p><strong>Tải lên Giấy phép kinh doanh mới</strong></p>
-                          <span class="upload-note">Hỗ trợ JPG, PNG</span>
                         }
+                        
+                        <div class="upload-area" (click)="licenseInput.click()" [class.disabled]="licenseUploading()" style="min-height: 120px;">
+                          @if (licenseUploading()) {
+                            <div class="upload-spinner"></div>
+                            <p><strong>{{ licenseUploadStatus() }}</strong></p>
+                          } @else {
+                            <span class="material-icons-round upload-icon" style="font-size: 32px; color: var(--primary-light);">add_photo_alternate</span>
+                            <p><strong>Tải lên Giấy phép kinh doanh mới</strong></p>
+                            <span class="upload-note">Hỗ trợ JPG, PNG</span>
+                          }
+                        </div>
+                        <input #licenseInput type="file" accept="image/*" style="display:none" (change)="onLicenseSelected($event)">
                       </div>
-                      <input #licenseInput type="file" accept="image/*" style="display:none" (change)="onLicenseSelected($event)">
-                    </div>
+                    }
                   </div>
                 </div>
               }
@@ -570,9 +578,15 @@ import Tesseract from 'tesseract.js';
                               <a [routerLink]="['/jobs', job.id]" style="text-decoration:none; color:inherit">
                                 <div class="job-title">{{ job.title }}</div>
                               </a>
-                              <div class="job-meta">
+                              <div class="job-meta" style="display: flex; gap: 12px; flex-wrap: wrap;">
                                 <span><i class="material-icons-round" style="font-size:14px">business</i> {{ job.company }}</span>
                                 <span style="color:var(--success)"><i class="material-icons-round" style="font-size:14px">payments</i> {{ job.budget?.toLocaleString('vi-VN') }}đ</span>
+                                @if (job.workStartTime && job.workEndTime) {
+                                  <span style="color:var(--primary-light)"><i class="material-icons-round" style="font-size:14px">access_time</i> {{ formatAmPm(job.workStartTime) }} - {{ formatAmPm(job.workEndTime) }}@if(job.workDate) { ({{ job.workDate | date:'dd/MM/yyyy' }}) }</span>
+                                }
+                                @if (job.workDays) {
+                                  <span style="color:var(--warning)"><i class="material-icons-round" style="font-size:14px">calendar_month</i> {{ job.workDays }}</span>
+                                }
                               </div>
                             </div>
                             @let myApp = getMyApplicationForJob(job.id);
@@ -591,7 +605,7 @@ import Tesseract from 'tesseract.js';
                                 <span class="badge badge-warning">Đang thực hiện</span>
                               }
                             } @else if (job.status === 'pending_confirmation') {
-                              <span class="badge badge-primary">Chờ NTD nghiệm thu</span>
+                              <span class="badge badge-warning">Đang thực hiện</span>
                             } @else if (job.status === 'completed') {
                               <span class="badge badge-success" style="display: flex; align-items: center; gap: 4px;"><i class="material-icons-round" style="font-size:14px">paid</i> Đã nhận lương</span>
                             } @else if (job.status === 'disputed') {
@@ -607,6 +621,7 @@ import Tesseract from 'tesseract.js';
                               </p>
                             </div>
                           }
+
                           <!-- Student Application Status for the Job -->
                           @if (job.status === 'in_progress' && myApp) {
                             <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px; flex-wrap: wrap;">
@@ -617,13 +632,22 @@ import Tesseract from 'tesseract.js';
                               } @else if (!myApp.checkOutTime) {
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                   <span style="font-size: 11.5px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 2px;">
-                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ myApp.checkInTime + 'Z' | date:'HH:mm' }})
+                                    <span class="material-icons-round" style="font-size:14px">check_circle</span> Đã check-in ({{ formatUtcTime(myApp.checkInTime) | date:'HH:mm dd/MM/yyyy' }})
                                   </span>
                                   <button type="button" class="btn btn-warning btn-sm" (click)="openCheckOutModal(myApp.id)">
                                     <span class="material-icons-round" style="font-size:16px">logout</span> Check-out OTP
                                   </button>
                                 </div>
                               }
+                            </div>
+                          }
+                          <!-- Info box when missed schedule -->
+                          @if (job.isMissedSchedule) {
+                            <div style="margin-top: 8px; padding: 10px 14px; background: rgba(239, 68, 68, 0.06); border: 1px dashed rgba(239, 68, 68, 0.25); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: 8px;">
+                              <span class="material-icons-round" style="font-size:18px; color:#EF4444; flex-shrink:0; margin-top:1px">warning</span>
+                              <p style="margin:0; font-size:13px; color: var(--text-secondary); line-height:1.5">
+                                ⚠️ <strong style="color:#EF4444">Bạn đã bỏ lỡ thời gian quy định!</strong> Hệ thống ghi nhận bạn chưa hoàn tất Check-in/Check-out. Vui lòng liên hệ Nhà tuyển dụng ngay lập tức!
+                              </p>
                             </div>
                           }
 
@@ -660,19 +684,45 @@ import Tesseract from 'tesseract.js';
                             @if (job.status === 'completed') {
                               <span class="badge badge-success" style="display: flex; align-items: center; gap: 4px;"><i class="material-icons-round" style="font-size:14px">paid</i> Đã nhận lương</span>
                             } @else if (job.status === 'pending_confirmation') {
-                              <span class="badge badge-primary" style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3);">Chờ NTD nghiệm thu</span>
+                              <span class="badge badge-success" style="display: flex; align-items: center; gap: 4px;"><i class="material-icons-round" style="font-size:14px">paid</i> Đã hoàn thành</span>
                             } @else if (job.status === 'disputed') {
                               <span class="badge badge-danger">Đang tranh chấp</span>
                             } @else if (job.status === 'closed') {
                               <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Chưa hoàn thành</span>
                             }
                           </div>
+                          
+                          @if (job.checkInTime || job.checkOutTime) {
+                            <div style="margin-top: 12px; padding: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg); font-size: 13px; display: flex; flex-direction: column; gap: 6px;">
+                              @if (job.checkInTime) {
+                                <div style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary);">
+                                  <span class="material-icons-round" style="font-size: 16px; color: var(--success);">login</span>
+                                  <strong>Check-in:</strong> {{ formatUtcTime(job.checkInTime) | date:'HH:mm dd/MM/yyyy' }}
+                                </div>
+                              }
+                              @if (job.checkOutTime) {
+                                <div style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary);">
+                                  <span class="material-icons-round" style="font-size: 16px; color: var(--warning);">logout</span>
+                                  <strong>Check-out:</strong> {{ formatUtcTime(job.checkOutTime) | date:'HH:mm dd/MM/yyyy' }}
+                                </div>
+                              }
+                            </div>
+                          }
 
                           @if (job.status === 'completed') {
                             <div class="job-actions" style="justify-content: flex-end;">
                               <button type="button" class="btn btn-primary btn-sm" (click)="openReviewModal(job)">
                                 <i class="material-icons-round" style="font-size:16px">star</i> Đánh giá nhà tuyển dụng
                               </button>
+                            </div>
+                          }
+
+                          @if (job.status === 'closed') {
+                            <div style="margin-top: 12px; padding: 12px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-secondary);">
+                              <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px;">
+                                <span class="material-icons-round" style="font-size: 18px;">warning</span> Công việc không hoàn thành
+                              </strong>
+                              <p style="margin: 6px 0 0 0;">Bạn đã không thực hiện Check-in / Check-out trong thời gian quy định. Công việc bị đánh dấu là không hoàn thành.</p>
                             </div>
                           }
 
@@ -742,26 +792,47 @@ import Tesseract from 'tesseract.js';
                   @if (appliedJobs().length) {
                     <div class="job-list">
                       @for (job of appliedJobs(); track job.id) {
-                        <a [routerLink]="['/jobs', job.id]" class="job-card">
+                        <div class="job-card">
                           <div class="job-card-header">
                             <div>
-                              <div class="job-title">{{ job.title }}</div>
+                              <a [routerLink]="['/jobs', job.id]" style="text-decoration:none; color:inherit">
+                                <div class="job-title">{{ job.title }}</div>
+                              </a>
                               <div class="job-meta">
                                 <span><i class="material-icons-round" style="font-size:14px">business</i> {{ job.company }}</span>
                                 <span><i class="material-icons-round" style="font-size:14px">location_on</i> {{ job.location || 'Từ xa' }}</span>
                               </div>
                             </div>
-                            @if (job.myAppStatus === 0 || job.myAppStatus === 'Applied') {
+                            @if (job.myAppStatus === 3 || job.myAppStatus === 'Rejected') {
+                              <span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2);">Không trúng tuyển</span>
+                            } @else if (job.status === 'in_progress' || job.status === 'completed' || job.status === 'closed') {
+                              <span class="badge" style="background: rgba(156, 163, 175, 0.15); color: #6B7280; border: 1px solid rgba(156, 163, 175, 0.3); padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 600;">Quá hạn ứng tuyển</span>
+                            } @else if (job.myAppStatus === 0 || job.myAppStatus === 'Applied') {
                               <span class="badge badge-success">Đã nộp</span>
                             } @else if (job.myAppStatus === 1 || job.myAppStatus === 'Interviewing') {
                               <span class="badge badge-warning">Đang phỏng vấn</span>
-                            } @else if (job.myAppStatus === 3 || job.myAppStatus === 'Rejected') {
-                              <span class="badge badge-danger">Bị từ chối</span>
                             } @else {
                               <span class="badge badge-success">Đã nộp</span>
                             }
                           </div>
-                        </a>
+                          @if (job.myAppStatus === 3 || job.myAppStatus === 'Rejected') {
+                            @if (job.rejectReason) {
+                              <div style="margin-top: 12px; padding: 12px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-secondary);">
+                                <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                                  <span class="material-icons-round" style="font-size: 16px;">info</span> Lý do từ chối:
+                                </strong>
+                                <p style="margin: 0; padding-left: 20px;">{{ job.rejectReason }}</p>
+                              </div>
+                            } @else {
+                              <div style="margin-top: 12px; padding: 12px; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-secondary);">
+                                <strong style="color: #EF4444; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                                  <span class="material-icons-round" style="font-size: 16px;">info</span> Nhà tuyển dụng đã tìm được ứng viên phù hợp.
+                                </strong>
+                                <p style="margin: 0; padding-left: 20px;">Chúc bạn may mắn lần sau!</p>
+                              </div>
+                            }
+                          }
+                        </div>
                       }
                     </div>
                   } @else {
@@ -776,6 +847,81 @@ import Tesseract from 'tesseract.js';
             </main>
         }
       </div>
+
+      <!-- Upgrade to Business Modal -->
+      @if (showUpgradeModal()) {
+        <div class="modal-overlay animate-fade-in">
+          <div class="modal-content glass-card p-6" style="width: 100%; max-width: 500px;">
+            <div class="modal-header d-flex justify-between items-center mb-4">
+              <h3 style="font-size:1.25rem; font-weight:700; color: var(--warning)">Nâng cấp Doanh nghiệp</h3>
+              <button class="btn btn-secondary icon-btn" (click)="showUpgradeModal.set(false)" [disabled]="upgradeUploading()">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            
+            <div class="modal-body">
+              <div class="alert alert-warning mb-4" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #b45309">
+                <span class="material-icons-round" style="color: #f59e0b">info</span>
+                Sau khi nâng cấp, bạn sẽ có thể mua các gói dịch vụ cao cấp và tuyển dụng không giới hạn.
+              </div>
+              
+              @if (upgradeError()) {
+                <div class="alert alert-error mb-4">
+                  <span class="material-icons-round">error</span>
+                  {{ upgradeError() }}
+                </div>
+              }
+              
+              @if (upgradeSuccess()) {
+                <div class="alert alert-success mb-4">
+                  <span class="material-icons-round">check_circle</span>
+                  {{ upgradeSuccess() }}
+                </div>
+              }
+
+              <form (ngSubmit)="submitUpgrade()" class="upgrade-form">
+                <div class="form-group mb-3">
+                  <label class="form-label">Tên công ty *</label>
+                  <input type="text" class="form-input" [(ngModel)]="upgradeForm.companyName" name="companyName" required placeholder="VD: Công ty TNHH ABC">
+                </div>
+                
+                <div class="form-group mb-4">
+                  <label class="form-label">Mã số thuế *</label>
+                  <input type="text" class="form-input" [(ngModel)]="upgradeForm.taxCode" name="taxCode" required placeholder="VD: 0101234567">
+                </div>
+                
+                <div class="form-group mb-4">
+                  <label class="form-label">Giấy phép kinh doanh *</label>
+                  <div class="upload-area" (click)="upgradeFileInput.click()" [class.disabled]="upgradeUploading()" style="min-height: 100px; padding: var(--space-3)">
+                    @if (upgradeFile) {
+                      <div class="d-flex items-center gap-2" style="color: var(--primary)">
+                        <span class="material-icons-round">image</span>
+                        <strong>{{ upgradeFile.name }}</strong>
+                      </div>
+                    } @else {
+                      <span class="material-icons-round upload-icon" style="font-size: 28px; color: var(--primary-light);">add_photo_alternate</span>
+                      <p style="margin: 4px 0"><strong>Tải lên hình ảnh bản gốc GPKD</strong></p>
+                      <span class="upload-note">Hệ thống sẽ tự động quét bằng AI</span>
+                    }
+                  </div>
+                  <input #upgradeFileInput type="file" accept="image/*" style="display:none" (change)="onUpgradeFileSelected($event)">
+                </div>
+
+                <div class="form-actions d-flex justify-end gap-3 mt-4">
+                  <button type="button" class="btn btn-secondary" (click)="showUpgradeModal.set(false)" [disabled]="upgradeUploading()">Hủy</button>
+                  <button type="submit" class="btn btn-warning" [disabled]="upgradeUploading() || !upgradeForm.companyName || !upgradeForm.taxCode || !upgradeFile" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none;">
+                    @if (upgradeUploading()) {
+                      <span class="spinner" style="border-top-color: white"></span> Đang xử lý...
+                    } @else {
+                      Xác nhận nâng cấp
+                    }
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- Withdraw Modal -->
       @if (showWithdrawModal()) {
@@ -831,7 +977,11 @@ import Tesseract from 'tesseract.js';
               <div class="form-actions d-flex justify-between gap-3">
                 <button type="button" class="btn btn-secondary flex-1" (click)="showWithdrawModal.set(false)">Hủy</button>
                 <button type="submit" class="btn btn-primary flex-1" [disabled]="!withdrawForm.amount || !withdrawForm.bank || !withdrawForm.account || !withdrawForm.name || isSubmittingWithdraw()">
-                  Xác nhận rút tiền
+                  @if (isSubmittingWithdraw()) {
+                    <span class="material-icons-round spinner">autorenew</span> Đang xử lý...
+                  } @else {
+                    Xác nhận rút tiền
+                  }
                 </button>
               </div>
             </form>
@@ -1619,11 +1769,33 @@ export class ProfileComponent implements OnInit, OnDestroy {
   editSuccess = signal(false);
   editMessage = signal('');
 
+  showUpgradeModal = signal(false);
+  upgradeForm = { companyName: '', taxCode: '' };
+  upgradeFile: File | null = null;
+  upgradeUploading = signal(false);
+  upgradeError = signal('');
+  upgradeSuccess = signal('');
+
   showWithdrawModal = signal(false);
   withdrawSuccess = signal(false);
   withdrawMessage = signal('');
   isSubmittingWithdraw = signal(false);
   selectedJobToComplete = signal<Job | null>(null);
+
+  formatUtcTime(timeStr?: string): Date | null {
+    if (!timeStr) return null;
+    return new Date(timeStr.endsWith('Z') ? timeStr : timeStr + 'Z');
+  }
+
+  formatAmPm(timeString: string): string {
+    if (!timeString) return '';
+    const [h, m] = timeString.split(':');
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'CH' : 'SA';
+    hour = hour % 12;
+    hour = hour ? hour : 12; // the hour '0' should be '12'
+    return `${hour.toString().padStart(2, '0')}:${m} ${ampm}`;
+  }
 
   selectedJobToReport = signal<Job | null>(null);
   reportReason = signal('');
@@ -1668,11 +1840,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .filter(app => app.status === 2 || app.status === 'Accepted' || app.status === 'accepted')
       .map(app => app.jobId);
 
+    const historyAppJobIds = this.myApplications()
+      .filter(app => app.status === 5 || app.status === 'Completed' || app.status === 'completed')
+      .map(app => app.jobId);
+
     return this.jobService.getAllJobs().filter(j =>
       (j.selectedStudentId === user.id ||
         (j.selectedStudentId && String(j.selectedStudentId) === String(user.id)) ||
         acceptedJobIds.includes(j.id)) &&
-      (j.status === 'open' || j.status === 'in_progress' || j.status === 'pending_confirmation')
+      (j.status === 'open' || j.status === 'in_progress' || j.status === 'pending_confirmation') &&
+      !historyAppJobIds.includes(j.id)
     ).filter(j => {
       // Only include 'open' jobs if my application is Accepted for that job
       if (j.status === 'open') {
@@ -1681,10 +1858,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return true;
     }).map(j => {
       const myApp = this.myApplications().find(app => app.jobId === j.id);
+      
+      let isMissedSchedule = false;
+      if (j.status === 'in_progress' && j.workDate && j.workEndTime && (!myApp?.checkInTime || !myApp?.checkOutTime)) {
+        try {
+          const workDateStr = j.workDate.split('T')[0];
+          const endDateTimeStr = `${workDateStr}T${j.workEndTime}`;
+          const endDateTime = new Date(endDateTimeStr);
+          if (endDateTime.getTime() < Date.now()) {
+            isMissedSchedule = true;
+          }
+        } catch (e) {}
+      }
+      
       return {
         ...j,
         checkInTime: myApp?.checkInTime ? (myApp.checkInTime.endsWith('Z') ? myApp.checkInTime : myApp.checkInTime + 'Z') : undefined,
-        checkOutTime: myApp?.checkOutTime ? (myApp.checkOutTime.endsWith('Z') ? myApp.checkOutTime : myApp.checkOutTime + 'Z') : undefined
+        checkOutTime: myApp?.checkOutTime ? (myApp.checkOutTime.endsWith('Z') ? myApp.checkOutTime : myApp.checkOutTime + 'Z') : undefined,
+        isMissedSchedule
       };
     });
   });
@@ -1730,7 +1921,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const myApp = appliedApps.find(app => app.jobId === j.id);
       return {
         ...j,
-        myAppStatus: myApp?.status
+        myAppStatus: myApp?.status,
+        rejectReason: myApp?.rejectReason
       };
     });
   });
@@ -1757,6 +1949,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     skillsStr: '',
     bio: '',
     // Employer fields
+    employerType: 0,
     companyName: '',
     position: '',
     companyIndustry: '',
@@ -1784,45 +1977,41 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       this.subscriptions.add(
         this.signalRService.applicationApprovedOccurred$.subscribe(jobId => {
-          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
-          if (hasMyApplication) {
-            this.toast.success('Nhà tuyển dụng vừa Nghiệm thu thành công! Bạn đã nhận được lương vào Ví.');
-            this.refreshStudentApplications();
-            this.jobService.fetchJobs();
-            this.auth.fetchBalance().subscribe();
+          this.jobService.fetchJobs();
+          if (this.auth.isStudent()) {
+            this.jobService.getMyApplications().subscribe({
+              next: (apps) => {
+                this.myApplications.set(apps);
+                const myApp = apps.find(app => Number(app.jobId) === Number(jobId));
+                if (myApp && (myApp.status === 5 || myApp.status === 'Completed' || myApp.status === 'completed')) {
+                  this.toast.success('🎉 Check-out thành công! Tiền công đã được gửi vào ví của bạn. Cảm ơn bạn đã hoàn thành công việc!', 8000);
+                  this.auth.fetchBalance().subscribe();
+                }
+              },
+              error: (err) => console.error('Failed to load student applications:', err)
+            });
           }
         })
       );
 
       this.subscriptions.add(
         this.signalRService.applicationCheckInOccurred$.subscribe(jobId => {
-          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
-          if (hasMyApplication) {
-            // Không hiện toast ở đây vì submitCheckIn() đã hiện rồi
-            this.refreshStudentApplications();
-            this.jobService.fetchJobs();
-          }
+          this.refreshStudentApplications();
+          this.jobService.fetchJobs();
         })
       );
 
       this.subscriptions.add(
         this.signalRService.applicationCheckOutOccurred$.subscribe(jobId => {
-          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
-          if (hasMyApplication) {
-            // Không hiện toast ở đây vì submitCheckOut() đã hiện rồi
-            this.refreshStudentApplications();
-            this.jobService.fetchJobs();
-          }
+          this.refreshStudentApplications();
+          this.jobService.fetchJobs();
         })
       );
 
       this.subscriptions.add(
         this.signalRService.applicationStatusChanged$.subscribe(jobId => {
-          const hasMyApplication = this.myApplications().some(app => app.jobId === jobId);
-          if (hasMyApplication) {
-            this.refreshStudentApplications();
-            this.jobService.fetchJobs();
-          }
+          this.refreshStudentApplications();
+          this.jobService.fetchJobs();
         })
       );
 
@@ -1873,6 +2062,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           year: user.year || 3,
           skillsStr: (user.skills || []).join(', '),
           bio: user.bio || '',
+          employerType: user.employerType ?? 0,
           companyName: user.companyName || '',
           position: user.position || '',
           companyIndustry: user.companyIndustry || '',
@@ -1904,14 +2094,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
     } else if (this.auth.isAdmin()) {
       // Handled in common block
     } else {
+      payload.employerType = this.editForm.employerType;
       payload.companyName = this.editForm.companyName || undefined;
       payload.position = this.editForm.position || undefined;
       payload.companyIndustry = this.editForm.companyIndustry || undefined;
-      payload.companySize = this.editForm.companySize || undefined;
+      if (this.editForm.employerType === 0) {
+        payload.companySize = this.editForm.companySize || undefined;
+        payload.taxCode = this.editForm.taxCode || undefined;
+      } else {
+        payload.companySize = undefined;
+        payload.taxCode = undefined;
+      }
       payload.companyLocation = this.editForm.companyLocation || undefined;
       payload.companyDescription = this.editForm.companyDescription || undefined;
       payload.companyWebsite = this.editForm.companyWebsite || undefined;
-      payload.taxCode = this.editForm.taxCode || undefined;
     }
 
     this.auth.updateProfile(payload).subscribe({
@@ -1930,6 +2126,53 @@ export class ProfileComponent implements OnInit, OnDestroy {
         }
       },
       error: () => this.toast.error('Có lỗi xảy ra khi lưu hồ sơ.')
+    });
+  }
+
+  onUpgradeFileSelected(event: any) {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        this.toast.error('Kích thước file không được vượt quá 10MB');
+        return;
+      }
+      this.upgradeFile = file;
+      this.upgradeError.set('');
+    }
+  }
+
+  submitUpgrade() {
+    if (!this.upgradeForm.companyName || !this.upgradeForm.taxCode || !this.upgradeFile) {
+      this.upgradeError.set('Vui lòng điền đầy đủ thông tin và tải lên Giấy phép kinh doanh.');
+      return;
+    }
+
+    this.upgradeUploading.set(true);
+    this.upgradeError.set('');
+    this.upgradeSuccess.set('');
+
+    this.auth.upgradeToBusiness(
+      this.upgradeForm.companyName, 
+      this.upgradeForm.taxCode, 
+      this.upgradeFile
+    ).subscribe({
+      next: (res) => {
+        this.upgradeUploading.set(false);
+        if (res.success) {
+          this.upgradeSuccess.set(res.message);
+          setTimeout(() => {
+            this.showUpgradeModal.set(false);
+            this.toast.success(res.message);
+            window.location.reload(); // Reload to reflect changes globally
+          }, 2000);
+        } else {
+          this.upgradeError.set(res.message);
+        }
+      },
+      error: () => {
+        this.upgradeUploading.set(false);
+        this.upgradeError.set('Có lỗi xảy ra khi nâng cấp, vui lòng thử lại.');
+      }
     });
   }
 
@@ -1952,6 +2195,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.isSubmittingWithdraw()) return;
+    this.isSubmittingWithdraw.set(true);
+
     this.auth.withdraw(
       amount,
       this.withdrawForm.bank,
@@ -1959,6 +2205,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.withdrawForm.name
     ).subscribe({
       next: (res) => {
+        this.isSubmittingWithdraw.set(false);
         if (res.success) {
           this.toast.success('Yêu cầu rút tiền thành công! Tiền sẽ được chuyển trong 24h.');
           this.showWithdrawModal.set(false);
@@ -1967,7 +2214,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
           this.toast.error('Có lỗi xảy ra: ' + res.message);
         }
       },
-      error: () => this.toast.error('Lỗi kết nối máy chủ.')
+      error: () => {
+        this.isSubmittingWithdraw.set(false);
+        this.toast.error('Lỗi kết nối máy chủ.');
+      }
     });
   }
 
@@ -2036,7 +2286,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.jobService.studentCheckOutApplication(appId, this.otpInput).subscribe({
       next: (res) => {
         if (res.success) {
-          this.toast.success(res.message);
+          // Xóa dòng hiển thị thông báo "Check-out thành công" từ API,
+          // vì SignalR (applicationApprovedOccurred) sẽ gộp chung và thông báo chi tiết hơn.
           this.showCheckOutModal.set(false);
           this.refreshStudentApplications();
         } else {

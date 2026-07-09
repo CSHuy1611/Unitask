@@ -27,6 +27,8 @@ namespace UniTask.DataAcesss.Entities
 
         public ApplicationStatus Status { get; set; } = ApplicationStatus.Applied;
 
+        public string? RejectReason { get; set; }
+
         public DateTime AppliedDate { get; set; } = DateTime.UtcNow;
 
         // ===== Check-in / Check-out & Escrow Fields =====

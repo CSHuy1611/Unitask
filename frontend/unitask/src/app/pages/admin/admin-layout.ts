@@ -1,11 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { AdminSearchService } from '../../services/admin-search.service';
 
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule],
   template: `
     <section class="admin-layout-wrapper">
       @if (!auth.isAdmin()) {
@@ -44,11 +46,31 @@ import { AuthService } from '../../services/auth.service';
                 <span class="material-icons-round">account_balance</span> Logs Nạp Tiền (PayOS)
               </a>
             </nav>
+            <div class="sidebar-footer">
+              <div class="admin-profile">
+                <div class="avatar">A</div>
+                <div class="info">
+                  <div class="name">Administrator</div>
+                  <div class="email">admin@unitask.vn</div>
+                </div>
+              </div>
+            </div>
           </aside>
 
           <!-- Main Content -->
           <main class="admin-main-content">
-            <router-outlet></router-outlet>
+            <header class="admin-top-bar glass-card">
+              <div class="breadcrumbs">
+                UniTask <span class="separator">/</span> <span class="current">Admin Panel</span>
+              </div>
+              <div class="search-bar">
+                <span class="material-icons-round">search</span>
+                <input type="text" placeholder="Tìm kiếm nhanh..." [(ngModel)]="searchService.searchQuery">
+              </div>
+            </header>
+            <div class="page-content">
+              <router-outlet></router-outlet>
+            </div>
           </main>
         </div>
       }
@@ -79,10 +101,13 @@ import { AuthService } from '../../services/auth.service';
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       box-shadow: 0 8px 32px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 80px - var(--space-12));
     }
 
     .sidebar-header {
-      padding: var(--space-4);
+      padding: var(--space-2) var(--space-2) var(--space-4);
       margin-bottom: var(--space-4);
       border-bottom: 1px solid var(--border-color);
     }
@@ -101,7 +126,12 @@ import { AuthService } from '../../services/auth.service';
       display: flex;
       flex-direction: column;
       gap: var(--space-2);
+      overflow-y: auto;
     }
+    
+    /* Scrollbar for nav */
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 
     .sidebar-link {
       display: flex;
@@ -114,26 +144,123 @@ import { AuthService } from '../../services/auth.service';
       font-weight: 600;
       font-size: var(--font-size-sm);
       transition: all var(--transition-fast);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sidebar-link::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--primary-light);
+      transform: scaleY(0);
+      transition: transform var(--transition-fast);
+      transform-origin: left;
     }
 
     .sidebar-link:hover {
-      background: rgba(var(--primary-rgb), 0.05);
+      background: rgba(255,255,255, 0.05);
       color: var(--text-primary);
     }
 
     .sidebar-link.active {
-      background: var(--primary);
+      background: var(--primary-gradient);
       color: white;
-      box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .sidebar-link.active::before {
+      transform: scaleY(1);
     }
 
     .sidebar-link .material-icons-round {
       font-size: 20px;
     }
 
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .admin-profile {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .admin-profile .avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800;
+    }
+
+    .admin-profile .info .name {
+      font-weight: 700; font-size: var(--font-size-sm); color: var(--text-primary);
+    }
+
+    .admin-profile .info .email {
+      font-size: var(--font-size-xs); color: var(--text-muted);
+    }
+
     .admin-main-content {
       flex: 1;
       min-width: 0; /* Prevent overflow */
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .admin-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-3) var(--space-6);
+      border-radius: var(--radius-xl);
+      animation: fade-in-up 0.4s ease-out;
+    }
+
+    .breadcrumbs {
+      color: var(--text-muted);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+    }
+
+    .breadcrumbs .separator { margin: 0 var(--space-2); opacity: 0.5; }
+    .breadcrumbs .current { color: var(--primary-light); }
+
+    .search-bar {
+      position: relative;
+    }
+
+    .search-bar .material-icons-round {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 20px;
+    }
+
+    .search-bar input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-light);
+      padding: 8px 16px 8px 40px;
+      border-radius: var(--radius-full);
+      color: white;
+      width: 280px;
+      outline: none;
+      transition: all var(--transition-fast);
+      font-size: var(--font-size-sm);
+    }
+
+    .search-bar input:focus {
+      background: rgba(255,255,255,0.1);
+      border-color: var(--primary-light);
+      width: 320px;
     }
 
     /* Mobile responsiveness */
@@ -155,4 +282,5 @@ import { AuthService } from '../../services/auth.service';
 })
 export class AdminLayoutComponent {
   auth = inject(AuthService);
+  searchService = inject(AdminSearchService);
 }

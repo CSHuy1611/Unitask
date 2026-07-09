@@ -28,6 +28,63 @@ import { Subscription } from 'rxjs';
           </div>
         } @else {
           <!-- SIDEBAR -->
+          
+          @if (showWelcomePopup()) {
+            <div class="modal-overlay" style="display:flex; z-index: 1000;">
+              <div class="modal-content glass-card animate-scale-up" style="max-width: 450px; text-align: center; padding: 32px;">
+                <div class="modal-icon" style="background: var(--success); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                  <span class="material-icons-round" style="color: white; font-size: 32px;">verified</span>
+                </div>
+                <h2 style="margin-bottom: 16px; font-size: 20px;">Đăng ký thành công!</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;">
+                  Tài khoản của bạn mặc định là <strong>Hộ kinh doanh</strong>. Bạn được miễn phí đăng việc 3 lần, sau đó bạn sẽ cần trả phí để tiếp tục đăng việc.
+                </p>
+                <button type="button" class="btn btn-primary full-width" (click)="closeWelcomePopup()">Bắt đầu ngay</button>
+              </div>
+            </div>
+          }
+
+          @if (showFreePostingConfirm()) {
+            <div class="modal-overlay" style="display:flex; z-index: 1001;">
+              <div class="modal-content glass-card animate-scale-up" style="max-width: 480px; text-align: center; padding: 32px;">
+                <div class="modal-icon" style="background: linear-gradient(135deg, #10b981, #059669); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                  <span class="material-icons-round" style="color: white; font-size: 32px;">card_giftcard</span>
+                </div>
+                <h2 style="margin-bottom: 8px; font-size: 20px;">Xác nhận đăng tin</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
+                  Đây là bài đăng <strong>miễn phí đăng tin</strong> lần <strong>{{ freePostingCount() + 1 }}/3</strong> của bạn.
+                </p>
+                <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: left;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Tạm giữ lương</span>
+                    <span>{{ pendingJobData?.budget?.toLocaleString('vi-VN') || 0 }}đ</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Phí nền tảng (10%)</span>
+                    <span>{{ pendingJobData?.commission?.toLocaleString('vi-VN') || 0 }}đ</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Phí đăng tin</span>
+                    <span style="text-decoration: line-through; color: var(--text-muted); margin-right: 8px;">2.000đ</span>
+                    <span style="color: #10b981; font-weight: 600;">Miễn phí</span>
+                  </div>
+                  <hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="font-weight: 600;">Tổng cần thanh toán</span>
+                    <span style="font-weight: 700; font-size: 1.1em;">{{ (pendingJobData?.budget + pendingJobData?.commission)?.toLocaleString('vi-VN') || 0 }}đ</span>
+                  </div>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.85em; margin-bottom: 20px;">
+                  Còn lại <strong>{{ 3 - freePostingCount() - 1 }}</strong> lần miễn phí đăng tin sau bài đăng này. Sau 3 lần, bạn sẽ cần trả thêm phí đăng tin 2.000đ.
+                </p>
+                <div style="display: flex; gap: 12px;">
+                  <button type="button" class="btn btn-secondary" style="flex:1" (click)="cancelFreePosting()">Hủy</button>
+                  <button type="button" class="btn btn-primary" style="flex:1" (click)="confirmFreePosting()">Xác nhận đăng tin</button>
+                </div>
+              </div>
+            </div>
+          }
+
           <aside class="dashboard-sidebar animate-fade-in-up">
             <div class="sidebar-card glass-card profile-card">
               <div class="profile-header">
@@ -52,6 +109,7 @@ import { Subscription } from 'rxjs';
                 }
                 <div class="wallet-actions">
                   <a routerLink="/pricing" class="btn btn-primary btn-sm full-width"><span class="material-icons-round">add_circle</span> Nạp tiền / Mua gói</a>
+                  <button type="button" class="btn btn-secondary btn-sm full-width" style="margin-top: 8px;" (click)="quickTopUp()" [disabled]="isToppingUp()"><span class="material-icons-round">bolt</span> Nạp 10,000,000đ (Test)</button>
                   <button class="btn btn-secondary btn-sm full-width" (click)="showTransactions.set(true)"><span class="material-icons-round">history</span> Lịch sử Giao dịch</button>
                 </div>
               </div>
@@ -147,7 +205,7 @@ import { Subscription } from 'rxjs';
                   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Loại hình</label>
-                      <select class="form-select" [(ngModel)]="formData.type" name="type">
+                      <select class="form-select" [(ngModel)]="formData.type" (ngModelChange)="onTypeChange($event)" name="type">
                         <option>Thực tập</option>
                         <option>Part-time</option>
                         <option>Freelance</option>
@@ -163,6 +221,54 @@ import { Subscription } from 'rxjs';
                       <label class="form-label">Địa điểm <span style="color: #EF4444">*</span></label>
                       <input type="text" class="form-input" placeholder="VD: TP. Hồ Chí Minh" [(ngModel)]="formData.location" name="location" required>
                       @if (formErrors['location']) { <span class="error-text">{{ formErrors['location'] }}</span> }
+                    </div>
+                  </div>
+                  
+                  <!-- Work Schedule Fields -->
+                  <div style="margin-top: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 20px;">
+                      <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Giờ bắt đầu <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
+                        <input type="time" class="form-input" [(ngModel)]="formData.workStartTime" name="workStartTime">
+                        @if (formErrors['workStartTime']) { <span class="error-text">{{ formErrors['workStartTime'] }}</span> }
+                      </div>
+                      <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Giờ kết thúc <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
+                        <input type="time" class="form-input" [(ngModel)]="formData.workEndTime" name="workEndTime">
+                        @if (formErrors['workEndTime']) { <span class="error-text">{{ formErrors['workEndTime'] }}</span> }
+                      </div>
+
+                      <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Ngày bắt đầu <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
+                        <input type="date" class="form-input" [(ngModel)]="formData.workDate" name="workDate">
+                        @if (formErrors['workDate']) { <span class="error-text">{{ formErrors['workDate'] }}</span> }
+                      </div>
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                      @if (!isShortTerm) {
+                        <div class="form-group" style="margin: 0;">
+                          <label class="form-label">Lịch làm việc hàng tuần</label>
+                          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">
+                            @for (day of availableDays; track day) {
+                              <button type="button" 
+                                      (click)="toggleDay(day)"
+                                      [class.active]="selectedDays.includes(day)"
+                                      style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 13px; font-weight: 500; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;"
+                                      [style.background]="selectedDays.includes(day) ? 'var(--primary-color)' : 'var(--bg-surface)'"
+                                      [style.color]="selectedDays.includes(day) ? '#fff' : 'var(--text-primary)'"
+                                      [style.border-color]="selectedDays.includes(day) ? 'var(--primary-color)' : 'var(--border-color)'">
+                                {{ day }}
+                              </button>
+                            }
+                          </div>
+                        </div>
+                      } @else {
+                        <div class="form-group" style="margin: 0;">
+                          <label class="form-label">Khoảng thời gian / Các ngày cụ thể</label>
+                          <input type="text" class="form-input" [(ngModel)]="formData.workDays" name="workDays" placeholder="VD: 15/07 - 18/07">
+                        </div>
+                      }
                     </div>
                   </div>
                 </div>
@@ -332,9 +438,15 @@ import { Subscription } from 'rxjs';
                           <li style="margin-bottom: 4px; display: flex; gap: 4px;"><span class="material-icons-round" style="font-size: 14px; color: var(--success);">check</span> Đăng không giới hạn tin</li>
                           @if (pkg.id >= 2) { <li style="margin-bottom: 4px; display: flex; gap: 4px;"><span class="material-icons-round" style="font-size: 14px; color: var(--success);">check</span> Ưu tiên hiển thị top</li> }
                         </ul>
-                        <button class="btn full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)" [disabled]="isProcessingPackage()">
-                          Mua gói
-                        </button>
+                        @if (auth.currentUser()?.employerType === 1) {
+                          <button class="btn full-width" style="background: var(--bg-card); color: var(--text-muted); border: 1px dashed var(--border-color); cursor: not-allowed;" title="Vui lòng nâng cấp lên Doanh nghiệp để mua gói.">
+                            Chỉ dành cho Doanh nghiệp
+                          </button>
+                        } @else {
+                          <button class="btn full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)" [disabled]="isProcessingPackage()">
+                            Mua gói
+                          </button>
+                        }
                       </div>
                     }
                   </div>
@@ -390,7 +502,13 @@ import { Subscription } from 'rxjs';
                       <div class="job-meta">
                         <span>📍 {{ job.location }}</span>
                         <span>💰 {{ job.salary }}</span>
-                        <span>⏰ {{ job.type }}</span>
+                        <span>⏱️ {{ job.type }}</span>
+                        @if (job.workStartTime && job.workEndTime) {
+                          <span style="color: var(--primary-light);">⏰ {{ formatAmPm(job.workStartTime) }} - {{ formatAmPm(job.workEndTime) }}@if(job.workDate) { ({{ job.workDate | date:'dd/MM/yyyy' }}) }</span>
+                        }
+                        @if (job.workDays) {
+                          <span style="color: var(--warning);">📅 {{ job.workDays }}</span>
+                        }
                         <span>📅 Hạn: {{ job.deadline }}</span>
                       </div>
                     </div>
@@ -525,11 +643,24 @@ import { Subscription } from 'rxjs';
                       <span class="material-icons-round" style="font-size: 20px; margin-top: 2px;">warning</span>
                       <div>
                         <strong>Lưu ý:</strong> Công việc này cần tuyển <strong>{{ selectedJobForApplicants()?.headCount }}</strong> người. Bạn mới duyệt <strong>{{ selectedJobForApplicants()?.acceptedCount || 0 }}</strong> người.<br>
-                        Sinh viên chỉ có thể bắt đầu làm việc (Check-in) khi bạn đã giao việc cho <strong>ĐỦ</strong> số lượng yêu cầu.
+                        Vui lòng duyệt đủ số lượng ứng viên để có thể bắt đầu công việc.
                         @if (jobApplications().length >= (selectedJobForApplicants()?.headCount || 1)) {
-                          <br><span style="color: var(--success); font-weight: 500;">Bạn đã có đủ số lượng ứng viên đăng ký. Hãy xem xét và giao việc ngay!</span>
+                          <br><span style="color: var(--success); font-weight: 500;">Bạn đã có đủ số lượng ứng viên đăng ký. Hãy xem xét và duyệt ngay!</span>
                         }
                       </div>
+                    </div>
+                  } @else {
+                    <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; color: #10B981; display: flex; align-items: flex-start; gap: 8px; justify-content: space-between;">
+                      <div style="display: flex; gap: 8px;">
+                        <span class="material-icons-round" style="font-size: 20px; margin-top: 2px;">check_circle</span>
+                        <div>
+                          <strong>Hoàn tất!</strong> Bạn đã duyệt đủ <strong>{{ selectedJobForApplicants()?.acceptedCount }}</strong> ứng viên.<br>
+                          Hãy nhấn nút "Bắt đầu công việc" để chuyển trạng thái công việc và sinh viên có thể Check-in.
+                        </div>
+                      </div>
+                      <button class="btn btn-primary" (click)="onStartJob(selectedJobForApplicants()!)">
+                        Bắt đầu công việc
+                      </button>
                     </div>
                   }
                 }
@@ -718,12 +849,6 @@ import { Subscription } from 'rxjs';
                                 Check-out
                               </button>
                             </div>
-                            <!-- Approve -->
-                            <button (click)="appToApprove.set(app)"
-                                    style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background: white; color: #111; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                              <span class="material-icons-round" style="font-size: 20px;">verified</span>
-                              Nghiệm thu công việc
-                            </button>
                             <!-- Report violation -->
                             <button (click)="appToDispute.set(app)"
                                     style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; background: transparent; color: #EF4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
@@ -1425,9 +1550,33 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   showPostForm = signal(false);
   showTransactions = signal(false);
   isSyncing = signal(false);
+  isToppingUp = signal(false);
   postSuccess = signal(false);
   postMessage = signal('');
   editingJobId = signal<number | null>(null);
+  showWelcomePopup = signal(false);
+  showFreePostingConfirm = signal(false);
+  freePostingCount = signal(0);
+  pendingJobData: any = null;
+
+  closeWelcomePopup() {
+    this.showWelcomePopup.set(false);
+  }
+
+  confirmFreePosting() {
+    this.showFreePostingConfirm.set(false);
+    if (this.pendingJobData) {
+      const totalCost = (this.pendingJobData.budget || 0) + (this.pendingJobData.commission || 0);
+      this.auth.deductBalance(totalCost);
+      this.submitJobToBackend(this.pendingJobData);
+      this.pendingJobData = null;
+    }
+  }
+
+  cancelFreePosting() {
+    this.showFreePostingConfirm.set(false);
+    this.pendingJobData = null;
+  }
 
   // SignalR properties for OTP Real-time
   private hubConnection?: HubConnection;
@@ -1635,7 +1784,24 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  isShortTerm = false;
+  availableDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  selectedDays: string[] = [];
+  timeOptions: string[] = [];
+
   ngOnInit() {
+    if (localStorage.getItem('justRegisteredEmployer') === 'true') {
+      this.showWelcomePopup.set(true);
+      localStorage.removeItem('justRegisteredEmployer');
+    }
+
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const hh = h.toString().padStart(2, '0');
+        const mm = m.toString().padStart(2, '0');
+        this.timeOptions.push(`${hh}:${mm}`);
+      }
+    }
     this.connectSignalR();
     this.auth.fetchProfile().subscribe({
       error: (err) => console.error('Failed to refresh employer profile:', err)
@@ -1671,6 +1837,11 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user) return;
 
+    if (user.employerType === 1) {
+      this.toast.error('Vui lòng nâng cấp lên Doanh nghiệp để mua gói dịch vụ.');
+      return;
+    }
+
     if ((user.balance || 0) < pkg.price) {
       this.toast.error('Số dư ví không đủ để mua gói này. Vui lòng nạp thêm tiền!');
       return;
@@ -1703,6 +1874,10 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       category: '',
       location: '',
       headCount: 1,
+      workStartTime: '',
+      workEndTime: '',
+      workDate: '',
+      workDays: '',
       salaryPerPerson: null as number | null,
       budget: null as number | null,
       description: '',
@@ -1724,7 +1899,23 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       return;
     }
     this.editingJobId.set(null);
+    
+    // Giữ lại các thông tin lịch làm việc
+    const prevType = this.formData.type;
+    const prevStartTime = this.formData.workStartTime;
+    const prevEndTime = this.formData.workEndTime;
+    const prevDate = this.formData.workDate;
+    const prevDays = this.formData.workDays;
+    
     this.formData = this.getEmptyForm();
+    
+    // Khôi phục lại
+    if (prevType) this.formData.type = prevType;
+    if (prevStartTime) this.formData.workStartTime = prevStartTime;
+    if (prevEndTime) this.formData.workEndTime = prevEndTime;
+    if (prevDate) this.formData.workDate = prevDate;
+    if (prevDays) this.formData.workDays = prevDays;
+    
     this.postMessage.set('');
     this.showPostForm.set(true);
   }
@@ -1735,8 +1926,59 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     this.postMessage.set('');
   }
 
+  onTypeChange(type: string) {
+    if (type === 'Freelance') {
+      this.isShortTerm = true;
+      this.formData.workStartTime = '';
+      this.formData.workEndTime = '';
+      this.selectedDays = [];
+    } else {
+      this.isShortTerm = false;
+      if (type === 'Thực tập' || type === 'Full-time') {
+        this.formData.workStartTime = '08:00';
+        this.formData.workEndTime = type === 'Thực tập' ? '17:00' : '17:30';
+        this.selectedDays = ['T2', 'T3', 'T4', 'T5', 'T6'];
+      } else if (type === 'Part-time') {
+        this.formData.workStartTime = '08:00';
+        this.formData.workEndTime = '12:00';
+        this.selectedDays = [];
+      }
+    }
+    this.formData.workDays = this.selectedDays.join(', ');
+  }
+
+  toggleDay(day: string) {
+    const index = this.selectedDays.indexOf(day);
+    if (index === -1) {
+      this.selectedDays.push(day);
+    } else {
+      this.selectedDays.splice(index, 1);
+    }
+    this.formData.workDays = this.selectedDays.join(', ');
+  }
+
   getRounded(value: number): number {
     return Math.round(value);
+  }
+
+  onStartJob(job: Job) {
+    if (!confirm('Bạn có chắc chắn muốn bắt đầu công việc này? Sinh viên sẽ nhận được thông báo để Check-in.')) {
+      return;
+    }
+    
+    this.jobService.startJob(job.id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          // Refresh list of applicants to reflect job status update
+          job.status = 'in_progress';
+          this.viewApplicants(job);
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: () => this.toast.error('Có lỗi xảy ra khi bắt đầu công việc.')
+    });
   }
 
   onEditJob(job: Job) {
@@ -1756,7 +1998,15 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       deadline: job.deadline,
       isRemote: job.isRemote || false,
       isUrgent: job.isUrgent || false,
+      workStartTime: job.workStartTime ? job.workStartTime.substring(0, 5) : '',
+      workEndTime: job.workEndTime ? job.workEndTime.substring(0, 5) : '',
+      workDate: job.workDate ? job.workDate.substring(0, 10) : '',
+      workDays: (job as any).workDays || '',
     };
+    
+    this.isShortTerm = job.type === 'Freelance';
+    this.selectedDays = this.formData.workDays ? this.formData.workDays.split(',').map(d => d.trim()).filter(d => d) : [];
+
     this.postMessage.set('');
     this.showPostForm.set(true);
   }
@@ -1764,6 +2014,13 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   onUrgentChange(event: any) {
     const user = this.auth.currentUser();
     if (!user) return;
+
+    if (user.employerType === 1) {
+      setTimeout(() => this.formData.isUrgent = false, 0);
+      this.toast.warning('Tính năng Tuyển gấp chỉ dành cho Doanh nghiệp. Vui lòng vào trang Hồ sơ để nâng cấp!');
+      return;
+    }
+
     const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
     if (this.formData.isUrgent && !hasActivePackage) {
       setTimeout(() => this.formData.isUrgent = false, 0);
@@ -1783,13 +2040,82 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     if (!this.formData.deadline) { this.formErrors['deadline'] = 'Vui lòng chọn hạn nộp hồ sơ.'; hasError = true; }
     if (!this.formData.headCount || this.formData.headCount < 1) { this.formErrors['headCount'] = 'Số lượng tuyển phải từ 1 trở lên.'; hasError = true; }
     
+    const parseLocalDate = (dateStr: string) => {
+      const [y, m, d] = dateStr.split('-');
+      return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+    };
+
     if (this.formData.deadline) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const deadlineDate = new Date(this.formData.deadline);
+      const deadlineDate = parseLocalDate(this.formData.deadline);
       if (deadlineDate < today) {
         this.formErrors['deadline'] = 'Hạn nộp hồ sơ không được ở trong quá khứ.';
         hasError = true;
+      }
+    }
+
+    const isFreelance = this.formData.type === 'Freelance';
+
+    if (!this.formData.workDate) {
+      if (!isFreelance) {
+        this.formErrors['workDate'] = 'Vui lòng chọn ngày làm việc.';
+        hasError = true;
+      }
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const workDate = parseLocalDate(this.formData.workDate);
+      
+      if (workDate < today) {
+        this.formErrors['workDate'] = 'Ngày làm việc không được ở trong quá khứ.';
+        hasError = true;
+      }
+
+      if (this.formData.deadline) {
+        const deadlineDate = parseLocalDate(this.formData.deadline);
+        if (deadlineDate > workDate) {
+          this.formErrors['deadline'] = 'Hạn nộp hồ sơ không được vượt quá ngày làm việc.';
+          hasError = true;
+        }
+      }
+    }
+
+    if (!this.formData.workStartTime) {
+      if (!isFreelance) {
+        this.formErrors['workStartTime'] = 'Vui lòng nhập giờ bắt đầu.';
+        hasError = true;
+      }
+    }
+    
+    if (!this.formData.workEndTime) {
+      if (!isFreelance) {
+        this.formErrors['workEndTime'] = 'Vui lòng nhập giờ kết thúc.';
+        hasError = true;
+      }
+    }
+
+    if (this.formData.workStartTime && this.formData.workEndTime) {
+      if (this.formData.workStartTime >= this.formData.workEndTime) {
+        this.formErrors['workEndTime'] = 'Giờ kết thúc phải lớn hơn giờ bắt đầu.';
+        hasError = true;
+      }
+      
+      if (this.formData.workDate) {
+        const today = new Date();
+        const workDate = parseLocalDate(this.formData.workDate);
+        if (workDate.toDateString() === today.toDateString()) {
+          const nowHour = today.getHours();
+          const nowMinute = today.getMinutes();
+          const startParts = this.formData.workStartTime.split(':');
+          const startHour = parseInt(startParts[0], 10);
+          const startMinute = parseInt(startParts[1], 10);
+          
+          if (startHour < nowHour || (startHour === nowHour && startMinute < nowMinute)) {
+            this.formErrors['workStartTime'] = 'Giờ bắt đầu không được trong quá khứ so với hiện tại.';
+            hasError = true;
+          }
+        }
       }
     }
 
@@ -1808,6 +2134,12 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user) return;
 
+    if (this.formData.isUrgent && user.employerType === 1) {
+      this.formErrors['isUrgent'] = 'Tính năng Tuyển gấp chỉ dành cho Doanh nghiệp!';
+      this.toast.error('Vui lòng vào trang Hồ sơ nâng cấp lên Doanh nghiệp để đăng tin tuyển gấp!');
+      return;
+    }
+
     const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
     if (this.formData.isUrgent && !hasActivePackage) {
       this.formErrors['isUrgent'] = 'Vui lòng mua gói dịch vụ để đăng tin tuyển gấp!';
@@ -1816,7 +2148,14 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     }
 
     if (!this.editingJobId() && !hasActivePackage) {
-      // Show free tier confirmation modal instead of directly submitting
+      // For first 3 household business jobs, skip the fee confirmation and go to free posting flow
+      const user2 = this.auth.currentUser();
+      const isFirstThreeHousehold = user2?.employerType === 1 && this.employerJobs().length < 3;
+      if (isFirstThreeHousehold) {
+        this.executePostJob();
+        return;
+      }
+      // Show free tier confirmation modal for normal employers
       this.showFreeTierConfirm.set(true);
       return;
     }
@@ -1850,6 +2189,10 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
         headCount: this.formData.headCount || 1,
+        workStartTime: this.formData.workStartTime,
+        workEndTime: this.formData.workEndTime,
+        workDate: this.formData.workDate,
+        workDays: this.formData.workDays,
       } as any).subscribe({
         next: (result) => {
           this.postSuccess.set(result.success);
@@ -1870,41 +2213,29 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       });
     } else {
       // Create mode
-      if (!user.businessLicenseUrl || !user.isBusinessLicenseVerified) {
-        this.postSuccess.set(false);
-        this.postMessage.set('Giấy phép kinh doanh của bạn chưa được xác thực. Vui lòng cập nhật Giấy phép kinh doanh (có chứa MST) trong mục Hồ sơ và chờ hệ thống xác nhận trước khi đăng tin.');
-        this.toast.error('Vui lòng xác thực Giấy phép kinh doanh trước khi đăng tin!');
-        return;
+      if (user.employerType === 1) {
+        // Household Business needs eKYC verified
+        if (user.ekycStatus !== 'verified') {
+          this.postSuccess.set(false);
+          this.postMessage.set('Tài khoản của bạn chưa được xác thực eKYC (Căn cước công dân). Vui lòng xác thực trong mục Hồ sơ trước khi đăng tin.');
+          this.toast.error('Vui lòng xác thực eKYC trước khi đăng tin!');
+          return;
+        }
+      } else {
+        // Business needs Business License verified
+        if (!user.businessLicenseUrl || !user.isBusinessLicenseVerified) {
+          this.postSuccess.set(false);
+          this.postMessage.set('Giấy phép kinh doanh của bạn chưa được xác thực. Vui lòng cập nhật Giấy phép kinh doanh (có chứa MST) trong mục Hồ sơ và chờ hệ thống xác nhận trước khi đăng tin.');
+          this.toast.error('Vui lòng xác thực Giấy phép kinh doanh trước khi đăng tin!');
+          return;
+        }
       }
 
       const budget = this.formData.budget || 0;
-
-      // Payment check
       const commission = Math.round(budget * 0.1);
-      const escrowTotal = budget + commission;
-      const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
-      const postingFee = hasActivePackage ? 0 : 2000;
-      const totalCost = escrowTotal + postingFee;
+      const isFirstThreeHouseholdJobs = user.employerType === 1 && this.employerJobs().length < 3;
 
-      const balance = user.balance || 0;
-      if (balance < totalCost) {
-        const errStr = `Số dư tài khoản không đủ. Tổng cần: ${totalCost.toLocaleString('vi-VN')}đ (Bao gồm tạm giữ lương + 10% phí + ${postingFee.toLocaleString('vi-VN')}đ đăng tin). Vui lòng nạp thêm tiền.`;
-        this.postSuccess.set(false);
-        this.postMessage.set(errStr);
-        this.toast.error('Số dư ví không đủ để ký quỹ công việc này!');
-        return;
-      }
-      
-      // Deduct balance
-      const deductResult = this.auth.deductBalance(totalCost);
-      if (!deductResult.success) {
-        this.postSuccess.set(false);
-        this.postMessage.set('Lỗi trừ phí đăng tin. Vui lòng thử lại.');
-        this.toast.error('Lỗi trừ phí đăng tin.');
-        return;
-      }
-
-      this.jobService.addJob({
+      const jobPayload = {
         title: this.formData.title,
         company: user.companyName || user.fullName || 'My Company',
         companyId: user.companyId || user.id || 0,
@@ -1923,26 +2254,77 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         deadline: this.formData.deadline,
         isRemote: this.formData.isRemote,
         isUrgent: this.formData.isUrgent,
-      } as any).subscribe({
-        next: (result) => {
-          this.postSuccess.set(result.success);
-          this.postMessage.set(result.message);
-          if (result.success) {
-            this.toast.success(result.message || 'Đăng bài tuyển dụng thành công!');
-            this.auth.fetchBalance().subscribe();
-            setTimeout(() => this.closeForm(), 1500);
-          } else {
-            this.toast.error(result.message || 'Đăng bài tuyển dụng thất bại.');
-          }
-        },
-        error: (err) => {
+        workStartTime: this.formData.workStartTime,
+        workEndTime: this.formData.workEndTime,
+        workDate: this.formData.workDate,
+        workDays: this.formData.workDays,
+      };
+
+      if (isFirstThreeHouseholdJobs) {
+        // Check balance (budget + commission, no posting fee)
+        const totalCostFree = budget + commission;
+        const balance = user.balance || 0;
+        if (balance < totalCostFree) {
+          const errStr = `Số dư tài khoản không đủ. Tổng cần: ${totalCostFree.toLocaleString('vi-VN')}đ (Tạm giữ lương ${budget.toLocaleString('vi-VN')}đ + 10% phí nền tảng ${commission.toLocaleString('vi-VN')}đ). Phí đăng tin được miễn phí. Vui lòng nạp thêm tiền.`;
           this.postSuccess.set(false);
-          const errMsg = err.error?.message || 'Có lỗi xảy ra khi đăng tin.';
-          this.postMessage.set(errMsg);
-          this.toast.error(errMsg);
+          this.postMessage.set(errStr);
+          this.toast.error('Số dư ví không đủ!');
+          return;
         }
-      });
+        // Show free posting confirmation popup
+        this.freePostingCount.set(this.employerJobs().length);
+        this.pendingJobData = jobPayload;
+        this.showFreePostingConfirm.set(true);
+        return;
+      }
+
+      // Normal flow: check balance
+      const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
+      const postingFee = hasActivePackage ? 0 : 2000;
+      const totalCost = budget + commission + postingFee;
+
+      const balance = user.balance || 0;
+      if (balance < totalCost) {
+        const errStr = `Số dư tài khoản không đủ. Tổng cần: ${totalCost.toLocaleString('vi-VN')}đ (Bao gồm tạm giữ lương ${budget.toLocaleString('vi-VN')}đ + 10% phí nền tảng ${commission.toLocaleString('vi-VN')}đ + ${postingFee.toLocaleString('vi-VN')}đ phí đăng tin). Vui lòng nạp thêm tiền.`;
+        this.postSuccess.set(false);
+        this.postMessage.set(errStr);
+        this.toast.error('Số dư ví không đủ để ký quỹ công việc này!');
+        return;
+      }
+
+      // Deduct balance
+      const deductResult = this.auth.deductBalance(totalCost);
+      if (!deductResult.success) {
+        this.postSuccess.set(false);
+        this.postMessage.set('Lỗi trừ phí đăng tin. Vui lòng thử lại.');
+        this.toast.error('Lỗi trừ phí đăng tin.');
+        return;
+      }
+
+      this.submitJobToBackend(jobPayload);
     }
+  }
+
+  submitJobToBackend(jobPayload: any) {
+    this.jobService.addJob(jobPayload as any).subscribe({
+      next: (result) => {
+        this.postSuccess.set(result.success);
+        this.postMessage.set(result.message);
+        if (result.success) {
+          this.toast.success(result.message || 'Đăng bài tuyển dụng thành công!');
+          this.auth.fetchBalance().subscribe();
+          setTimeout(() => this.closeForm(), 1500);
+        } else {
+          this.toast.error(result.message || 'Đăng bài tuyển dụng thất bại.');
+        }
+      },
+      error: (err) => {
+        this.postSuccess.set(false);
+        const errMsg = err.error?.message || 'Có lỗi xảy ra khi đăng tin.';
+        this.postMessage.set(errMsg);
+        this.toast.error(errMsg);
+      }
+    });
   }
 
   // --- ESCROW & APPLICANTS LOGIC --- //
@@ -1998,41 +2380,69 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  private signalRService = inject(SignalRService);
+
   private connectSignalR() {
-    const hubUrl = API_BASE_URL.endsWith('/api')
-      ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) + '/hub/dashboard'
-      : '/hub/dashboard';
-
-    this.hubConnection = new HubConnectionBuilder()
-      .withUrl(hubUrl)
-      .withAutomaticReconnect()
-      .build();
-
-    this.hubConnection.on('CheckInSuccess', (appId: number) => {
-      console.log('[SignalR] CheckInSuccess received for appId:', appId);
-      if (this.waitingOtpAppId === appId && this.otpType() === 'checkin') {
-        this.handleOtpSuccess('checkin');
+    this.signalRService.applicationCheckInOccurred$.subscribe(jobId => {
+      // Vì logic cũ sử dụng CheckInSuccess(appId), nhưng backend giờ bắn appId không rõ,
+      // tuy nhiên jobService.fetchJobs() và viewApplicants() đã đủ để update UI.
+      // Ẩn OTP popup nếu đang mở cho job này:
+      if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
+         if (this.otpType() === 'checkin') {
+           this.handleOtpSuccess('checkin');
+         } else {
+           this.viewApplicants(this.selectedJobForApplicants()!);
+         }
       }
+      this.jobService.fetchJobs();
     });
 
-    this.hubConnection.on('CheckOutSuccess', (appId: number) => {
-      console.log('[SignalR] CheckOutSuccess received for appId:', appId);
-      if (this.waitingOtpAppId === appId && this.otpType() === 'checkout') {
-        this.handleOtpSuccess('checkout');
+    this.signalRService.applicationCheckOutOccurred$.subscribe(jobId => {
+      if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
+         if (this.otpType() === 'checkout') {
+           this.handleOtpSuccess('checkout');
+         } else {
+           this.viewApplicants(this.selectedJobForApplicants()!);
+         }
       }
+      this.jobService.fetchJobs();
     });
 
-    this.hubConnection.on('JobApplicationAdded', (jobId: number) => {
-      console.log('[SignalR] JobApplicationAdded received for jobId:', jobId);
-      const belongsToEmployer = this.employerJobs().some(j => j.id === jobId);
+    // Thêm listener riêng lẻ nếu employer có Hub event riêng,
+    // Hiện tại employer chỉ cần reload khi status thay đổi hoặc checkin/out.
+    this.signalRService.applicationStatusChanged$.subscribe(jobId => {
+      const belongsToEmployer = this.employerJobs().some(j => Number(j.id) === Number(jobId));
       if (belongsToEmployer) {
         this.jobService.fetchJobs();
+        if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
+          this.viewApplicants(this.selectedJobForApplicants()!);
+        }
       }
     });
 
-    this.hubConnection.start()
-      .then(() => console.log('Employer SignalR connection established successfully.'))
-      .catch((err) => console.error('Error starting SignalR connection:', err));
+    this.signalRService.jobApplicationAdded$.subscribe(jobId => {
+      const belongsToEmployer = this.employerJobs().some(j => Number(j.id) === Number(jobId));
+      if (belongsToEmployer) {
+        this.jobService.fetchJobs();
+        if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
+          this.viewApplicants(this.selectedJobForApplicants()!);
+        }
+      }
+    });
+
+    this.signalRService.applicationApprovedOccurred$.subscribe(jobId => {
+      const belongsToEmployer = this.employerJobs().some(j => Number(j.id) === Number(jobId));
+      if (belongsToEmployer) {
+        this.jobService.fetchJobs();
+        if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
+          this.viewApplicants(this.selectedJobForApplicants()!);
+        }
+      }
+    });
+
+    this.signalRService.jobCreated$.subscribe(() => {
+      // nothing for employer
+    });
   }
 
   handleOtpSuccess(type: 'checkin' | 'checkout') {
@@ -2188,4 +2598,31 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  quickTopUp() {
+    this.isToppingUp.set(true);
+    this.http.post(`${API_BASE_URL}/wallet/quick-topup`, {}).subscribe({
+      next: (res: any) => {
+        this.toast.success(res.message || 'Nạp tiền thành công');
+        this.auth.fetchBalance().subscribe();
+        this.isToppingUp.set(false);
+      },
+      error: (err) => {
+        this.toast.error('Lỗi nạp tiền');
+        console.error(err);
+        this.isToppingUp.set(false);
+      }
+    });
+  }
+
+  formatAmPm(timeStr: string): string {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour ? hour : 12;
+    return `${hour}:${m} ${ampm}`;
+  }
 }
+

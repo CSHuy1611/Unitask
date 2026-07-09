@@ -70,6 +70,26 @@ namespace UniTask.Api.Controllers
             }
         }
 
+        [HttpPost("employer/upgrade")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> UpgradeToBusiness([FromForm] UpgradeToBusinessDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            try
+            {
+                var result = await _profileService.UpgradeToBusinessAsync(userId, dto);
+                if (!result) return BadRequest(new { message = "Failed to upgrade account" });
+
+                return Ok(new { message = "Nâng cấp lên Doanh nghiệp thành công!" });
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPut("admin")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateAdminProfile([FromForm] AdminProfileUpdateDto dto)

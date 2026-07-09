@@ -1,5 +1,6 @@
 import { Component, input, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { DatePipe } from '@angular/common';
 import { Job } from '../../models/job.model';
 import { AuthService } from '../../services/auth.service';
 import { JobService } from '../../services/job.service';
@@ -8,9 +9,10 @@ import { ToastService } from '../../services/toast.service';
 @Component({
   selector: 'app-job-card',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, DatePipe],
   template: `
     <a [routerLink]="['/jobs', job().id]" class="job-card glass-card" [class.premium-card]="job().isCompanyPremium">
+
       <div class="card-header">
         <div class="company-logo" [class.premium-avatar-glow]="job().isCompanyPremium" [style.background]="getLogoGradient()">
           {{ job().companyLogo }}
@@ -18,16 +20,28 @@ import { ToastService } from '../../services/toast.service';
         <div class="card-meta">
           <span class="company-name">
             {{ job().company }}
+            @if (job().employerType === 1) {
+              <span class="soft-badge soft-badge-warning" style="margin-left: 4px;">🏠 Hộ KD</span>
+            } @else {
+              <span class="soft-badge soft-badge-primary" style="margin-left: 4px;">🏢 Doanh nghiệp</span>
+            }
             @if (job().isCompanyPremium) {
               <span class="premium-badge" title="Nhà tuyển dụng Premium">
                 <span class="material-icons-round" style="font-size: 14px;">workspace_premium</span>
               </span>
             }
           </span>
-          <span class="posted-date">{{ getTimeAgo() }}</span>
+          <span class="posted-date">
+            Đã đăng: {{ job().postedDate | date:'dd/MM/yyyy HH:mm' }}
+            @if (job().isNew) {
+              <span class="badge-new-modern">
+                <span class="pulse-dot"></span> MỚI
+              </span>
+            }
+          </span>
         </div>
         @if (job().isUrgent) {
-          <span class="badge badge-danger urgent-badge">🔥 Urgent</span>
+          <span class="badge badge-danger urgent-badge" style="margin: 0;">🔥 Urgent</span>
         }
       </div>
 
@@ -42,6 +56,21 @@ import { ToastService } from '../../services/toast.service';
           <span class="material-icons-round">schedule</span>
           {{ job().type }}
         </span>
+        @if (job().workStartTime && job().workEndTime) {
+          <span class="info-item" style="color: var(--primary-light);">
+            <span class="material-icons-round">access_time</span>
+            {{ formatAmPm(job().workStartTime!) }} - {{ formatAmPm(job().workEndTime!) }}
+            @if (job().workDate) {
+              ({{ job().workDate | date:'dd/MM/yyyy' }})
+            }
+          </span>
+        }
+        @if (job().workDays) {
+          <span class="info-item" style="color: var(--warning);">
+            <span class="material-icons-round">calendar_month</span>
+            {{ job().workDays }}
+          </span>
+        }
         @if (job().isRemote) {
           <span class="info-item remote">
             <span class="material-icons-round">wifi</span>
@@ -57,7 +86,7 @@ import { ToastService } from '../../services/toast.service';
 
       <div class="tags">
         @for (tag of job().tags.slice(0, 3); track tag) {
-          <span class="badge badge-primary">{{ tag }}</span>
+          <span class="soft-badge soft-badge-primary">{{ tag }}</span>
         }
       </div>
 
@@ -77,7 +106,7 @@ import { ToastService } from '../../services/toast.service';
               Đã đủ người
             </button>
           } @else {
-            <button class="btn btn-primary btn-sm" (click)="applyForJob($event)" [disabled]="hasApplied()">
+            <button [class]="hasApplied() ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'" (click)="applyForJob($event)" [disabled]="hasApplied()">
               {{ hasApplied() ? 'Đã ứng tuyển' : 'Ứng tuyển ngay' }}
             </button>
           }
@@ -87,13 +116,16 @@ import { ToastService } from '../../services/toast.service';
   `,
   styles: [`
     .job-card {
+      position: relative;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       gap: var(--space-4);
       text-decoration: none;
       color: inherit;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .job-card.premium-card {
@@ -102,10 +134,17 @@ import { ToastService } from '../../services/toast.service';
     }
 
     .job-card.premium-card:hover {
-      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.2);
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25);
+      border-color: rgba(245, 158, 11, 0.6);
+      transform: translateY(-2px);
     }
 
-    .job-card:hover { color: inherit; }
+    .job-card:hover { 
+      color: inherit; 
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
 
     .card-header {
       display: flex;
@@ -213,8 +252,7 @@ export class JobCardComponent {
   toast = inject(ToastService);
 
   hasApplied() {
-    const user = this.auth.currentUser();
-    return user && this.job().applicants?.includes(user.id);
+    return this.job().isAppliedByCurrentUser || false;
   }
 
   applyForJob(event: Event) {
@@ -266,14 +304,13 @@ export class JobCardComponent {
     return colors[(this.job().companyId - 1) % colors.length];
   }
 
-  getTimeAgo(): string {
-    const now = new Date();
-    const posted = new Date(this.job().postedDate);
-    const diffDays = Math.floor((now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return 'Hôm nay';
-    if (diffDays === 1) return 'Hôm qua';
-    if (diffDays < 7) return `${diffDays} ngày trước`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`;
-    return `${Math.floor(diffDays / 30)} tháng trước`;
+  formatAmPm(timeStr: string): string {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour ? hour : 12;
+    return `${hour}:${m} ${ampm}`;
   }
 }

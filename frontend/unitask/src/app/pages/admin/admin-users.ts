@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { API_BASE_URL } from '../../config/api.config';
+import { AdminSearchService } from '../../services/admin-search.service';
 
 @Component({
   selector: 'app-admin-users',
@@ -32,7 +33,9 @@ import { API_BASE_URL } from '../../config/api.config';
                 <select class="form-select role-select" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
                   <option value="all">Tất cả vai trò</option>
                   <option value="student">Sinh viên</option>
-                  <option value="employer">Nhà tuyển dụng</option>
+                  <option value="employer">Tất cả NTD</option>
+                  <option value="household">Hộ kinh doanh</option>
+                  <option value="business">Doanh nghiệp</option>
                 </select>
               </div>
             </div>
@@ -52,71 +55,86 @@ import { API_BASE_URL } from '../../config/api.config';
                   </tr>
                 </thead>
                 <tbody>
-                  @for (user of filteredUsers(); track user.id) {
+                  @if (isLoading() && users().length === 0) {
                     <tr>
-                      <td>
-                        <div class="user-info">
-                          <div class="avatar-sm">{{ user.avatar }}</div>
-                          <div>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                              <strong style="color: var(--text-primary);">{{ user.fullName }}</strong>
-                              @if (user.isFlagged) {
-                                <span class="material-icons-round" style="color: #EF4444; font-size: 18px; cursor: help;" [title]="'Tài khoản bị cảnh cáo: ' + user.flagReason">flag</span>
-                              }
+                      <td colspan="6">
+                        <div class="skeleton skeleton-card"></div>
+                      </td>
+                    </tr>
+                  } @else {
+                    @for (user of filteredUsers(); track user.id) {
+                      <tr>
+                        <td>
+                          <div class="user-info">
+                            <div class="avatar-sm">{{ user.avatar }}</div>
+                            <div>
+                              <div style="display: flex; align-items: center; gap: 6px;">
+                                <strong style="color: var(--text-primary);">{{ user.fullName }}</strong>
+                                @if (user.isFlagged) {
+                                  <span class="material-icons-round" style="color: #EF4444; font-size: 18px; cursor: help;" [title]="'Tài khoản bị cảnh cáo: ' + user.flagReason">flag</span>
+                                }
+                              </div>
+                              <span class="text-caption">{{ user.role === 'student' ? user.university : user.companyName }}</span>
                             </div>
-                            <span class="text-caption">{{ user.role === 'student' ? user.university : user.companyName }}</span>
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span class="role-badge" [class]="user.role">
-                          {{ user.role === 'student' ? 'Sinh viên' : 'Nhà tuyển dụng' }}
-                        </span>
-                        @if (user.role === 'student') {
-                          <div class="text-caption" style="margin-top: 4px; display: flex; align-items: center; gap: 2px;">
-                            <span class="material-icons-round" style="font-size: 14px; color: var(--warning)">verified_user</span>
-                            Điểm: <strong>{{ user.reliabilityScore ?? 100 }}</strong>
-                          </div>
-                        }
-                      </td>
-                      <td>
-                        <div class="contact-info">
-                          <span>{{ user.email }}</span>
-                          <span class="text-caption">{{ user.phone }}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span class="status-badge" [class]="'status-' + user.ekycStatus">
-                          @if (user.ekycStatus === 'verified') {
-                            <span class="material-icons-round">check_circle</span> Đã duyệt
-                          } @else if (user.ekycStatus === 'pending') {
-                            <span class="material-icons-round">hourglass_top</span> Chờ duyệt
-                          } @else if (user.ekycStatus === 'rejected') {
-                            <span class="material-icons-round">cancel</span> Bị từ chối
-                          } @else {
-                            <span class="material-icons-round">gpp_maybe</span> Chưa XT
+                        </td>
+                        <td>
+                          <span class="role-badge" [class]="user.role === 'student' ? 'student' : (user.employerType === 1 ? 'household' : 'business')">
+                            {{ user.role === 'student' ? 'Sinh viên' : (user.employerType === 1 ? 'Hộ kinh doanh' : 'Doanh nghiệp') }}
+                          </span>
+                          @if (user.role === 'student') {
+                            <div class="text-caption" style="margin-top: 4px; display: flex; align-items: center; gap: 2px;">
+                              <span class="material-icons-round" style="font-size: 14px; color: var(--warning)">verified_user</span>
+                              Điểm: <strong>{{ user.reliabilityScore ?? 100 }}</strong>
+                            </div>
                           }
-                        </span>
-                      </td>
-                      <td><span class="text-muted">{{ user.createdAt }}</span></td>
-                      <td>
-                        @if (user.ekycStatus !== 'verified') {
-                          <button class="btn btn-sm btn-primary" (click)="forceVerify(user.id)" style="font-size: 11px; padding: 4px 8px; margin-right: 4px;">
-                            Xác thực
-                          </button>
-                        }
-                        <button class="btn btn-sm btn-secondary" (click)="openEditModal(user)" style="font-size: 11px; padding: 4px 8px;" title="Sửa thông tin">
-                          <span class="material-icons-round" style="font-size: 14px;">edit</span>
-                        </button>
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="6" class="empty-state">
-                        <span class="material-icons-round" style="font-size:48px;color:var(--text-muted)">search_off</span>
-                        <p>Không tìm thấy người dùng phù hợp với bộ lọc.</p>
-                      </td>
-                    </tr>
+                        </td>
+                        <td>
+                          <div class="contact-info">
+                            <span>{{ user.email }}</span>
+                            <span class="text-caption">{{ user.phone }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="status-badge" [class]="'status-' + user.ekycStatus">
+                            @if (user.ekycStatus === 'verified') {
+                              <span class="material-icons-round">check_circle</span> Đã duyệt
+                            } @else if (user.ekycStatus === 'pending') {
+                              <span class="material-icons-round">hourglass_top</span> Chờ duyệt
+                            } @else if (user.ekycStatus === 'rejected') {
+                              <span class="material-icons-round">cancel</span> Bị từ chối
+                            } @else {
+                              <span class="material-icons-round">gpp_maybe</span> Chưa XT
+                            }
+                          </span>
+                        </td>
+                        <td><span class="text-muted">{{ user.createdAt }}</span></td>
+                        <td>
+                          <div class="action-wrapper" [class.open]="openDropdownId() === user.id">
+                            <button class="action-btn-icon" (click)="toggleDropdown(user.id, $event)">
+                              <span class="material-icons-round">more_vert</span>
+                            </button>
+                            <div class="action-menu">
+                              @if (user.ekycStatus !== 'verified') {
+                                <button class="action-item" (click)="forceVerify(user.id)">
+                                  <span class="material-icons-round">check_circle</span> Xác thực ngay
+                                </button>
+                              }
+                              <button class="action-item" (click)="openEditModal(user)">
+                                <span class="material-icons-round">edit</span> Sửa email
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="6" class="empty-state">
+                          <span class="material-icons-round" style="font-size:48px;color:var(--text-muted)">search_off</span>
+                          <p>Không tìm thấy người dùng phù hợp với bộ lọc.</p>
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
                </table>
@@ -136,10 +154,10 @@ import { API_BASE_URL } from '../../config/api.config';
 
           <!-- Edit User Modal -->
           @if (isEditModalOpen()) {
-            <div class="modal-overlay animate-fade-in">
-              <div class="modal-content animate-scale-in" style="max-width: 450px;">
+            <div class="modal-backdrop">
+              <div class="modal-panel">
                 <div class="modal-header">
-                  <h2>Sửa thông tin Người dùng</h2>
+                  <h3>Sửa thông tin Người dùng</h3>
                   <button class="icon-btn" (click)="closeEditModal()"><span class="material-icons-round">close</span></button>
                 </div>
                 <div class="modal-body">
@@ -160,6 +178,27 @@ import { API_BASE_URL } from '../../config/api.config';
                     }
                     Lưu thay đổi
                   </button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Confirm Verify Modal -->
+          @if (showConfirmVerifyModal()) {
+            <div class="modal-backdrop">
+              <div class="modal-panel">
+                <div class="modal-header">
+                  <h3>Xác nhận ép xác thực</h3>
+                  <button class="icon-btn" (click)="showConfirmVerifyModal.set(false)"><span class="material-icons-round">close</span></button>
+                </div>
+                <div class="modal-body">
+                  <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">
+                    Bạn có chắc muốn ép xác thực eKYC cho người dùng này không? Hành động này sẽ cấp quyền truy cập đầy đủ vào nền tảng cho người dùng.
+                  </p>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: var(--space-3);">
+                  <button type="button" class="btn btn-secondary" style="flex:1" (click)="showConfirmVerifyModal.set(false)">Hủy</button>
+                  <button type="button" class="btn btn-primary" style="flex:1" (click)="executeForceVerify()">Xác nhận</button>
                 </div>
               </div>
             </div>
@@ -212,23 +251,6 @@ import { API_BASE_URL } from '../../config/api.config';
       font-size: 18px;
       color: var(--text-muted);
       margin-left: var(--space-2);
-    }
-
-    .form-select {
-      background: transparent;
-      border: none;
-      padding: var(--space-2);
-      padding-right: var(--space-6);
-      color: var(--text-primary);
-      font-size: var(--font-size-sm);
-      width: auto;
-      min-width: 150px;
-    }
-
-    .form-select:focus {
-      outline: none;
-      box-shadow: none;
-      border-color: transparent;
     }
 
     .table-wrapper {
@@ -346,6 +368,12 @@ import { API_BASE_URL } from '../../config/api.config';
       outline: none;
       box-shadow: none;
       border-color: transparent;
+    }
+
+    .form-select option {
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+      padding: var(--space-2);
     }
 
     .table-wrapper {
@@ -439,10 +467,16 @@ import { API_BASE_URL } from '../../config/api.config';
       border: 1px solid rgba(59, 130, 246, 0.3);
     }
 
-    .role-badge.employer {
+    .role-badge.employer, .role-badge.business {
       background: rgba(16, 185, 129, 0.1);
       color: #10B981;
       border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .role-badge.household {
+      background: rgba(245, 158, 11, 0.1);
+      color: #F59E0B;
+      border: 1px solid rgba(245, 158, 11, 0.3);
     }
 
     .status-badge {
@@ -485,36 +519,14 @@ import { API_BASE_URL } from '../../config/api.config';
     .empty-state p { margin-top: var(--space-3); color: var(--text-secondary); }
     .text-muted { color: var(--text-muted); }
 
-    /* Modal Styles */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
-      display: flex; align-items: center; justify-content: center; z-index: 1000;
-    }
-
-    .modal-content {
+    .data-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
       background: var(--bg-card);
-      border-radius: var(--radius-xl);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-      width: 100%;
-      max-width: 450px;
+      box-shadow: 0 1px 0 var(--border-light);
     }
 
-    .modal-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: var(--space-4) var(--space-5);
-      border-bottom: 1px solid var(--border-light);
-    }
-    .modal-header h2 { font-size: var(--font-size-lg); margin: 0; }
-    
-    .modal-body { padding: var(--space-5); }
-    
-    .modal-footer {
-      display: flex; justify-content: flex-end; gap: var(--space-3);
-      padding: var(--space-4) var(--space-5);
-      border-top: 1px solid var(--border-light);
-      background: rgba(255,255,255,0.02);
-    }
 
     @media (max-width: 900px) {
       .dashboard-header { flex-direction: column; align-items: flex-start; gap: var(--space-4); }
@@ -533,7 +545,11 @@ export class AdminUsersComponent {
   auth = inject(AuthService);
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  private searchService = inject(AdminSearchService);
   
+  showConfirmVerifyModal = signal(false);
+  pendingVerifyUserId = signal<string | null>(null);
+
   users = signal<any[]>([]);
   statusFilter = signal<string>('all');
   roleFilter = signal<string>('all');
@@ -549,7 +565,21 @@ export class AdminUsersComponent {
   editingEmail = signal<string>('');
   isUpdating = signal<boolean>(false);
 
- 
+  // Dropdown Menu State
+  openDropdownId = signal<number | null>(null);
+
+  toggleDropdown(id: number, event: Event) {
+    event.stopPropagation();
+    this.openDropdownId.set(this.openDropdownId() === id ? null : id);
+    
+    // Close dropdown when clicking outside
+    const closeListener = () => {
+      this.openDropdownId.set(null);
+      document.removeEventListener('click', closeListener);
+    };
+    document.addEventListener('click', closeListener);
+  }
+
   filteredUsers = computed(() => {
     let result = this.users();
     
@@ -560,8 +590,21 @@ export class AdminUsersComponent {
       });
     }
     
-    if (this.roleFilter() !== 'all') {
+    if (this.roleFilter() === 'household') {
+      result = result.filter((u: any) => u.role === 'employer' && u.employerType === 1);
+    } else if (this.roleFilter() === 'business') {
+      result = result.filter((u: any) => u.role === 'employer' && (u.employerType === 0 || u.employerType === null));
+    } else if (this.roleFilter() !== 'all') {
       result = result.filter((u: any) => (u.role || '').toLowerCase() === this.roleFilter());
+    }
+
+    const query = this.searchService.searchQuery().toLowerCase().trim();
+    if (query) {
+      result = result.filter((u: any) => 
+        (u.fullName || '').toLowerCase().includes(query) || 
+        (u.email || '').toLowerCase().includes(query) ||
+        (u.id || '').toString().toLowerCase().includes(query)
+      );
     }
 
     return result;
@@ -598,17 +641,27 @@ export class AdminUsersComponent {
   }
 
   forceVerify(userId: string) {
-    if (confirm('Bạn có chắc muốn ép xác thực người dùng này không?')) {
-      this.http.post<any>(`${API_BASE_URL}/admin/users/${userId}/force-verify`, {}).subscribe({
-        next: (res) => {
-          this.toast.success(res.message);
-          this.loadUsers(1);
-        },
-        error: (err) => {
-          this.toast.error('Không thể ép xác thực.');
-        }
-      });
-    }
+    this.pendingVerifyUserId.set(userId);
+    this.showConfirmVerifyModal.set(true);
+  }
+
+  executeForceVerify() {
+    const userId = this.pendingVerifyUserId();
+    if (!userId) return;
+
+    this.http.post<any>(`${API_BASE_URL}/admin/users/${userId}/force-verify`, {}).subscribe({
+      next: (res) => {
+        this.toast.success(res.message);
+        this.showConfirmVerifyModal.set(false);
+        this.pendingVerifyUserId.set(null);
+        this.loadUsers(1);
+      },
+      error: (err) => {
+        this.toast.error('Không thể ép xác thực.');
+        this.showConfirmVerifyModal.set(false);
+        this.pendingVerifyUserId.set(null);
+      }
+    });
   }
 
   openEditModal(user: any) {

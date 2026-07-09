@@ -65,6 +65,26 @@ namespace UniTask.Business.Services
 
 
 
+        public async Task<bool> QuickTopUpAsync(string userId, decimal amount)
+        {
+            var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId);
+            if (wallet == null) return false;
+            
+            wallet.Balance += amount;
+            
+            var transaction = new Transaction
+            {
+                WalletId = wallet.Id,
+                Amount = amount,
+                Type = TransactionType.Deposit,
+                CreatedAt = DateTime.UtcNow,
+                Description = "Nạp tiền nhanh (Test)"
+            };
+            _context.Transactions.Add(transaction);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> WithdrawAsync(string userId, WithdrawRequestDto dto)
         {
             var roundedAmount = Math.Round(dto.Amount, 0);

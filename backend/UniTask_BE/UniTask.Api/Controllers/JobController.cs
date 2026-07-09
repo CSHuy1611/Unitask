@@ -21,7 +21,8 @@ namespace UniTask.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetJobs([FromQuery] JobFilterDto filter)
         {
-            var jobs = await _jobService.GetJobsAsync(filter);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var jobs = await _jobService.GetJobsAsync(filter, currentUserId);
             return Ok(jobs);
         }
 
@@ -51,6 +52,24 @@ namespace UniTask.Api.Controllers
                 return CreatedAtAction(nameof(GetJobById), new { id = job.Id }, job);
             }
             catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/start")]
+        [Authorize(Roles = "Employer")]
+        public async Task<IActionResult> StartJob(int id)
+        {
+            var employerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (employerId == null) return Unauthorized();
+
+            try
+            {
+                var result = await _jobService.StartJobAsync(id, employerId);
+                return Ok(new { message = "Công việc đã được bắt đầu thành công." });
+            }
+            catch (System.Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
