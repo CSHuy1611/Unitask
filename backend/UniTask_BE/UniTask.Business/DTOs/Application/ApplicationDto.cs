@@ -10,6 +10,8 @@ namespace UniTask.Business.DTOs.Application
         
         public string StudentId { get; set; } = string.Empty;
         public string StudentName { get; set; } = string.Empty;
+        public string? StudentEmail { get; set; }
+        public string? StudentPhone { get; set; }
         public string? StudentAvatarUrl { get; set; }
         
         // Extended Student Profile details for Employer Review UI
