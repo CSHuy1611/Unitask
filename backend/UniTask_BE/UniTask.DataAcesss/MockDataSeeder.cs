@@ -65,18 +65,34 @@ namespace UniTask.DataAcesss
                 return email;
             }
 
-            // 1. Generate 10 Companies
-            var companyFaker = new Faker<Company>("vi")
-                .RuleFor(c => c.Name, f => f.Company.CompanyName())
-                .RuleFor(c => c.Industry, f => f.PickRandom("IT", "Marketing", "Sự kiện", "F&B", "Bán lẻ", "Giáo dục"))
-                .RuleFor(c => c.Size, f => f.PickRandom("1-10", "10-50", "50-100"))
-                .RuleFor(c => c.Location, f => f.Address.City())
-                .RuleFor(c => c.Description, f => f.Lorem.Paragraph())
-                .RuleFor(c => c.Website, f => f.Internet.Url())
-                .RuleFor(c => c.Rating, f => f.Random.Decimal(4.0m, 5.0m))
-                .RuleFor(c => c.IsVerified, true);
+            // 1. Generate 10 Specific Household Companies (Hộ Kinh Doanh)
+            var householdData = new[]
+            {
+                new { Tax = "8122887619-001", Name = "HỘ KINHH DOANH QUẢNG CÁO 365HL", Desc = "Quay video quảng cáo, thiết kế/quảng cáo local, content marketing. Trạng thái đang hoạt động, địa chỉ thuế Thôn 3, Xã Hòa Lạc." },
+                new { Tax = "8716585280-001", Name = "HỘ KINH DOANH QUÁN SỮA 338", Desc = "Review đồ uống, quay video quán, TikTok/Facebook content. Trạng thái đang hoạt động, địa chỉ thuế Thôn 1, Xã Hòa Lạc." },
+                new { Tax = "0107617853", Name = "HỘ KINH DOANH HƯƠNG VIỆT QUÁN", Desc = "Review quán ăn, quay món ăn, phục vụ part-time. Trạng thái đang hoạt động, địa chỉ Thôn 2, Xã Thạch Hoà." },
+                new { Tax = "8779182598-001", Name = "HỘ KINH DOANH OHIO MART", Desc = "Review siêu thị/mini mart, quay video sản phẩm, bán hàng part-time. Trạng thái đang hoạt động, địa chỉ thuế Thôn 3, Xã Hòa Lạc." },
+                new { Tax = "8148376746-001", Name = "HỘ KINH DOANH MỸ PHẨM HÒA LẠC", Desc = "Mẫu ảnh mỹ phẩm, review sản phẩm, quay video quảng cáo sản phẩm. Trạng thái đang hoạt động, địa chỉ thuế Thôn 4, Xã Hòa Lạc." },
+                new { Tax = "001091051569", Name = "HỘ KINH DOANH MỸ PHẨM HÒA LẠC", Desc = "Mẫu ảnh/reviewer mỹ phẩm, content TikTok sản phẩm. Trạng thái đang hoạt động, địa chỉ thuế Thôn 4, Xã Hòa Lạc." },
+                new { Tax = "8441168811-001", Name = "HỘ KINH DOANH DI ĐỘNG HÒA LẠC", Desc = "Review điện thoại/phụ kiện, quay video giới thiệu sản phẩm. Trạng thái đang hoạt động, địa chỉ thuế Thôn 3, Xã Hòa Lạc." },
+                new { Tax = "0102905939-001", Name = "CHUNG CƯ MINI 68", Desc = "Quay video quảng cáo phòng trọ/chung cư mini, content review địa điểm. Trạng thái đang hoạt động, địa chỉ thuế Cụm 4, Xã Hòa Lạc." },
+                new { Tax = "8095833587-001", Name = "HỘ KINH DOANH TÂY ĐÔ HOÀ LẠC", Desc = "Quay video cửa hàng/dịch vụ địa phương, content giới thiệu cơ sở. Trạng thái đang hoạt động, địa chỉ thuế Thôn 2, Xã Hòa Lạc." },
+                new { Tax = "8659772690-001", Name = "HỘ KINH DOANH PHONG NHÀN", Desc = "Content quảng cáo hộ kinh doanh địa phương, quay clip giới thiệu dịch vụ. Trạng thái đang hoạt động, địa chỉ thuế Thôn 4, Xã Hòa Lạc." }
+            };
 
-            var companies = companyFaker.Generate(10);
+            var companies = householdData.Select(h => new Company
+            {
+                Name = h.Name,
+                TaxCode = h.Tax,
+                Description = h.Desc,
+                Industry = "Dịch vụ địa phương",
+                Size = "1-10",
+                Location = h.Desc.Contains("Hòa Lạc") ? "Hòa Lạc" : "Thạch Hoà",
+                Website = "https://masothue.com",
+                Rating = 5.0m,
+                IsVerified = true
+            }).ToList();
+
             context.Companies.AddRange(companies);
             await context.SaveChangesAsync();
 
@@ -204,66 +220,8 @@ namespace UniTask.DataAcesss
             await context.SaveChangesAsync();
 
             // 4. Generate 20-30 Expired Jobs
-            // 4. Generate 20-30 Realistic Short-term Jobs (Household / Freelance)
-            var jobTemplates = new[] {
-                new { 
-                    Title = "Nhân viên bê tráp đám cưới (Nam/Nữ)", 
-                    Category = "Sự kiện", 
-                    Tags = new[] { "Bê tráp", "Cuối tuần", "Sinh viên" },
-                    Description = "Cần tuyển 5 bạn nam và 5 bạn nữ hỗ trợ bê tráp đám hỏi. Thời gian làm việc ngắn, phù hợp với sinh viên kiếm thêm thu nhập cuối tuần.",
-                    SalaryText = "150k - 200k/buổi",
-                    Requirements = new[] { "Nam cao > 1m65, Nữ cao > 1m55", "Ngoại hình sáng sủa, gọn gàng", "Đúng giờ, có mặt trước 30 phút", "Thái độ vui vẻ, nhiệt tình" },
-                    Benefits = new[] { "Nhận lương ngay sau khi xong việc", "Được phát lì xì duyên", "Hỗ trợ trang phục áo dài/áo sơ mi" }
-                },
-                new { 
-                    Title = "Shipper Giao Hàng Hỏa Tốc Nội Thành", 
-                    Category = "Vận chuyển", 
-                    Tags = new[] { "Giao hàng", "Shipper", "Linh hoạt" },
-                    Description = "Shop kinh doanh hoa quả nhập khẩu cần tuyển shipper ruột chạy các đơn hỏa tốc nội thành. Đơn nổ liên tục trong ngày, có thể chọn thời gian rảnh để chạy.",
-                    SalaryText = "20k - 35k/đơn",
-                    Requirements = new[] { "Có xe máy cá nhân và smartphone", "Thông thuộc đường phố", "Nhanh nhẹn, cẩn thận, bảo quản hàng tốt (hoa quả)", "Thái độ lịch sự với khách hàng" },
-                    Benefits = new[] { "Thu nhập trung bình 200k-400k/ngày nếu chạy chăm chỉ", "Không cần cọc tiền hàng với các đơn dưới 500k", "Thời gian linh hoạt, rảnh lúc nào chạy lúc đó" }
-                },
-                new { 
-                    Title = "Quay và Dựng Video TikTok (Freelance)", 
-                    Category = "Marketing & Content", 
-                    Tags = new[] { "TikTok", "Quay phim", "Edit video" },
-                    Description = "Shop thời trang cần tìm bạn sinh viên có năng khiếu quay dựng video TikTok, Reels để quảng bá sản phẩm mới. Có kịch bản sẵn, chỉ cần đến shop quay 1 buổi và dựng 3-5 video ngắn.",
-                    SalaryText = "300k - 500k/buổi",
-                    Requirements = new[] { "Có kỹ năng sử dụng CapCut hoặc Premiere", "Có mắt thẩm mỹ, bắt trend TikTok nhanh", "Có điện thoại quay phim tốt hoặc máy ảnh", "Hoàn thành video đúng deadline (2 ngày sau khi quay)" },
-                    Benefits = new[] { "Thời gian làm việc cực kỳ linh hoạt", "Thanh toán ngay 50% sau khi quay xong", "Có thể hợp tác lâu dài nếu sản phẩm chất lượng tốt" }
-                },
-                new { 
-                    Title = "Phục vụ tiệc cưới cuối tuần (Part-time)", 
-                    Category = "F&B", 
-                    Tags = new[] { "Phục vụ", "Nhà hàng", "Cuối tuần" },
-                    Description = "Nhà hàng tiệc cưới cần tuyển gấp nhân viên phục vụ part-time làm việc vào các ngày cuối tuần (Thứ 7, Chủ Nhật). Công việc bao gồm setup bàn tiệc, lên món và dọn dẹp.",
-                    SalaryText = "120k - 180k/ca",
-                    Requirements = new[] { "Sức khỏe tốt, nhanh nhẹn", "Trang phục áo sơ mi trắng, quần tây đen, giày đen", "Thái độ phục vụ chuyên nghiệp, chu đáo", "Chưa có kinh nghiệm sẽ được hướng dẫn" },
-                    Benefits = new[] { "Bao ăn 1 bữa theo ca làm việc", "Có cơ hội nhận tiền tip từ khách", "Môi trường làm việc nhộn nhịp, nhiều bạn bè đồng trang lứa" }
-                },
-                new { 
-                    Title = "Phát tờ rơi khai trương quán Cafe", 
-                    Category = "Marketing & Content", 
-                    Tags = new[] { "Phát tờ rơi", "Khai trương", "Part-time" },
-                    Description = "Quán Cafe mới khai trương cần tìm các bạn sinh viên năng động hỗ trợ phát tờ rơi tại các ngã tư và cổng trường đại học khu vực lân cận.",
-                    SalaryText = "30k/giờ",
-                    Requirements = new[] { "Chịu khó, không ngại nắng nôi", "Đứng phát tại đúng các điểm được phân công", "Vui vẻ, tươi tắn khi giao tờ rơi cho khách", "Nộp lại hình ảnh check-in tại điểm phát" },
-                    Benefits = new[] { "Nhận lương ngay trong ngày", "Tặng 1 ly nước uống tự chọn miễn phí sau ca làm", "Ca làm việc ngắn (2-3 tiếng/ca), không gò bó" }
-                },
-                new { 
-                    Title = "Hỗ trợ gói quà sự kiện 8/3", 
-                    Category = "Hành chính", 
-                    Tags = new[] { "Gói quà", "Thủ công", "Thời vụ" },
-                    Description = "Cửa hàng quà tặng cần tuyển nhân viên thời vụ hỗ trợ gói quà (hoa, mỹ phẩm) dịp lễ mùng 8/3 đang tới gần. Số lượng đơn hàng lớn nên cần người khéo tay.",
-                    SalaryText = "25k/giờ",
-                    Requirements = new[] { "Khéo tay, tỉ mỉ, cẩn thận", "Nhanh nhẹn, có thể làm việc dưới áp lực thời gian", "Ưu tiên các bạn nữ đã từng làm đồ handmade", "Có thể làm tăng ca nếu cần" },
-                    Benefits = new[] { "Công việc nhẹ nhàng, ngồi máy lạnh", "Làm tốt có thưởng thêm theo số lượng đơn hoàn thành", "Được mua sản phẩm tại shop với giá ưu đãi" }
-                }
-            };
-
+            // 4. Generate Customized Jobs for each Employer based on their Company
             var jobFaker = new Faker<Job>("vi")
-                .RuleFor(j => j.Location, f => f.Address.City())
                 .RuleFor(j => j.Type, f => f.PickRandom("Freelance", "Part-time", "Thời vụ"))
                 .RuleFor(j => j.Budget, f => f.Random.Int(100000, 800000))
                 .RuleFor(j => j.Commission, (f, j) => j.Budget * 0.1m)
@@ -277,38 +235,122 @@ namespace UniTask.DataAcesss
 
             foreach (var employer in employers)
             {
-                var employerProfile = await context.EmployerProfiles.FirstAsync(e => e.UserId == employer.Id);
+                var employerProfile = await context.EmployerProfiles.Include(e => e.Company).FirstAsync(e => e.UserId == employer.Id);
+                var companyName = employerProfile.Company?.Name ?? "";
                 
                 int numJobs = Randomizer.Seed.Next(1, 4);
                 for (int i = 0; i < numJobs; i++)
                 {
                     var job = jobFaker.Generate();
-                    var template = jobTemplates[Randomizer.Seed.Next(jobTemplates.Length)];
+                    job.Location = employerProfile.Company?.Location ?? "Hà Nội";
                     
-                    job.Title = template.Title;
-                    job.Category = template.Category;
-                    job.Description = template.Description;
-                    job.SalaryText = template.SalaryText;
+                    // Match templates based on Company Name
+                    if (companyName.Contains("QUẢNG CÁO 365HL"))
+                    {
+                        job.Title = "Quay video quảng cáo sản phẩm local";
+                        job.Category = "Marketing & Content";
+                        job.Description = "Tuyển người quay video bằng điện thoại tại cửa hàng để chạy Ads Facebook. Cần biết căn góc và có sẵn kịch bản quay ngắn.";
+                        job.SalaryText = "200k - 300k/buổi";
+                        job.Location = "Thôn 3, Xã Hòa Lạc";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Quay phim"}, new JobTag{TagName="TikTok"}, new JobTag{TagName="Freelance"} };
+                    }
+                    else if (companyName.Contains("QUÁN SỮA 338"))
+                    {
+                        job.Title = "Review đồ uống tại quán (Đăng TikTok)";
+                        job.Category = "Marketing & Content";
+                        job.Description = "Cần 1 bạn sinh viên ngoại hình sáng đến quán review 2 món đồ uống mới, quay và đăng lên kênh TikTok cá nhân.";
+                        job.SalaryText = "150k + Đồ uống free";
+                        job.Location = "Thôn 1, Xã Hòa Lạc";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Reviewer"}, new JobTag{TagName="F&B"} };
+                    }
+                    else if (companyName.Contains("HƯƠNG VIỆT QUÁN"))
+                    {
+                        job.Title = "Phục vụ bàn part-time cuối tuần";
+                        job.Category = "F&B";
+                        job.Description = "Quán đông khách dịp cuối tuần, cần tuyển 2 bạn phục vụ bàn, order món ăn và dọn dẹp nhẹ nhàng.";
+                        job.SalaryText = "25k/giờ";
+                        job.Location = "Thôn 2, Xã Thạch Hoà";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Phục vụ"}, new JobTag{TagName="Part-time"} };
+                    }
+                    else if (companyName.Contains("OHIO MART"))
+                    {
+                        job.Title = "Bán hàng siêu thị mini ca tối";
+                        job.Category = "Bán lẻ";
+                        job.Description = "Đứng quầy thu ngân và sắp xếp hàng hóa siêu thị mini ca từ 18h - 22h.";
+                        job.SalaryText = "22k/giờ";
+                        job.Location = "Thôn 3, Xã Hòa Lạc";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Bán hàng"}, new JobTag{TagName="Thu ngân"} };
+                    }
+                    else if (companyName.Contains("MỸ PHẨM"))
+                    {
+                        job.Title = "Mẫu ảnh chụp feedback mỹ phẩm";
+                        job.Category = "Sáng tạo nội dung";
+                        job.Description = "Tuyển mẫu ảnh nữ chụp cùng set mỹ phẩm skincare mới nhập. Chụp tại studio của shop.";
+                        job.SalaryText = "300k/buổi";
+                        job.Location = "Thôn 4, Xã Hòa Lạc";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Mẫu ảnh"}, new JobTag{TagName="Mỹ phẩm"} };
+                    }
+                    else if (companyName.Contains("DI ĐỘNG"))
+                    {
+                        job.Title = "Quay video unbox và review điện thoại";
+                        job.Category = "Công nghệ";
+                        job.Description = "Cửa hàng cần tuyển 1 bạn có khả năng nói lưu loát để quay video unbox các mẫu điện thoại mới nhất đăng lên Fanpage.";
+                        job.SalaryText = "250k - 400k/buổi";
+                        job.Location = "Thôn 3, Xã Hòa Lạc";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Review"}, new JobTag{TagName="Tech"} };
+                    }
+                    else if (companyName.Contains("CHUNG CƯ MINI"))
+                    {
+                        job.Title = "Phát tờ rơi quảng cáo phòng trọ mới xây";
+                        job.Category = "Marketing";
+                        job.Description = "Chung cư mini mới khai trương cần 3 bạn phát tờ rơi tại ngã tư và cổng trường đại học lân cận.";
+                        job.SalaryText = "30k/giờ";
+                        job.Location = "Cụm 4, Xã Hòa Lạc";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Phát tờ rơi"}, new JobTag{TagName="Part-time"} };
+                    }
+                    else if (companyName.Contains("TÂY ĐÔ"))
+                    {
+                        job.Title = "Shipper giao hàng nội khu Hòa Lạc";
+                        job.Category = "Vận chuyển";
+                        job.Description = "Cần 1 bạn có xe máy chạy ship đồ ăn nội khu vực Hòa Lạc. Đơn nổ liên tục buổi trưa và tối.";
+                        job.SalaryText = "15k - 25k/đơn";
+                        job.Location = "Thôn 2, Xã Hòa Lạc";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Shipper"}, new JobTag{TagName="Giao hàng"} };
+                    }
+                    else if (companyName.Contains("PHONG NHÀN"))
+                    {
+                        job.Title = "Nhân viên bê tráp đám hỏi (Nam/Nữ)";
+                        job.Category = "Sự kiện";
+                        job.Description = "Dịch vụ cưới hỏi Phong Nhàn cần gấp 5 bạn nam và 5 bạn nữ đi bê tráp cuối tuần này.";
+                        job.SalaryText = "150k - 200k/buổi";
+                        job.Location = "Thôn 4, Xã Hòa Lạc";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="Bê tráp"}, new JobTag{TagName="Cuối tuần"} };
+                    }
+                    else
+                    {
+                        job.Title = "Lập trình viên ReactJS (Freelance)";
+                        job.Category = "IT";
+                        job.Description = "Bảo trì và thêm tính năng mới cho Landing Page của công ty.";
+                        job.SalaryText = "2 triệu - 5 triệu/project";
+                        job.Tags = new List<JobTag> { new JobTag{TagName="IT"}, new JobTag{TagName="ReactJS"} };
+                    }
+
                     job.EmployerId = employer.Id;
                     job.CompanyId = employerProfile.CompanyId.Value;
                     
-                    context.Jobs.Add(job);
-                    await context.SaveChangesAsync(); 
+                    job.Requirements = new List<JobRequirement> 
+                    { 
+                        new JobRequirement { Content = "Trách nhiệm, nhiệt tình với công việc" },
+                        new JobRequirement { Content = "Đúng giờ, tuân thủ quy định" }
+                    };
+                    
+                    job.Benefits = new List<JobBenefit>
+                    {
+                        new JobBenefit { Content = "Môi trường làm việc thoải mái" },
+                        new JobBenefit { Content = "Thanh toán lương đúng hạn" }
+                    };
 
-                    foreach (var tag in template.Tags)
-                    {
-                        context.JobTags.Add(new JobTag { JobId = job.Id, TagName = tag });
-                    }
-                    
-                    foreach (var req in template.Requirements)
-                    {
-                        context.JobRequirements.Add(new JobRequirement { JobId = job.Id, Content = req });
-                    }
-                    
-                    foreach (var ben in template.Benefits)
-                    {
-                        context.JobBenefits.Add(new JobBenefit { JobId = job.Id, Content = ben });
-                    }
+                    context.Jobs.Add(job);
                 }
             }
             await context.SaveChangesAsync();
