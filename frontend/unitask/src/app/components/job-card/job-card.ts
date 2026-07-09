@@ -12,11 +12,7 @@ import { ToastService } from '../../services/toast.service';
   imports: [RouterLink, DatePipe],
   template: `
     <a [routerLink]="['/jobs', job().id]" class="job-card glass-card" [class.premium-card]="job().isCompanyPremium">
-      @if (job().isNew) {
-        <div class="new-ribbon">
-          Mới
-        </div>
-      }
+
       <div class="card-header">
         <div class="company-logo" [class.premium-avatar-glow]="job().isCompanyPremium" [style.background]="getLogoGradient()">
           {{ job().companyLogo }}
@@ -25,9 +21,9 @@ import { ToastService } from '../../services/toast.service';
           <span class="company-name">
             {{ job().company }}
             @if (job().employerType === 1) {
-              <span class="badge badge-warning" style="font-size: 10px; padding: 2px 6px; margin-left: 4px;">🏠 Hộ KD</span>
+              <span class="soft-badge soft-badge-warning" style="margin-left: 4px;">🏠 Hộ KD</span>
             } @else {
-              <span class="badge badge-primary" style="font-size: 10px; padding: 2px 6px; margin-left: 4px;">🏢 Doanh nghiệp</span>
+              <span class="soft-badge soft-badge-primary" style="margin-left: 4px;">🏢 Doanh nghiệp</span>
             }
             @if (job().isCompanyPremium) {
               <span class="premium-badge" title="Nhà tuyển dụng Premium">
@@ -35,7 +31,14 @@ import { ToastService } from '../../services/toast.service';
               </span>
             }
           </span>
-          <span class="posted-date">Đã đăng: {{ job().postedDate | date:'dd/MM/yyyy HH:mm' }}</span>
+          <span class="posted-date">
+            Đã đăng: {{ job().postedDate | date:'dd/MM/yyyy HH:mm' }}
+            @if (job().isNew) {
+              <span class="badge-new-modern">
+                <span class="pulse-dot"></span> MỚI
+              </span>
+            }
+          </span>
         </div>
         @if (job().isUrgent) {
           <span class="badge badge-danger urgent-badge" style="margin: 0;">🔥 Urgent</span>
@@ -83,7 +86,7 @@ import { ToastService } from '../../services/toast.service';
 
       <div class="tags">
         @for (tag of job().tags.slice(0, 3); track tag) {
-          <span class="badge badge-primary">{{ tag }}</span>
+          <span class="soft-badge soft-badge-primary">{{ tag }}</span>
         }
       </div>
 
@@ -121,24 +124,8 @@ import { ToastService } from '../../services/toast.service';
       text-decoration: none;
       color: inherit;
       cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .new-ribbon {
-      position: absolute;
-      top: 10px;
-      right: -28px;
-      background: linear-gradient(135deg, #10B981, #059669);
-      color: white;
-      font-size: 9px;
-      font-weight: 800;
-      padding: 3px 26px;
-      transform: rotate(45deg);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-      z-index: 5;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      text-align: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .job-card.premium-card {
@@ -147,10 +134,17 @@ import { ToastService } from '../../services/toast.service';
     }
 
     .job-card.premium-card:hover {
-      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.2);
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25);
+      border-color: rgba(245, 158, 11, 0.6);
+      transform: translateY(-2px);
     }
 
-    .job-card:hover { color: inherit; }
+    .job-card:hover { 
+      color: inherit; 
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
 
     .card-header {
       display: flex;

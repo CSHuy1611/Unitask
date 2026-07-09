@@ -114,7 +114,7 @@ namespace UniTask.DataAcesss
             }
             await context.SaveChangesAsync();
 
-            // 3. Generate 40 Students
+            // 3. Generate 50 Students
             var students = new List<ApplicationUser>();
             var studentFaker = new Faker<ApplicationUser>("vi")
                 .RuleFor(u => u.FullName, f => f.Name.FullName())
@@ -138,7 +138,7 @@ namespace UniTask.DataAcesss
                 .RuleFor(p => p.DateOfBirth, f => f.Date.Past(5, new DateTime(2005, 1, 1)))
                 .RuleFor(p => p.ReliabilityScore, 100);
 
-            for (int i = 0; i < 40; i++)
+            for (int i = 0; i < 50; i++)
             {
                 var student = studentFaker.Generate();
                 var result = await userManager.CreateAsync(student, password);
@@ -155,32 +155,73 @@ namespace UniTask.DataAcesss
             await context.SaveChangesAsync();
 
             // 4. Generate 20-30 Expired Jobs
+            // 4. Generate 20-30 Realistic Short-term Jobs (Household / Freelance)
             var jobTemplates = new[] {
-                new { Title = "Thực tập sinh Marketing / Content Creator", Category = "Marketing & Content", Tags = new[] { "Marketing", "Sinh viên", "Content" } },
-                new { Title = "Nhân viên Telesales (Part-time)", Category = "Sales", Tags = new[] { "Sales", "Bán thời gian", "Sinh viên" } },
-                new { Title = "Cộng tác viên viết bài PR", Category = "Marketing & Content", Tags = new[] { "Freelance", "Viết lách" } },
-                new { Title = "Thực tập sinh Lập trình Web (Frontend)", Category = "IT & Công nghệ", Tags = new[] { "IT", "Thực tập", "Frontend" } },
-                new { Title = "Nhân viên hỗ trợ sự kiện", Category = "Sự kiện", Tags = new[] { "Sự kiện", "Part-time" } },
-                new { Title = "Designer thực tập (Photoshop/Illustrator)", Category = "Thiết kế & Đồ họa", Tags = new[] { "Thiết kế", "Đồ họa", "Sinh viên" } },
-                new { Title = "Nhân viên nhập liệu bán thời gian", Category = "Hành chính", Tags = new[] { "Nhập liệu", "Bán thời gian", "Sinh viên" } }
-            };
-
-            var jobDescriptions = new[] {
-                "Mô tả công việc:\n- Quản lý và lên nội dung cho Fanpage.\n- Hỗ trợ quay dựng video cơ bản.\nYêu cầu:\n- Sinh viên năm 2 trở lên.\n- Có khả năng viết lách tốt.\nQuyền lợi:\n- Được đào tạo bài bản.\n- Hỗ trợ dấu mộc thực tập.",
-                "Mô tả công việc:\n- Gọi điện tư vấn khóa học cho khách hàng theo data có sẵn.\n- Cập nhật thông tin lên hệ thống.\nYêu cầu:\n- Giọng nói dễ nghe, không ngọng.\n- Có laptop cá nhân.\nQuyền lợi:\n- Lương cứng + Hoa hồng.\n- Thời gian làm việc linh hoạt.",
-                "Mô tả công việc:\n- Phối hợp cùng team để triển khai giao diện người dùng trên nền tảng Web.\n- Xử lý lỗi và tối ưu hiệu suất.\nYêu cầu:\n- Nắm vững HTML, CSS, JavaScript.\n- Có tinh thần học hỏi cao.\nQuyền lợi:\n- Có lương thực tập.\n- Xem xét lên chính thức sau 2 tháng."
+                new { 
+                    Title = "Nhân viên bê tráp đám cưới (Nam/Nữ)", 
+                    Category = "Sự kiện", 
+                    Tags = new[] { "Bê tráp", "Cuối tuần", "Sinh viên" },
+                    Description = "Cần tuyển 5 bạn nam và 5 bạn nữ hỗ trợ bê tráp đám hỏi. Thời gian làm việc ngắn, phù hợp với sinh viên kiếm thêm thu nhập cuối tuần.",
+                    SalaryText = "150k - 200k/buổi",
+                    Requirements = new[] { "Nam cao > 1m65, Nữ cao > 1m55", "Ngoại hình sáng sủa, gọn gàng", "Đúng giờ, có mặt trước 30 phút", "Thái độ vui vẻ, nhiệt tình" },
+                    Benefits = new[] { "Nhận lương ngay sau khi xong việc", "Được phát lì xì duyên", "Hỗ trợ trang phục áo dài/áo sơ mi" }
+                },
+                new { 
+                    Title = "Shipper Giao Hàng Hỏa Tốc Nội Thành", 
+                    Category = "Vận chuyển", 
+                    Tags = new[] { "Giao hàng", "Shipper", "Linh hoạt" },
+                    Description = "Shop kinh doanh hoa quả nhập khẩu cần tuyển shipper ruột chạy các đơn hỏa tốc nội thành. Đơn nổ liên tục trong ngày, có thể chọn thời gian rảnh để chạy.",
+                    SalaryText = "20k - 35k/đơn",
+                    Requirements = new[] { "Có xe máy cá nhân và smartphone", "Thông thuộc đường phố", "Nhanh nhẹn, cẩn thận, bảo quản hàng tốt (hoa quả)", "Thái độ lịch sự với khách hàng" },
+                    Benefits = new[] { "Thu nhập trung bình 200k-400k/ngày nếu chạy chăm chỉ", "Không cần cọc tiền hàng với các đơn dưới 500k", "Thời gian linh hoạt, rảnh lúc nào chạy lúc đó" }
+                },
+                new { 
+                    Title = "Quay và Dựng Video TikTok (Freelance)", 
+                    Category = "Marketing & Content", 
+                    Tags = new[] { "TikTok", "Quay phim", "Edit video" },
+                    Description = "Shop thời trang cần tìm bạn sinh viên có năng khiếu quay dựng video TikTok, Reels để quảng bá sản phẩm mới. Có kịch bản sẵn, chỉ cần đến shop quay 1 buổi và dựng 3-5 video ngắn.",
+                    SalaryText = "300k - 500k/buổi",
+                    Requirements = new[] { "Có kỹ năng sử dụng CapCut hoặc Premiere", "Có mắt thẩm mỹ, bắt trend TikTok nhanh", "Có điện thoại quay phim tốt hoặc máy ảnh", "Hoàn thành video đúng deadline (2 ngày sau khi quay)" },
+                    Benefits = new[] { "Thời gian làm việc cực kỳ linh hoạt", "Thanh toán ngay 50% sau khi quay xong", "Có thể hợp tác lâu dài nếu sản phẩm chất lượng tốt" }
+                },
+                new { 
+                    Title = "Phục vụ tiệc cưới cuối tuần (Part-time)", 
+                    Category = "F&B", 
+                    Tags = new[] { "Phục vụ", "Nhà hàng", "Cuối tuần" },
+                    Description = "Nhà hàng tiệc cưới cần tuyển gấp nhân viên phục vụ part-time làm việc vào các ngày cuối tuần (Thứ 7, Chủ Nhật). Công việc bao gồm setup bàn tiệc, lên món và dọn dẹp.",
+                    SalaryText = "120k - 180k/ca",
+                    Requirements = new[] { "Sức khỏe tốt, nhanh nhẹn", "Trang phục áo sơ mi trắng, quần tây đen, giày đen", "Thái độ phục vụ chuyên nghiệp, chu đáo", "Chưa có kinh nghiệm sẽ được hướng dẫn" },
+                    Benefits = new[] { "Bao ăn 1 bữa theo ca làm việc", "Có cơ hội nhận tiền tip từ khách", "Môi trường làm việc nhộn nhịp, nhiều bạn bè đồng trang lứa" }
+                },
+                new { 
+                    Title = "Phát tờ rơi khai trương quán Cafe", 
+                    Category = "Marketing & Content", 
+                    Tags = new[] { "Phát tờ rơi", "Khai trương", "Part-time" },
+                    Description = "Quán Cafe mới khai trương cần tìm các bạn sinh viên năng động hỗ trợ phát tờ rơi tại các ngã tư và cổng trường đại học khu vực lân cận.",
+                    SalaryText = "30k/giờ",
+                    Requirements = new[] { "Chịu khó, không ngại nắng nôi", "Đứng phát tại đúng các điểm được phân công", "Vui vẻ, tươi tắn khi giao tờ rơi cho khách", "Nộp lại hình ảnh check-in tại điểm phát" },
+                    Benefits = new[] { "Nhận lương ngay trong ngày", "Tặng 1 ly nước uống tự chọn miễn phí sau ca làm", "Ca làm việc ngắn (2-3 tiếng/ca), không gò bó" }
+                },
+                new { 
+                    Title = "Hỗ trợ gói quà sự kiện 8/3", 
+                    Category = "Hành chính", 
+                    Tags = new[] { "Gói quà", "Thủ công", "Thời vụ" },
+                    Description = "Cửa hàng quà tặng cần tuyển nhân viên thời vụ hỗ trợ gói quà (hoa, mỹ phẩm) dịp lễ mùng 8/3 đang tới gần. Số lượng đơn hàng lớn nên cần người khéo tay.",
+                    SalaryText = "25k/giờ",
+                    Requirements = new[] { "Khéo tay, tỉ mỉ, cẩn thận", "Nhanh nhẹn, có thể làm việc dưới áp lực thời gian", "Ưu tiên các bạn nữ đã từng làm đồ handmade", "Có thể làm tăng ca nếu cần" },
+                    Benefits = new[] { "Công việc nhẹ nhàng, ngồi máy lạnh", "Làm tốt có thưởng thêm theo số lượng đơn hoàn thành", "Được mua sản phẩm tại shop với giá ưu đãi" }
+                }
             };
 
             var jobFaker = new Faker<Job>("vi")
                 .RuleFor(j => j.Location, f => f.Address.City())
-                .RuleFor(j => j.Type, f => f.PickRandom("Freelance", "Part-time", "Thực tập"))
-                .RuleFor(j => j.SalaryText, f => f.Random.Int(100, 500) + "k/buổi")
-                .RuleFor(j => j.Budget, f => f.Random.Int(200000, 1000000))
+                .RuleFor(j => j.Type, f => f.PickRandom("Freelance", "Part-time", "Thời vụ"))
+                .RuleFor(j => j.Budget, f => f.Random.Int(100000, 800000))
                 .RuleFor(j => j.Commission, (f, j) => j.Budget * 0.1m)
                 .RuleFor(j => j.PostedDate, f => f.Date.Between(new DateTime(2026, 5, 1), new DateTime(2026, 6, 15)))
-                .RuleFor(j => j.Deadline, (f, j) => j.PostedDate.AddDays(f.Random.Int(5, 15)))
-                .RuleFor(j => j.Views, f => f.Random.Int(100, 1000))
-                .RuleFor(j => j.ApplicationsCount, f => f.Random.Int(5, 20))
+                .RuleFor(j => j.Deadline, (f, j) => j.PostedDate.AddDays(f.Random.Int(3, 10)))
+                .RuleFor(j => j.Views, f => f.Random.Int(50, 500))
+                .RuleFor(j => j.ApplicationsCount, f => f.Random.Int(2, 15))
                 .RuleFor(j => j.IsUrgent, f => f.Random.Bool())
                 .RuleFor(j => j.IsRemote, f => f.Random.Bool())
                 .RuleFor(j => j.Status, f => f.PickRandom(JobStatus.Closed, JobStatus.Completed));
@@ -189,7 +230,7 @@ namespace UniTask.DataAcesss
             {
                 var employerProfile = await context.EmployerProfiles.FirstAsync(e => e.UserId == employer.Id);
                 
-                int numJobs = Randomizer.Seed.Next(2, 4);
+                int numJobs = Randomizer.Seed.Next(1, 4);
                 for (int i = 0; i < numJobs; i++)
                 {
                     var job = jobFaker.Generate();
@@ -197,7 +238,8 @@ namespace UniTask.DataAcesss
                     
                     job.Title = template.Title;
                     job.Category = template.Category;
-                    job.Description = jobDescriptions[Randomizer.Seed.Next(jobDescriptions.Length)];
+                    job.Description = template.Description;
+                    job.SalaryText = template.SalaryText;
                     job.EmployerId = employer.Id;
                     job.CompanyId = employerProfile.CompanyId.Value;
                     
@@ -209,10 +251,15 @@ namespace UniTask.DataAcesss
                         context.JobTags.Add(new JobTag { JobId = job.Id, TagName = tag });
                     }
                     
-                    context.JobRequirements.Add(new JobRequirement { JobId = job.Id, Content = "Tinh thần trách nhiệm cao" });
-                    context.JobRequirements.Add(new JobRequirement { JobId = job.Id, Content = "Chăm chỉ, trung thực" });
-                    context.JobBenefits.Add(new JobBenefit { JobId = job.Id, Content = "Môi trường làm việc năng động" });
-                    context.JobBenefits.Add(new JobBenefit { JobId = job.Id, Content = "Cơ hội thăng tiến và học hỏi" });
+                    foreach (var req in template.Requirements)
+                    {
+                        context.JobRequirements.Add(new JobRequirement { JobId = job.Id, Content = req });
+                    }
+                    
+                    foreach (var ben in template.Benefits)
+                    {
+                        context.JobBenefits.Add(new JobBenefit { JobId = job.Id, Content = ben });
+                    }
                 }
             }
             await context.SaveChangesAsync();
