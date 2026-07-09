@@ -109,7 +109,7 @@ import { Subscription } from 'rxjs';
                 }
                 <div class="wallet-actions">
                   <a routerLink="/pricing" class="btn btn-primary btn-sm full-width"><span class="material-icons-round">add_circle</span> Nạp tiền / Mua gói</a>
-                  <button type="button" class="btn btn-secondary btn-sm full-width" style="margin-top: 8px;" (click)="quickTopUp()" [disabled]="isToppingUp()"><span class="material-icons-round">bolt</span> Nạp 10,000,000đ (Test)</button>
+                  <!-- <button type="button" class="btn btn-secondary btn-sm full-width" style="margin-top: 8px;" (click)="quickTopUp()" [disabled]="isToppingUp()"><span class="material-icons-round">bolt</span> Nạp 10,000,000đ (Test)</button> -->
                   <button class="btn btn-secondary btn-sm full-width" (click)="showTransactions.set(true)"><span class="material-icons-round">history</span> Lịch sử Giao dịch</button>
                 </div>
               </div>
