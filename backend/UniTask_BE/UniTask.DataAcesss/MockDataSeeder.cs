@@ -109,8 +109,57 @@ namespace UniTask.DataAcesss
                     BusinessLicenseUrl = "https://example.com/license.jpg",
                     IsBusinessLicenseVerified = true
                 });
-                
                 context.Wallets.Add(new Wallet { UserId = employer.Id, Balance = 0 });
+            }
+            
+            // Generate 2 specific Enterprise Employers
+            for (int i = 1; i <= 2; i++)
+            {
+                var enterprise = new ApplicationUser
+                {
+                    FullName = $"Doanh nghiệp {i}",
+                    UserName = $"doanhnghiep{i}@gmail.com",
+                    Email = $"doanhnghiep{i}@gmail.com",
+                    PhoneNumber = $"098765432{i}",
+                    UserType = UserType.Employer,
+                    EkycStatus = EkycStatus.Verified,
+                    EkycDate = DateTime.UtcNow.AddDays(-10),
+                    CreatedAt = DateTime.UtcNow.AddDays(-20),
+                    EmailConfirmed = true
+                };
+
+                var result = await userManager.CreateAsync(enterprise, password);
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(enterprise, "Employer");
+                    employers.Add(enterprise);
+
+                    var newCompany = new Company
+                    {
+                        Name = $"Công ty TNHH Doanh nghiệp {i}",
+                        Industry = "CNTT",
+                        Size = "100-500",
+                        Location = "Hà Nội",
+                        Description = "Công ty công nghệ hàng đầu.",
+                        Website = $"https://doanhnghiep{i}.com",
+                        Rating = 4.8m,
+                        IsVerified = true
+                    };
+                    context.Companies.Add(newCompany);
+                    await context.SaveChangesAsync();
+
+                    context.EmployerProfiles.Add(new EmployerProfile
+                    {
+                        UserId = enterprise.Id,
+                        CompanyId = newCompany.Id,
+                        Position = "Giám đốc",
+                        BusinessLicenseUrl = "https://example.com/license.jpg",
+                        IsBusinessLicenseVerified = true,
+                        Type = EmployerType.Business
+                    });
+                    
+                    context.Wallets.Add(new Wallet { UserId = enterprise.Id, Balance = 5000000 });
+                }
             }
             await context.SaveChangesAsync();
 
