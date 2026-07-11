@@ -22,40 +22,50 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 
           <!-- BALANCE SHEET WIDGET -->
           <div class="stats-grid" style="margin-bottom: var(--space-8);">
-            <div class="stat-card gradient-card animate-fade-in-up" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; animation-delay: 0.1s;">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                  <h3 style="color: white; font-size: 1.25rem; margin-bottom: 0.25rem;">Bảng Cân Đối Dòng Tiền (System Balance Sheet)</h3>
-                  <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">Đối soát toàn bộ hệ thống để phát hiện lệch dòng tiền</p>
+            <!-- System Balance Sheet Widget -->
+            <div class="stat-card glass-card animate-fade-in-up balance-sheet-card" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1.5rem; animation-delay: 0.1s; border-top: 3px solid var(--primary);">
+              <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 12px; color: var(--primary); display: flex; align-items: center; justify-content: center;">
+                    <span class="material-icons-round">account_balance</span>
+                  </div>
+                  <div>
+                    <h3 style="color: var(--text-primary); font-size: 1.25rem; margin-bottom: 0.25rem; font-weight: 700;">Bảng Đối Soát Dòng Tiền Toàn Hệ Thống</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem;">Kiểm toán thời gian thực tổng nguồn vốn và nợ phải trả của nền tảng</p>
+                  </div>
                 </div>
-                <div [class]="isBalanceMatched() ? 'status-badge success' : 'status-badge error'" style="font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 20px; background: rgba(255,255,255,0.2); font-weight: bold;">
+                <div [class]="isBalanceMatched() ? 'status-badge success-glow' : 'status-badge error-glow'" style="font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 20px; font-weight: bold; border: 1px solid currentColor;">
                   @if(isBalanceMatched()) {
-                    <span class="material-icons-round" style="font-size: 1rem;">check_circle</span> Cân Bằng Đồng Nhất
+                    <span class="material-icons-round" style="font-size: 1.1rem;">verified_user</span> Hệ thống Cân bằng
                   } @else {
-                    <span class="material-icons-round" style="font-size: 1rem;">warning</span> Lệch Sổ Cái: {{ Math.abs(netPlatformCash() - totalPlatformLiabilities()) | number }} ₫
+                    <span class="material-icons-round" style="font-size: 1.1rem;">warning</span> Lệch Sổ Cái: {{ Math.abs(netPlatformCash() - totalPlatformLiabilities()) | number }} ₫
                   }
                 </div>
               </div>
 
               <div class="balance-equation">
-                <div class="equation-box">
+                <div class="equation-box highlight-box">
                   <span class="label">Tiền Thực Tế PayOS (Thu - Rút)</span>
-                  <span class="value">{{ netPlatformCash() | number }} ₫</span>
+                  <span class="value text-primary">{{ netPlatformCash() | number }} ₫</span>
+                  <span class="sub-label">Tài sản hiện có</span>
                 </div>
                 <div class="equation-operator">=</div>
                 <div class="equation-box">
                   <span class="label">Số Dư Ví Người Dùng</span>
                   <span class="value">{{ totalWalletBalance() | number }} ₫</span>
+                  <span class="sub-label">Nợ phải trả User</span>
                 </div>
                 <div class="equation-operator">+</div>
                 <div class="equation-box">
                   <span class="label">Tiền Ký Quỹ (Escrow)</span>
                   <span class="value">{{ totalEscrowBalance() | number }} ₫</span>
+                  <span class="sub-label">Nợ phải trả Seller</span>
                 </div>
                 <div class="equation-operator">+</div>
                 <div class="equation-box">
                   <span class="label">Doanh Thu Nền Tảng</span>
-                  <span class="value">{{ totalRevenue() | number }} ₫</span>
+                  <span class="value text-success">{{ totalRevenue() | number }} ₫</span>
+                  <span class="sub-label">Vốn chủ sở hữu</span>
                 </div>
               </div>
             </div>
@@ -467,49 +477,78 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
     }
 
     /* Balance Sheet Styles */
-    .gradient-card {
-      background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
-      color: white;
-      border: none;
+    .balance-sheet-card {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
 
     .balance-equation {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: rgba(255,255,255,0.1);
-      border-radius: var(--radius-md);
-      padding: 1.5rem;
       flex-wrap: wrap;
-      gap: 1rem;
+      gap: 1.5rem;
     }
 
     .equation-box {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.25rem;
       flex: 1;
       min-width: 150px;
+      padding: 1.5rem 1rem;
+      border-radius: var(--radius-lg);
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-light);
       text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .equation-box:hover {
+      background: rgba(255, 255, 255, 0.03);
+      transform: translateY(-2px);
+    }
+
+    .equation-box.highlight-box {
+      background: rgba(59, 130, 246, 0.05);
+      border-color: rgba(59, 130, 246, 0.2);
     }
 
     .equation-box .label {
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      opacity: 0.8;
+      color: var(--text-secondary);
+      font-weight: 600;
     }
 
     .equation-box .value {
       font-size: 1.5rem;
-      font-weight: 700;
+      font-weight: 800;
+      color: var(--text-primary);
       font-family: monospace;
+      margin: 0.5rem 0;
     }
 
+    .equation-box .sub-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .text-primary { color: var(--primary-light) !important; }
+    .text-success { color: var(--success) !important; }
+
     .equation-operator {
-      font-size: 2rem;
+      font-size: 1.5rem;
       font-weight: bold;
-      opacity: 0.7;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.05);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
     }
 
     .status-badge {
@@ -517,9 +556,15 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
       align-items: center;
       gap: 0.5rem;
     }
-    .status-badge.error {
-      background: rgba(220, 38, 38, 0.9) !important;
-      color: white;
+    .status-badge.error-glow {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    }
+    .status-badge.success-glow {
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.1);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
     }
 
     /* Extra Stats */

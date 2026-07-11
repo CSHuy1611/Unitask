@@ -9,6 +9,8 @@ namespace UniTask.Business.Interfaces
         Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10);
         Task<bool> ForceVerifyUserAsync(string userId);
         Task<bool> UpdateUserEmailAsync(string userId, string newEmail);
+        Task<bool> BanUserAsync(string userId);
+        Task<bool> DeleteUserAsync(string userId);
         
         // Package Management
         Task<ServicePackageDto> CreatePackageAsync(ServicePackageCreateDto dto);
