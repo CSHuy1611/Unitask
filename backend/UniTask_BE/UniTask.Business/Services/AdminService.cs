@@ -962,6 +962,64 @@ namespace UniTask.Business.Services
             }
             if (activeUsers.Count > 0) formatTable(activeSheet, 1, "TableActiveUsers");
 
+            // 5. Sheet Toàn bộ User & Trả phí (All Users & Paid Users)
+            var allUsersSheet = workbook.Worksheets.Add("Tất cả User & Trả phí");
+            allUsersSheet.Style.Font.FontName = "Arial";
+            allUsersSheet.Cell(1, 1).Value = "TÊN KHÁCH HÀNG";
+            allUsersSheet.Cell(1, 2).Value = "EMAIL";
+            allUsersSheet.Cell(1, 3).Value = "VAI TRÒ";
+            allUsersSheet.Cell(1, 4).Value = "LÀ KHÁCH TRẢ PHÍ";
+            allUsersSheet.Cell(1, 5).Value = "DOANH THU ĐÃ ĐÓNG GÓP";
+            allUsersSheet.Cell(1, 6).Value = "SỐ DƯ VÍ";
+            allUsersSheet.Cell(1, 7).Value = "TRẠNG THÁI EKYC";
+            allUsersSheet.Cell(1, 8).Value = "NGÀY ĐĂNG KÝ";
+
+            var allUsers = await _context.Users.Include(u => u.Wallet).Include(u => u.EmployerProfile).OrderByDescending(u => u.CreatedAt).ToListAsync();
+            // Get all transactions for revenue calculation
+            var allTransactions = await _context.Transactions.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee).ToListAsync();
+            
+            // Optimize lookup using Dictionary
+            var revenueByWalletId = allTransactions
+                .GroupBy(t => t.WalletId)
+                .ToDictionary(g => g.Key, g => g.Sum(t => Math.Abs(t.Amount)));
+
+            for (int i = 0; i < allUsers.Count; i++)
+            {
+                var u = allUsers[i];
+                int row = i + 2;
+                allUsersSheet.Cell(row, 1).Value = u.FullName;
+                allUsersSheet.Cell(row, 2).Value = u.Email;
+                allUsersSheet.Cell(row, 3).Value = u.UserType == UserType.Student 
+                    ? "Sinh viên" 
+                    : (u.EmployerProfile?.Type == EmployerType.SmallBusinessHousehold 
+                        ? "Hộ kinh doanh" 
+                        : "Doanh nghiệp");
+                
+                var userRev = (u.Wallet != null && revenueByWalletId.ContainsKey(u.Wallet.Id)) ? revenueByWalletId[u.Wallet.Id] : 0;
+                bool isPaidUser = userRev > 0;
+
+                allUsersSheet.Cell(row, 4).Value = isPaidUser ? "Có" : "Không";
+                allUsersSheet.Cell(row, 4).Style.Font.FontColor = isPaidUser ? ClosedXML.Excel.XLColor.ForestGreen : ClosedXML.Excel.XLColor.Gray;
+                allUsersSheet.Cell(row, 4).Style.Font.Bold = isPaidUser;
+
+                allUsersSheet.Cell(row, 5).Value = userRev;
+                allUsersSheet.Cell(row, 5).Style.NumberFormat.Format = currencyFormat;
+                if (isPaidUser) allUsersSheet.Cell(row, 5).Style.Font.FontColor = ClosedXML.Excel.XLColor.Teal;
+
+                allUsersSheet.Cell(row, 6).Value = u.Wallet?.Balance ?? 0;
+                allUsersSheet.Cell(row, 6).Style.NumberFormat.Format = currencyFormat;
+
+                string ekycText = u.EkycStatus switch {
+                    EkycStatus.Verified => "Đã xác thực",
+                    EkycStatus.Pending => "Chờ xác thực",
+                    EkycStatus.Rejected => "Bị từ chối",
+                    _ => "Chưa xác thực"
+                };
+                allUsersSheet.Cell(row, 7).Value = ekycText;
+                allUsersSheet.Cell(row, 8).Value = u.CreatedAt.ToString("dd/MM/yyyy");
+            }
+            if (allUsers.Count > 0) formatTable(allUsersSheet, 1, "TableAllUsers");
+
             using var stream = new System.IO.MemoryStream();
             workbook.SaveAs(stream);
             return stream.ToArray();
