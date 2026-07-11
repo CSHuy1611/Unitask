@@ -94,6 +94,23 @@ import { AdminSearchService } from '../../services/admin-search.service';
                             <span>{{ user.email }}</span>
                             <span class="text-caption">{{ user.phone }}</span>
                           </div>
+                          @if (user.isBanned) {
+                            <span class="badge" style="background: rgba(239,68,68,0.1); color: #ef4444;">
+                              <span class="material-icons-round">block</span> Bị Khóa
+                            </span>
+                          } @else {
+                            <span class="badge" [class]="'badge-' + (user.ekycStatus === 'verified' ? 'success' : (user.ekycStatus === 'pending' ? 'warning' : 'neutral'))">
+                              @if (user.ekycStatus === 'verified') {
+                                <span class="material-icons-round">check_circle</span> Đã duyệt
+                              } @else if (user.ekycStatus === 'pending') {
+                                <span class="material-icons-round">hourglass_top</span> Chờ duyệt
+                              } @else if (user.ekycStatus === 'rejected') {
+                                <span class="material-icons-round">cancel</span> Bị từ chối
+                              } @else {
+                                <span class="material-icons-round">gpp_maybe</span> Chưa XT
+                              }
+                            </span>
+                          }
                         </td>
                         <td>
                           <span class="status-badge" [class]="'status-' + user.ekycStatus">
@@ -122,6 +139,13 @@ import { AdminSearchService } from '../../services/admin-search.service';
                               }
                               <button class="action-item" (click)="openEditModal(user)">
                                 <span class="material-icons-round">edit</span> Sửa email
+                              </button>
+                              <div class="action-divider"></div>
+                              <button class="action-item" (click)="toggleBanUser(user)">
+                                <span class="material-icons-round">{{ user.isBanned ? 'lock_open' : 'block' }}</span> {{ user.isBanned ? 'Mở Khóa' : 'Khóa tài khoản' }}
+                              </button>
+                              <button class="action-item text-danger" (click)="confirmDeleteUser(user)">
+                                <span class="material-icons-round">delete_forever</span> Xóa tài khoản
                               </button>
                             </div>
                           </div>
@@ -199,6 +223,28 @@ import { AdminSearchService } from '../../services/admin-search.service';
                 <div class="modal-footer" style="display: flex; gap: var(--space-3);">
                   <button type="button" class="btn btn-secondary" style="flex:1" (click)="showConfirmVerifyModal.set(false)">Hủy</button>
                   <button type="button" class="btn btn-primary" style="flex:1" (click)="executeForceVerify()">Xác nhận</button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Confirm Delete Modal -->
+          @if (showConfirmDeleteModal()) {
+            <div class="modal-backdrop">
+              <div class="modal-panel">
+                <div class="modal-header">
+                  <h3>Xác nhận xóa tài khoản</h3>
+                  <button class="icon-btn" (click)="showConfirmDeleteModal.set(false)"><span class="material-icons-round">close</span></button>
+                </div>
+                <div class="modal-body">
+                  <p style="color: var(--danger); margin-bottom: var(--space-4);">
+                    Bạn có chắc muốn xóa tài khoản <strong>{{ selectedUser()?.fullName }}</strong> không? Hành động này sẽ xóa hoàn toàn tài khoản khỏi hệ thống và không thể khôi phục.
+                  </p>
+                  <p class="text-caption text-muted">Lưu ý: Không thể xóa tài khoản đã có lịch sử giao dịch nạp rút trên hệ thống.</p>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: var(--space-3);">
+                  <button type="button" class="btn btn-secondary" style="flex:1" (click)="showConfirmDeleteModal.set(false)">Hủy</button>
+                  <button type="button" class="btn btn-primary" style="flex:1; background: var(--danger);" (click)="executeDeleteUser()">Xác nhận Xóa</button>
                 </div>
               </div>
             </div>
@@ -550,6 +596,9 @@ export class AdminUsersComponent {
   showConfirmVerifyModal = signal(false);
   pendingVerifyUserId = signal<string | null>(null);
 
+  showConfirmDeleteModal = signal(false);
+  pendingDeleteUserId = signal<string | null>(null);
+
   users = signal<any[]>([]);
   statusFilter = signal<string>('all');
   roleFilter = signal<string>('all');
@@ -701,6 +750,47 @@ export class AdminUsersComponent {
       error: (err) => {
         this.isUpdating.set(false);
         this.toast.error(err.error?.message || 'Không thể cập nhật email.');
+      }
+    });
+  }
+
+  toggleBanUser(user: any) {
+    if (!confirm(`Bạn có chắc muốn ${user.isBanned ? 'mở khóa' : 'khóa'} tài khoản này không?`)) return;
+
+    this.http.put<any>(`${API_BASE_URL}/admin/users/${user.id}/ban`, {}).subscribe({
+      next: (res) => {
+        this.toast.success(res.message);
+        this.loadUsers(this.currentPage()); // Reload current page to update status
+      },
+      error: (err) => {
+        this.toast.error(err.error?.message || 'Lỗi cập nhật trạng thái khóa tài khoản.');
+      }
+    });
+  }
+
+  confirmDeleteUser(user: any) {
+    this.selectedUser.set(user);
+    this.pendingDeleteUserId.set(user.id);
+    this.showConfirmDeleteModal.set(true);
+  }
+
+  executeDeleteUser() {
+    const userId = this.pendingDeleteUserId();
+    if (!userId) return;
+
+    this.http.delete<any>(`${API_BASE_URL}/admin/users/${userId}`).subscribe({
+      next: (res) => {
+        this.toast.success(res.message);
+        this.showConfirmDeleteModal.set(false);
+        this.pendingDeleteUserId.set(null);
+        this.selectedUser.set(null);
+        this.loadUsers(1);
+      },
+      error: (err) => {
+        this.toast.error(err.error?.message || 'Lỗi khi xóa tài khoản. Có thể người dùng này đã có dữ liệu ràng buộc.');
+        this.showConfirmDeleteModal.set(false);
+        this.pendingDeleteUserId.set(null);
+        this.selectedUser.set(null);
       }
     });
   }

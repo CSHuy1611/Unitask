@@ -65,13 +65,13 @@ import { AdminSearchService } from '../../services/admin-search.service';
                           <div class="text-sm text-muted">{{ item.userEmail }}</div>
                         </td>
                         <td>
-                          <div style="display: flex; align-items: center; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 12px;">
                             @if (getBankLogo(item.counterAccountBankName)) {
-                              <img [src]="getBankLogo(item.counterAccountBankName)" alt="Bank Logo" style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; background: white; padding: 2px;">
+                              <img [src]="getBankLogo(item.counterAccountBankName)" alt="Bank Logo" style="height: 36px; width: auto; max-width: 100px; object-fit: contain;">
                             } @else {
-                              <span class="material-icons-round" style="color: var(--text-muted); font-size: 24px;">account_balance</span>
+                              <span class="material-icons-round" style="color: var(--text-muted); font-size: 28px;">account_balance</span>
                             }
-                            <span class="badge" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary)">
+                            <span class="badge" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary); font-size: 0.85rem; padding: 4px 8px;">
                               {{ item.counterAccountBankName || 'N/A' }}
                             </span>
                           </div>

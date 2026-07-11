@@ -143,7 +143,8 @@ namespace UniTask.Business.Services
                     reliabilityScore = u.StudentProfile?.ReliabilityScore ?? 100,
                     employerType = u.EmployerProfile != null ? (int?)u.EmployerProfile.Type : null,
                     isFlagged = u.IsFlagged,
-                    flagReason = u.FlagReason ?? ""
+                    flagReason = u.FlagReason ?? "",
+                    isBanned = u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow
                 })
                 .ToList();
 
@@ -178,6 +179,45 @@ namespace UniTask.Business.Services
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> BanUserAsync(string userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return false;
+
+            // Toggle ban status
+            if (user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow)
+            {
+                user.LockoutEnd = null; // Unban
+            }
+            else
+            {
+                user.LockoutEnd = DateTimeOffset.MaxValue; // Ban permanently
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteUserAsync(string userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return false;
+
+            try
+            {
+                // Note: If the user has related transactions or jobs, this might fail due to FK constraints.
+                // Depending on DeleteBehavior.Restrict in DbContext.
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException)
+            {
+                // Referential integrity constraint violation
+                return false;
+            }
         }
 
 

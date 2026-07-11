@@ -75,6 +75,22 @@ namespace UniTask.Api.Controllers
             return Ok(new { message = "User email updated successfully." });
         }
 
+        [HttpPut("users/{userId}/ban")]
+        public async Task<IActionResult> BanUser(string userId)
+        {
+            var result = await _adminService.BanUserAsync(userId);
+            if (!result) return BadRequest(new { message = "Failed to update user ban status." });
+            return Ok(new { message = "User ban status updated successfully." });
+        }
+
+        [HttpDelete("users/{userId}")]
+        public async Task<IActionResult> DeleteUser(string userId)
+        {
+            var result = await _adminService.DeleteUserAsync(userId);
+            if (!result) return BadRequest(new { message = "Không thể xóa người dùng này vì họ đã có giao dịch hoặc công việc trên hệ thống." });
+            return Ok(new { message = "User deleted successfully." });
+        }
+
 
         // ===== PACKAGE MANAGEMENT =====
         [HttpPost("packages")]
