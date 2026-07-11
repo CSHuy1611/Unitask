@@ -45,6 +45,9 @@ import { AdminSearchService } from '../../services/admin-search.service';
               <a routerLink="/admin/payos-logs" class="sidebar-link" routerLinkActive="active">
                 <span class="material-icons-round">account_balance</span> Logs Nạp Tiền (PayOS)
               </a>
+              <a routerLink="/admin/ledger" class="sidebar-link" routerLinkActive="active">
+                <span class="material-icons-round">receipt_long</span> Sổ Cái (Ledger)
+              </a>
             </nav>
             <div class="sidebar-footer">
               <div class="admin-profile">
@@ -65,7 +68,7 @@ import { AdminSearchService } from '../../services/admin-search.service';
               </div>
               <div class="search-bar">
                 <span class="material-icons-round">search</span>
-                <input type="text" placeholder="Tìm kiếm nhanh..." [(ngModel)]="searchService.searchQuery">
+                <input type="text" placeholder="Tìm kiếm nhanh..." [ngModel]="searchService.searchQuery()" (ngModelChange)="searchService.searchQuery.set($event)">
               </div>
             </header>
             <div class="page-content">

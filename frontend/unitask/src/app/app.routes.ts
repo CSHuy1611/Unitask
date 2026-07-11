@@ -48,6 +48,7 @@ export const routes: Routes = [
       { path: 'disputes', loadComponent: () => import('./pages/admin/admin-disputes').then(m => m.AdminDisputesComponent) },
       { path: 'revenue', loadComponent: () => import('./pages/admin/admin-revenue').then(m => m.AdminRevenueComponent) },
       { path: 'payos-logs', loadComponent: () => import('./pages/admin/admin-payos').then(m => m.AdminPayosComponent) },
+      { path: 'ledger', loadComponent: () => import('./pages/admin/admin-ledger').then(m => m.AdminLedgerComponent) },
     ]
   },
   {
