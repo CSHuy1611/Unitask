@@ -174,7 +174,7 @@ namespace UniTask.DataAcesss
                         Type = EmployerType.Business
                     });
                     
-                    context.Wallets.Add(new Wallet { UserId = enterprise.Id, Balance = 5000000 });
+                    context.Wallets.Add(new Wallet { UserId = enterprise.Id, Balance = 0 });
                 }
             }
             await context.SaveChangesAsync();
