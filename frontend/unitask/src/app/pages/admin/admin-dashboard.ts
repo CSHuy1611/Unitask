@@ -24,48 +24,70 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
           <div class="stats-grid" style="margin-bottom: var(--space-8);">
             <!-- System Balance Sheet Widget -->
             <div class="stat-card glass-card animate-fade-in-up balance-sheet-card" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1.5rem; animation-delay: 0.1s; border-top: 3px solid var(--primary);">
-              <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <div style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 12px; color: var(--primary); display: flex; align-items: center; justify-content: center;">
+              <div class="balance-sheet-header">
+                <div class="header-left">
+                  <div class="icon-wrapper">
                     <span class="material-icons-round">account_balance</span>
                   </div>
                   <div>
-                    <h3 style="color: var(--text-primary); font-size: 1.25rem; margin-bottom: 0.25rem; font-weight: 700;">Bảng Đối Soát Dòng Tiền Toàn Hệ Thống</h3>
-                    <p style="color: var(--text-secondary); font-size: 0.85rem;">Kiểm toán thời gian thực tổng nguồn vốn và nợ phải trả của nền tảng</p>
+                    <h3>Bảng Cân Đối Dòng Tiền (Balance Sheet)</h3>
+                    <p>Kiểm toán thời gian thực tổng Tài Sản và Nguồn Vốn của nền tảng</p>
                   </div>
                 </div>
-                <div [class]="isBalanceMatched() ? 'status-badge success-glow' : 'status-badge error-glow'" style="font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 20px; font-weight: bold; border: 1px solid currentColor;">
+                <div [class]="isBalanceMatched() ? 'status-badge success-glow' : 'status-badge error-glow'">
                   @if(isBalanceMatched()) {
-                    <span class="material-icons-round" style="font-size: 1.1rem;">verified_user</span> Hệ thống Cân bằng
+                    <span class="material-icons-round" style="font-size: 1.1rem;">verified_user</span> Trạng thái: Cân bằng
                   } @else {
                     <span class="material-icons-round" style="font-size: 1.1rem;">warning</span> Lệch Sổ Cái: {{ Math.abs(netPlatformCash() - totalPlatformLiabilities()) | number }} ₫
                   }
                 </div>
               </div>
 
-              <div class="balance-equation">
-                <div class="equation-box highlight-box">
-                  <span class="label">Tiền Thực Tế PayOS (Thu - Rút)</span>
-                  <span class="value text-primary">{{ netPlatformCash() | number }} ₫</span>
-                  <span class="sub-label">Tài sản hiện có</span>
+              <div class="balance-sheet-body">
+                <div class="balance-column assets-column">
+                  <h4 class="column-title">TÀI SẢN (ASSETS)</h4>
+                  <div class="balance-item">
+                    <div class="item-info">
+                      <span class="item-name">Tiền Thực Tế Tại Ngân Hàng</span>
+                      <span class="item-desc">Tổng số tiền Nạp trừ đi số tiền Rút</span>
+                    </div>
+                    <div class="item-value text-primary">{{ netPlatformCash() | number }} ₫</div>
+                  </div>
+                  <div class="balance-total">
+                    <span>Tổng Tài Sản:</span>
+                    <span class="text-primary">{{ netPlatformCash() | number }} ₫</span>
+                  </div>
                 </div>
-                <div class="equation-operator">=</div>
-                <div class="equation-box">
-                  <span class="label">Số Dư Ví Người Dùng</span>
-                  <span class="value">{{ totalWalletBalance() | number }} ₫</span>
-                  <span class="sub-label">Nợ phải trả User</span>
-                </div>
-                <div class="equation-operator">+</div>
-                <div class="equation-box">
-                  <span class="label">Tiền Ký Quỹ (Escrow)</span>
-                  <span class="value">{{ totalEscrowBalance() | number }} ₫</span>
-                  <span class="sub-label">Nợ phải trả Seller</span>
-                </div>
-                <div class="equation-operator">+</div>
-                <div class="equation-box">
-                  <span class="label">Doanh Thu Nền Tảng</span>
-                  <span class="value text-success">{{ totalRevenue() | number }} ₫</span>
-                  <span class="sub-label">Vốn chủ sở hữu</span>
+
+                <div class="balance-divider"></div>
+
+                <div class="balance-column liabilities-column">
+                  <h4 class="column-title">NGUỒN VỐN (LIABILITIES & EQUITY)</h4>
+                  <div class="balance-item">
+                    <div class="item-info">
+                      <span class="item-name">Ví Người Dùng (Nợ phải trả)</span>
+                      <span class="item-desc">Số dư trong ví khả dụng của thành viên</span>
+                    </div>
+                    <div class="item-value">{{ totalWalletBalance() | number }} ₫</div>
+                  </div>
+                  <div class="balance-item">
+                    <div class="item-info">
+                      <span class="item-name">Tiền Ký Quỹ Escrow (Nợ phải trả)</span>
+                      <span class="item-desc">Tiền tạm giữ trong các Job đang thực thi</span>
+                    </div>
+                    <div class="item-value">{{ totalEscrowBalance() | number }} ₫</div>
+                  </div>
+                  <div class="balance-item">
+                    <div class="item-info">
+                      <span class="item-name">Doanh Thu Hệ Thống (Vốn chủ sở hữu)</span>
+                      <span class="item-desc">Phí hoa hồng, gói dịch vụ, phí đăng tin</span>
+                    </div>
+                    <div class="item-value text-success">{{ totalRevenue() | number }} ₫</div>
+                  </div>
+                  <div class="balance-total">
+                    <span>Tổng Nguồn Vốn:</span>
+                    <span>{{ totalPlatformLiabilities() | number }} ₫</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -481,80 +503,135 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
 
-    .balance-equation {
+    .balance-sheet-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1.5rem;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 1rem;
     }
 
-    .equation-box {
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-left .icon-wrapper {
+      padding: 10px;
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 12px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-left h3 {
+      color: var(--text-primary);
+      font-size: 1.25rem;
+      margin-bottom: 0.25rem;
+      font-weight: 700;
+    }
+
+    .header-left p {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .balance-sheet-body {
+      display: flex;
+      gap: 2rem;
+      background: rgba(0,0,0,0.15);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-light);
+      padding: 1.5rem;
+    }
+
+    .balance-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .column-title {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      border-bottom: 1px dashed var(--border-light);
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .balance-divider {
+      width: 1px;
+      background: var(--border-light);
+    }
+
+    .balance-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: var(--radius-md);
+      transition: background 0.2s ease;
+    }
+
+    .balance-item:hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    .item-info {
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
-      flex: 1;
-      min-width: 150px;
-      padding: 1.5rem 1rem;
-      border-radius: var(--radius-lg);
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border-light);
-      text-align: center;
-      transition: all 0.3s ease;
     }
 
-    .equation-box:hover {
-      background: rgba(255, 255, 255, 0.03);
-      transform: translateY(-2px);
-    }
-
-    .equation-box.highlight-box {
-      background: rgba(59, 130, 246, 0.05);
-      border-color: rgba(59, 130, 246, 0.2);
-    }
-
-    .equation-box .label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-secondary);
+    .item-name {
+      font-size: 0.95rem;
       font-weight: 600;
-    }
-
-    .equation-box .value {
-      font-size: 1.5rem;
-      font-weight: 800;
       color: var(--text-primary);
-      font-family: monospace;
-      margin: 0.5rem 0;
     }
 
-    .equation-box .sub-label {
-      font-size: 0.7rem;
+    .item-desc {
+      font-size: 0.75rem;
       color: var(--text-muted);
       font-style: italic;
+    }
+
+    .item-value {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .balance-total {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 2px solid var(--border-light);
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-primary);
     }
 
     .text-primary { color: var(--primary-light) !important; }
     .text-success { color: var(--success) !important; }
 
-    .equation-operator {
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.05);
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-    }
-
     .status-badge {
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      font-size: 0.85rem;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: bold;
+      border: 1px solid currentColor;
     }
     .status-badge.error-glow {
       color: var(--danger);
