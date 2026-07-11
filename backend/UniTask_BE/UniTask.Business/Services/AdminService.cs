@@ -34,10 +34,17 @@ namespace UniTask.Business.Services
                 totalJobs = await _context.Jobs.CountAsync(),
                 totalRevenue = await _context.Transactions
                     .Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.PostingFee || t.Type == TransactionType.SubscriptionFee)
-                    .SumAsync(t => -t.Amount),
+                    .SumAsync(t => Math.Abs(t.Amount)),
                 totalDeposits = await _context.Transactions
                     .Where(t => t.Type == TransactionType.Deposit && !(t.Description != null && t.Description.Contains("[PAYOS_PENDING]")))
                     .SumAsync(t => t.Amount),
+                totalWithdrawals = await _context.Transactions
+                    .Where(t => t.Type == TransactionType.Withdrawal && !(t.Description != null && t.Description.StartsWith("[Rejected]")))
+                    .SumAsync(t => Math.Abs(t.Amount)),
+                totalWalletBalance = await _context.Wallets.SumAsync(w => w.Balance),
+                totalEscrowHold = await _context.Transactions.Where(t => t.Type == TransactionType.EscrowHold).SumAsync(t => Math.Abs(t.Amount)),
+                totalEscrowRelease = await _context.Transactions.Where(t => t.Type == TransactionType.EscrowRelease).SumAsync(t => Math.Abs(t.Amount)),
+                totalRefund = await _context.Transactions.Where(t => t.Type == TransactionType.Refund).SumAsync(t => Math.Abs(t.Amount)),
                 commissionRevenue = await _context.Transactions
                     .Where(t => t.Type == TransactionType.CommissionFee)
                     .SumAsync(t => -t.Amount),
@@ -692,6 +699,10 @@ namespace UniTask.Business.Services
                 else if (type == "Revenue")
                 {
                     query = query.Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.SubscriptionFee || t.Type == TransactionType.PostingFee);
+                }
+                else if (type == "Escrow")
+                {
+                    query = query.Where(t => t.Type == TransactionType.EscrowHold || t.Type == TransactionType.EscrowRelease || t.Type == TransactionType.Refund);
                 }
             }
 

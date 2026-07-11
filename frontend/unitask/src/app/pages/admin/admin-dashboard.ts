@@ -1,4 +1,5 @@
-import { Component, inject, signal, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import Chart from 'chart.js/auto';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -11,12 +12,53 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, DecimalPipe],
   template: `
     <div class="admin-page-content">
           <div class="dashboard-header animate-fade-in-up">
             <h1>Admin <span class="gradient-text">Dashboard</span></h1>
             <p>Tổng quan hệ thống UniTask</p>
+          </div>
+
+          <!-- BALANCE SHEET WIDGET -->
+          <div class="stats-grid" style="margin-bottom: var(--space-8);">
+            <div class="stat-card gradient-card animate-fade-in-up" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; animation-delay: 0.1s;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <h3 style="color: white; font-size: 1.25rem; margin-bottom: 0.25rem;">Bảng Cân Đối Dòng Tiền (System Balance Sheet)</h3>
+                  <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">Đối soát toàn bộ hệ thống để phát hiện lệch dòng tiền</p>
+                </div>
+                <div [class]="isBalanceMatched() ? 'status-badge success' : 'status-badge error'" style="font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 20px; background: rgba(255,255,255,0.2); font-weight: bold;">
+                  @if(isBalanceMatched()) {
+                    <span class="material-icons-round" style="font-size: 1rem;">check_circle</span> Cân Bằng Đồng Nhất
+                  } @else {
+                    <span class="material-icons-round" style="font-size: 1rem;">warning</span> Lệch Sổ Cái: {{ Math.abs(netPlatformCash() - totalPlatformLiabilities()) | number }} ₫
+                  }
+                </div>
+              </div>
+
+              <div class="balance-equation">
+                <div class="equation-box">
+                  <span class="label">Tiền Thực Tế PayOS (Thu - Rút)</span>
+                  <span class="value">{{ netPlatformCash() | number }} ₫</span>
+                </div>
+                <div class="equation-operator">=</div>
+                <div class="equation-box">
+                  <span class="label">Số Dư Ví Người Dùng</span>
+                  <span class="value">{{ totalWalletBalance() | number }} ₫</span>
+                </div>
+                <div class="equation-operator">+</div>
+                <div class="equation-box">
+                  <span class="label">Tiền Ký Quỹ (Escrow)</span>
+                  <span class="value">{{ totalEscrowBalance() | number }} ₫</span>
+                </div>
+                <div class="equation-operator">+</div>
+                <div class="equation-box">
+                  <span class="label">Doanh Thu Nền Tảng</span>
+                  <span class="value">{{ totalRevenue() | number }} ₫</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Stat Cards -->
@@ -281,123 +323,6 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
       flex-direction: column;
       align-items: center;
       gap: var(--space-4);
-    }
-
-    .dashboard-header h1 {
-      font-size: var(--font-size-3xl);
-      font-weight: 800;
-      margin-bottom: var(--space-2);
-    }
-
-    .gradient-text {
-      background: var(--primary-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .dashboard-header p { color: var(--text-secondary); }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: var(--space-5);
-      margin-bottom: var(--space-8);
-    }
-
-    .stat-card {
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      padding: var(--space-5);
-    }
-
-    .stat-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .stat-icon .material-icons-round { color: white; font-size: 24px; }
-
-    .stat-number {
-      display: block;
-      font-size: var(--font-size-xl);
-      font-weight: 800;
-    }
-
-    .stat-label {
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
-    }
-
-    /* Chart */
-    .chart-section, .packages-section {
-      margin-bottom: var(--space-8);
-    }
-
-    .dashboard-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: var(--space-5);
-      margin-bottom: var(--space-8);
-    }
-
-    .breakdown-section h3 {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-size: var(--font-size-lg);
-      font-weight: 700;
-      margin-bottom: var(--space-6);
-    }
-
-    .breakdown-section h3 .material-icons-round {
-      color: var(--primary-light);
-    }
-
-    .breakdown-container {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-5);
-    }
-
-    .breakdown-item {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-
-    .breakdown-info {
-      display: flex;
-      justify-content: space-between;
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-    }
-
-    .breakdown-name {
-      color: var(--text-secondary);
-    }
-
-    .breakdown-val {
-      color: var(--text-primary);
-    }
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    .dashboard-header {
       margin-bottom: var(--space-8);
     }
 
@@ -541,63 +466,60 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
       font-weight: 800;
     }
 
-    .chart-section h3, .packages-section h3 {
+    /* Balance Sheet Styles */
+    .gradient-card {
+      background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+      color: white;
+      border: none;
+    }
+
+    .balance-equation {
       display: flex;
       align-items: center;
-      gap: var(--space-2);
-      font-size: var(--font-size-lg);
-      font-weight: 700;
-      margin-bottom: var(--space-6);
+      justify-content: space-between;
+      background: rgba(255,255,255,0.1);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
     }
 
-    .chart-section h3 .material-icons-round,
-    .packages-section h3 .material-icons-round {
-      color: var(--primary-light);
-    }
-
-    .chart-container {
-      display: flex;
-      align-items: flex-end;
-      gap: var(--space-4);
-      height: 220px;
-      padding: var(--space-4) 0;
-    }
-
-    .chart-bar-wrapper {
-      flex: 1;
+    .equation-box {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: var(--space-2);
-      height: 100%;
-      justify-content: flex-end;
+      gap: 0.5rem;
+      flex: 1;
+      min-width: 150px;
+      text-align: center;
     }
 
-    .chart-value {
-      font-size: var(--font-size-xs);
+    .equation-box .label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.8;
+    }
+
+    .equation-box .value {
+      font-size: 1.5rem;
       font-weight: 700;
-      color: var(--primary-light);
+      font-family: monospace;
     }
 
-    .chart-bar {
-      width: 100%;
-      max-width: 60px;
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      overflow: hidden;
-      transition: height 0.6s ease;
+    .equation-operator {
+      font-size: 2rem;
+      font-weight: bold;
+      opacity: 0.7;
     }
 
-    .chart-bar-fill {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(180deg, #7C3AED, #4F46E5);
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-
-    .chart-label {
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
-      font-weight: 500;
+    .status-badge.error {
+      background: rgba(220, 38, 38, 0.9) !important;
+      color: white;
     }
 
     /* Extra Stats */
@@ -733,19 +655,17 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
     }
 
     @media (max-width: 768px) {
-      .stats-grid, .extra-stats { grid-template-columns: 1fr 1fr 1fr; }
-      .chart-container { height: 160px; }
-    }
-
-    @media (max-width: 480px) {
       .stats-grid, .extra-stats { grid-template-columns: 1fr; }
-      .admin-nav { flex-direction: column; width: 100%; }
+      .balance-equation { flex-direction: column; }
+      .equation-operator { display: none; }
+      .chart-container { height: 160px; }
     }
   `]
 })
 export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('revenueChart') revenueChartRef!: ElementRef;
   chartInstance: Chart | null = null;
+  Math = Math;
 
   auth = inject(AuthService);
   private http = inject(HttpClient);
@@ -757,20 +677,31 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
       totalJobs: 0, 
       totalRevenue: 0, 
       totalDeposits: 0, 
+      totalWithdrawals: 0,
+      totalWalletBalance: 0,
+      totalEscrowHold: 0,
+      totalEscrowRelease: 0,
+      totalRefund: 0,
       commissionRevenue: 0, 
       postingFeeRevenue: 0, 
       subscriptionRevenue: 0, 
       ekycPending: 0, 
       totalStudents: 0, 
-      totalEmployers: 0, 
       totalBusinessEmployers: 0,
       totalHouseholdEmployers: 0,
-      ekycVerified: 0, 
       applicationsThisMonth: 0 
     },
     revenueByMonth: [],
     packages: []
   });
+
+  summary = computed(() => this.data().summary);
+  netPlatformCash = computed(() => (this.summary().totalDeposits || 0) - (this.summary().totalWithdrawals || 0));
+  totalWalletBalance = computed(() => this.summary().totalWalletBalance || 0);
+  totalRevenue = computed(() => this.summary().totalRevenue || 0);
+  totalEscrowBalance = computed(() => (this.summary().totalEscrowHold || 0) - (this.summary().totalEscrowRelease || 0) - (this.summary().totalRefund || 0));
+  totalPlatformLiabilities = computed(() => this.totalWalletBalance() + this.totalEscrowBalance() + this.totalRevenue());
+  isBalanceMatched = computed(() => Math.abs(this.netPlatformCash() - this.totalPlatformLiabilities()) < 100);
 
   maxRevenue = signal(1);
   isLoading = signal(true);
