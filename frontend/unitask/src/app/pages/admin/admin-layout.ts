@@ -48,6 +48,9 @@ import { AdminSearchService } from '../../services/admin-search.service';
               <a routerLink="/admin/ledger" class="sidebar-link" routerLinkActive="active">
                 <span class="material-icons-round">receipt_long</span> Sổ Cái (Ledger)
               </a>
+              <a routerLink="/admin/escrow-logs" class="sidebar-link" routerLinkActive="active">
+                <span class="material-icons-round">gavel</span> Log Ký Quỹ (Escrow)
+              </a>
             </nav>
             <div class="sidebar-footer">
               <div class="admin-profile">

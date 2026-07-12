@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { Router } from '@angular/router';
 import Chart from 'chart.js/auto';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -63,6 +64,15 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
                 <div>
                   <span class="stat-number">{{ formatCurrency(data().summary.totalRevenue || 0) }}</span>
                   <span class="stat-label">Doanh thu thực tế</span>
+                </div>
+              </div>
+              <div class="stat-card glass-card hover-lift" (click)="router.navigate(['/admin/escrow-logs'])" style="cursor: pointer; position: relative;">
+                <div class="stat-icon" style="background:linear-gradient(135deg,#F59E0B,#D97706)">
+                  <span class="material-icons-round">gavel</span>
+                </div>
+                <div>
+                  <span class="stat-number">{{ formatCurrency(totalEscrowBalance() || 0) }}</span>
+                  <span class="stat-label">Tổng tiền giữ tạm (Escrow)</span>
                 </div>
               </div>
             }
@@ -307,6 +317,9 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
       gap: var(--space-5);
       margin-bottom: var(--space-8);
     }
+
+    .hover-lift { transition: transform 0.2s, box-shadow 0.2s; }
+    .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.1) !important; }
 
     .stat-card {
       display: flex;
@@ -575,6 +588,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
   auth = inject(AuthService);
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  router = inject(Router);
 
   data = signal<any>({
     summary: { 

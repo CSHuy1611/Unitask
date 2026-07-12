@@ -187,10 +187,16 @@ namespace UniTask.Api.Controllers
         [HttpGet("payos-deposits")]
         public async Task<IActionResult> GetPayosDeposits([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var result = await _adminService.GetPayosDepositsAsync(page, pageSize);
-            return Ok(result);
+            var logs = await _adminService.GetPayosDepositsAsync(page, pageSize);
+            return Ok(logs);
         }
 
+        [HttpGet("escrow-logs")]
+        public async Task<IActionResult> GetEscrowLogs([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var logs = await _adminService.GetEscrowLogsAsync(page, pageSize);
+            return Ok(logs);
+        }
 
         // ===== BUSINESS LICENSE MANAGEMENT =====
         [HttpGet("business-licenses/pending")]
