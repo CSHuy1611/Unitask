@@ -774,6 +774,62 @@ namespace UniTask.Business.Services
             };
         }
 
+        public async Task<object> GetEscrowLogsAsync(int page = 1, int pageSize = 10)
+        {
+            var rawQuery = _context.Jobs
+                .Include(j => j.Employer)
+                    .ThenInclude(u => u.EmployerProfile)
+                        .ThenInclude(ep => ep.Company)
+                .Include(j => j.Applications)
+                    .ThenInclude(a => a.StudentProfile)
+                        .ThenInclude(sp => sp.User)
+                .Where(j => j.Budget > 0 && j.Status != JobStatus.Closed && j.Status != JobStatus.Completed)
+                .OrderByDescending(j => j.PostedDate);
+
+            var totalCount = await rawQuery.CountAsync();
+            var totalEscrowAmount = await rawQuery.SumAsync(j => j.Budget);
+
+            var jobs = await rawQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var items = jobs.Select(j =>
+            {
+                var employerName = j.Employer?.EmployerProfile?.Company != null 
+                    ? j.Employer.EmployerProfile.Company.Name 
+                    : j.Employer?.FullName;
+                
+                var employerType = j.Employer?.EmployerProfile?.Type == EmployerType.SmallBusinessHousehold 
+                    ? "Hộ kinh doanh" 
+                    : "Doanh nghiệp";
+
+                var activeApp = j.Applications?.FirstOrDefault(a => a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed);
+                var assignedStudent = activeApp != null && activeApp.StudentProfile != null && activeApp.StudentProfile.User != null
+                    ? activeApp.StudentProfile.User.FullName 
+                    : "Đang trong quá trình ứng tuyển";
+
+                return new
+                {
+                    jobId = j.Id,
+                    title = j.Title,
+                    budget = j.Budget,
+                    employerName = employerName,
+                    employerType = employerType,
+                    assignedStudent = assignedStudent,
+                    status = j.Status.ToString()
+                };
+            }).ToList();
+
+            return new
+            {
+                items = items,
+                totalCount = totalCount,
+                totalEscrowAmount = totalEscrowAmount,
+                hasMore = page * pageSize < totalCount
+            };
+        }
+
         public async Task<byte[]> ExportRevenueReportExcelAsync(DateTime? startDate, DateTime? endDate)
         {
             var query = _context.Transactions
@@ -1109,5 +1165,7 @@ namespace UniTask.Business.Services
                 hasMore = page * pageSize < totalCount
             };
         }
+
+
     }
 }

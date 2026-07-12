@@ -49,6 +49,7 @@ export const routes: Routes = [
       { path: 'revenue', loadComponent: () => import('./pages/admin/admin-revenue').then(m => m.AdminRevenueComponent) },
       { path: 'payos-logs', loadComponent: () => import('./pages/admin/admin-payos').then(m => m.AdminPayosComponent) },
       { path: 'ledger', loadComponent: () => import('./pages/admin/admin-ledger').then(m => m.AdminLedgerComponent) },
+      { path: 'escrow-logs', loadComponent: () => import('./pages/admin/admin-escrow-logs').then(m => m.AdminEscrowLogsComponent) },
     ]
   },
   {
