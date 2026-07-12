@@ -281,7 +281,7 @@ export class AdminEscrowLogsComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
-        this.toast.showError('Lỗi khi tải dữ liệu log ký quỹ');
+        this.toast.error('Lỗi khi tải dữ liệu log ký quỹ');
         this.isLoading.set(false);
       }
     });
