@@ -97,10 +97,10 @@ namespace UniTask.Api.Controllers
             var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (studentId == null) return Unauthorized();
 
-            var success = await _applicationService.StudentCheckInAsync(id, studentId, dto.Otp);
-            if (!success) return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+            var result = await _applicationService.StudentCheckInAsync(id, studentId, dto.Otp);
+            if (!result.Success) return BadRequest(new { message = result.Message });
 
-            return Ok(new { message = "Check-in thành công." });
+            return Ok(result);
         }
 
         [HttpPost("{id}/checkout")]
@@ -110,10 +110,10 @@ namespace UniTask.Api.Controllers
             var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (studentId == null) return Unauthorized();
 
-            var success = await _applicationService.StudentCheckOutAsync(id, studentId, dto.Otp);
-            if (!success) return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+            var result = await _applicationService.StudentCheckOutAsync(id, studentId, dto.Otp);
+            if (!result.Success) return BadRequest(new { message = result.Message });
 
-            return Ok(new { message = "Check-out thành công. Đang chờ nghiệm thu." });
+            return Ok(result);
         }
 
         [HttpPost("{id}/report-noshow")]

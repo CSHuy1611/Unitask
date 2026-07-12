@@ -746,7 +746,15 @@ namespace UniTask.Business.Services
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
             if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return false;
 
-            var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
+            // Chặn Check-in trễ quá hạn: nếu thời gian hiện tại đã vượt quá giờ kết thúc ca làm việc
+            if (job.WorkDate.HasValue && job.WorkEndTime.HasValue)
+            {
+                var nowVn = DateTime.UtcNow.AddHours(7);
+                var shiftEnd = job.WorkDate.Value.Date + job.WorkEndTime.Value;
+                if (nowVn > shiftEnd) return false;
+            }
+
+            var app = await _context.Applications.Include(a => a.StudentProfile).FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
             if (app == null) return false;
 
             if (app.CheckInOtp != otp || app.CheckInOtpExpiredAt < DateTime.UtcNow) return false;
@@ -757,6 +765,34 @@ namespace UniTask.Business.Services
             
             if (job.Status == JobStatus.Open) {
                 job.Status = JobStatus.InProgress;
+            }
+
+            // Update reliability score based on check-in time
+            var studentProfile = app.StudentProfile;
+            if (studentProfile != null && job.WorkDate.HasValue && job.WorkStartTime.HasValue)
+            {
+                var nowVn = DateTime.UtcNow.AddHours(7);
+                var shiftStart = job.WorkDate.Value.Date + job.WorkStartTime.Value;
+
+                if (nowVn <= shiftStart)
+                {
+                    // Check-in sớm/đúng giờ: +1 điểm (tối đa 100)
+                    if (studentProfile.ReliabilityScore < 100)
+                    {
+                        studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                    }
+                }
+                else
+                {
+                    // Check-in muộn: -1 điểm
+                    studentProfile.ReliabilityScore = Math.Max(0, studentProfile.ReliabilityScore - 1);
+                    
+                    // Nếu dưới 80 điểm, thiết lập thời gian khóa 3 ngày
+                    if (studentProfile.ReliabilityScore < 80 && (!studentProfile.ReliabilityBlockedUntil.HasValue || DateTime.UtcNow >= studentProfile.ReliabilityBlockedUntil.Value))
+                    {
+                        studentProfile.ReliabilityBlockedUntil = DateTime.UtcNow.AddDays(3);
+                    }
+                }
             }
 
             await _context.SaveChangesAsync();
@@ -770,7 +806,7 @@ namespace UniTask.Business.Services
             var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
             if (job == null || (job.Status != JobStatus.InProgress && job.Status != JobStatus.Open)) return false;
 
-            var app = await _context.Applications.FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
+            var app = await _context.Applications.Include(a => a.StudentProfile).FirstOrDefaultAsync(a => a.JobId == jobId && a.StudentProfile.UserId == studentId && a.Status == ApplicationStatus.Accepted);
             if (app == null) return false;
 
             if (app.CheckOutOtp != otp || app.CheckOutOtpExpiredAt < DateTime.UtcNow) return false;
@@ -780,6 +816,34 @@ namespace UniTask.Business.Services
             app.CheckOutOtpExpiredAt = null;
             app.Status = ApplicationStatus.Completed; // Mark student's application as completed
             app.EscrowReleaseDate = DateTime.UtcNow.AddHours(24); // Set individual escrow release
+
+            // Update reliability score based on check-out time
+            var studentProfile = app.StudentProfile;
+            if (studentProfile != null && job.WorkDate.HasValue && job.WorkEndTime.HasValue)
+            {
+                var nowVn = DateTime.UtcNow.AddHours(7);
+                var shiftEnd = job.WorkDate.Value.Date + job.WorkEndTime.Value;
+
+                if (nowVn >= shiftEnd)
+                {
+                    // Check-out trễ/đúng giờ: +1 điểm (tối đa 100)
+                    if (studentProfile.ReliabilityScore < 100)
+                    {
+                        studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                    }
+                }
+                else
+                {
+                    // Check-out sớm: -1 điểm
+                    studentProfile.ReliabilityScore = Math.Max(0, studentProfile.ReliabilityScore - 1);
+
+                    // Nếu dưới 80 điểm, thiết lập thời gian khóa 3 ngày
+                    if (studentProfile.ReliabilityScore < 80 && (!studentProfile.ReliabilityBlockedUntil.HasValue || DateTime.UtcNow >= studentProfile.ReliabilityBlockedUntil.Value))
+                    {
+                        studentProfile.ReliabilityBlockedUntil = DateTime.UtcNow.AddDays(3);
+                    }
+                }
+            }
 
             // If ALL accepted apps for this job are completed, set job to PendingConfirmation
             var allApps = await _context.Applications.Where(a => a.JobId == jobId && (a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed)).ToListAsync();
@@ -829,6 +893,12 @@ namespace UniTask.Business.Services
                     if (studentProfile.ReliabilityScore < 0)
                     {
                         studentProfile.ReliabilityScore = 0;
+                    }
+
+                    // Nếu dưới 80 điểm, thiết lập thời gian khóa 3 ngày
+                    if (studentProfile.ReliabilityScore < 80 && (!studentProfile.ReliabilityBlockedUntil.HasValue || DateTime.UtcNow >= studentProfile.ReliabilityBlockedUntil.Value))
+                    {
+                        studentProfile.ReliabilityBlockedUntil = DateTime.UtcNow.AddDays(3);
                     }
                 }
 
