@@ -49,6 +49,8 @@ export interface Job {
   checkInTime?: string;
   checkOutTime?: string;
   isAppliedByCurrentUser?: boolean;
+  currentUserApplicationStatus?: string;
+  employerId?: string;
   isNew?: boolean;
   
   // UI extended fields

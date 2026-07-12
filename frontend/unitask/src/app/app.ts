@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, effect } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './components/header/header';
 import { FooterComponent } from './components/footer/footer';
@@ -31,6 +31,14 @@ export class App implements OnInit, OnDestroy {
   private jobService = inject(JobService);
   private authService = inject(AuthService);
   private subscriptions = new Subscription();
+
+  constructor() {
+    effect(() => {
+      // Trigger reload when login status changes to reload specific user's application data
+      const user = this.authService.currentUser();
+      this.jobService.fetchJobs();
+    }, { allowSignalWrites: true });
+  }
 
   ngOnInit() {
     this.signalRService.startConnection();

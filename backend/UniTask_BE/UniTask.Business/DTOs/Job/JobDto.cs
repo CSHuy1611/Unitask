@@ -65,6 +65,7 @@ namespace UniTask.Business.DTOs.Job
         public List<string> Benefits { get; set; } = new();
         
         public bool IsAppliedByCurrentUser { get; set; }
+        public string? CurrentUserApplicationStatus { get; set; }
         public bool IsNew { get; set; }
     }
 }

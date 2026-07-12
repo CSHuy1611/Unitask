@@ -119,6 +119,8 @@ export class JobService {
       workDate: dto.workDate,
       workDays: dto.workDays,
       employerType: dto.employerType,
+      employerId: dto.employerId,
+      currentUserApplicationStatus: dto.currentUserApplicationStatus || null,
       isNew: dto.isNew || false
     };
   }

@@ -88,7 +88,7 @@ namespace UniTask.Business.Services
                 .ToDictionary(g => g.Key, g => g.Max(s => s.DurationMonths));
 
             // Sort in-memory to prevent SQL Server memory grant errors (Error 8657) under constrained container memory limits
-            // Prioritize Open jobs, then VIP package duration (12m > 6m > 3m > 0m), then Urgent, then PostedDate
+            // Prioritize Open jobs, then VIP package duration (12m > 6m > 3m > 0m), then PostedDate (newest post/shift first), then Urgent
             var sortedJobs = allMatchingJobs
                 .Select(j => {
                     subscriptionMap.TryGetValue(j.EmployerId, out int duration);
@@ -96,8 +96,8 @@ namespace UniTask.Business.Services
                 })
                 .OrderByDescending(x => x.Job.Status == JobStatus.Open)
                 .ThenByDescending(x => x.Duration)
-                .ThenByDescending(x => x.Job.IsUrgent)
                 .ThenByDescending(x => x.Job.PostedDate)
+                .ThenByDescending(x => x.Job.IsUrgent)
                 .Select(x => x.Job)
                 .ToList();
 
@@ -115,14 +115,20 @@ namespace UniTask.Business.Services
 
             if (!string.IsNullOrEmpty(currentUserId))
             {
-                var appliedJobIds = await _context.Applications
+                var studentApplications = await _context.Applications
                     .Where(a => a.StudentProfile.UserId == currentUserId)
-                    .Select(a => a.JobId)
+                    .Select(a => new { a.JobId, a.Status })
                     .ToListAsync();
+
+                var appMap = studentApplications.ToDictionary(a => a.JobId, a => a.Status);
 
                 foreach (var dto in result)
                 {
-                    dto.IsAppliedByCurrentUser = appliedJobIds.Contains(dto.Id);
+                    dto.IsAppliedByCurrentUser = appMap.ContainsKey(dto.Id);
+                    if (appMap.TryGetValue(dto.Id, out var status))
+                    {
+                        dto.CurrentUserApplicationStatus = status.ToString();
+                    }
                 }
             }
 
@@ -155,7 +161,13 @@ namespace UniTask.Business.Services
             var dto = MapToDto(job, isPremium);
             if (!string.IsNullOrEmpty(currentUserId))
             {
-                dto.IsAppliedByCurrentUser = await _context.Applications.AnyAsync(a => a.JobId == id && a.StudentProfile.UserId == currentUserId);
+                var app = await _context.Applications
+                    .FirstOrDefaultAsync(a => a.JobId == id && a.StudentProfile.UserId == currentUserId);
+                if (app != null)
+                {
+                    dto.IsAppliedByCurrentUser = true;
+                    dto.CurrentUserApplicationStatus = app.Status.ToString();
+                }
             }
             return dto;
         }

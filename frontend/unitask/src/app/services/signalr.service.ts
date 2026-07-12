@@ -4,9 +4,16 @@ import { Subject } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
 
-const hubUrl = API_BASE_URL.endsWith('/api')
-  ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) + '/hub/dashboard'
-  : '/hub/dashboard';
+let calculatedHubUrl = '/hub/dashboard';
+if (API_BASE_URL.startsWith('http')) {
+  try {
+    const url = new URL(API_BASE_URL);
+    calculatedHubUrl = `${url.origin}/hub/dashboard`;
+  } catch (e) {
+    console.error('[SignalRService] Invalid API_BASE_URL:', e);
+  }
+}
+const hubUrl = calculatedHubUrl;
 
 @Injectable({
   providedIn: 'root'

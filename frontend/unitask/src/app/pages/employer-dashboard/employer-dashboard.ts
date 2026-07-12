@@ -184,12 +184,12 @@ import { Subscription } from 'rxjs';
                   <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Tiêu đề công việc <span style="color: #EF4444">*</span></label>
-                      <input type="text" class="form-input" placeholder="VD: Frontend Developer Intern" [(ngModel)]="formData.title" name="title" required>
+                      <input type="text" class="form-input" placeholder="VD: Frontend Developer Intern" [(ngModel)]="formData.title" (ngModelChange)="onFieldChange('title')" name="title" required>
                       @if (formErrors['title']) { <span class="error-text">{{ formErrors['title'] }}</span> }
                     </div>
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Danh mục <span style="color: #EF4444">*</span></label>
-                      <select class="form-select" [(ngModel)]="formData.category" name="category">
+                      <select class="form-select" [(ngModel)]="formData.category" (ngModelChange)="onFieldChange('category')" name="category">
                         <option value="">-- Chọn danh mục --</option>
                         <option>Marketing & Content</option>
                         <option>IT & Công nghệ</option>
@@ -214,12 +214,12 @@ import { Subscription } from 'rxjs';
                     </div>
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Số lượng tuyển <span style="color: #EF4444">*</span></label>
-                      <input type="number" class="form-input" [(ngModel)]="formData.headCount" name="headCount" placeholder="VD: 2" min="1" max="100" required>
+                      <input type="number" class="form-input" [(ngModel)]="formData.headCount" (ngModelChange)="onFieldChange('headCount')" name="headCount" placeholder="VD: 2" min="1" max="100" required>
                       @if (formErrors['headCount']) { <span class="error-text">{{ formErrors['headCount'] }}</span> }
                     </div>
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Địa điểm <span style="color: #EF4444">*</span></label>
-                      <input type="text" class="form-input" placeholder="VD: TP. Hồ Chí Minh" [(ngModel)]="formData.location" name="location" required>
+                      <input type="text" class="form-input" placeholder="VD: TP. Hồ Chí Minh" [(ngModel)]="formData.location" (ngModelChange)="onFieldChange('location')" name="location" required>
                       @if (formErrors['location']) { <span class="error-text">{{ formErrors['location'] }}</span> }
                     </div>
                   </div>
@@ -229,47 +229,49 @@ import { Subscription } from 'rxjs';
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 20px;">
                       <div class="form-group" style="margin: 0;">
                         <label class="form-label">Giờ bắt đầu <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
-                        <input type="time" class="form-input" [(ngModel)]="formData.workStartTime" name="workStartTime">
+                        <input type="time" class="form-input" [(ngModel)]="formData.workStartTime" (ngModelChange)="onFieldChange('workStartTime')" name="workStartTime">
                         @if (formErrors['workStartTime']) { <span class="error-text">{{ formErrors['workStartTime'] }}</span> }
                       </div>
                       <div class="form-group" style="margin: 0;">
                         <label class="form-label">Giờ kết thúc <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
-                        <input type="time" class="form-input" [(ngModel)]="formData.workEndTime" name="workEndTime">
+                        <input type="time" class="form-input" [(ngModel)]="formData.workEndTime" (ngModelChange)="onFieldChange('workEndTime')" name="workEndTime">
                         @if (formErrors['workEndTime']) { <span class="error-text">{{ formErrors['workEndTime'] }}</span> }
                       </div>
 
                       <div class="form-group" style="margin: 0;">
                         <label class="form-label">Ngày bắt đầu <span style="color: #EF4444" [hidden]="formData.type === 'Freelance'">*</span></label>
-                        <input type="date" class="form-input" [(ngModel)]="formData.workDate" name="workDate">
+                        <input type="date" class="form-input" [(ngModel)]="formData.workDate" (ngModelChange)="onFieldChange('workDate')" name="workDate">
                         @if (formErrors['workDate']) { <span class="error-text">{{ formErrors['workDate'] }}</span> }
                       </div>
                     </div>
 
-                    <div style="margin-top: 16px;">
-                      @if (!isShortTerm) {
-                        <div class="form-group" style="margin: 0;">
-                          <label class="form-label">Lịch làm việc hàng tuần</label>
-                          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">
-                            @for (day of availableDays; track day) {
-                              <button type="button" 
-                                      (click)="toggleDay(day)"
-                                      [class.active]="selectedDays.includes(day)"
-                                      style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 13px; font-weight: 500; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;"
-                                      [style.background]="selectedDays.includes(day) ? 'var(--primary-color)' : 'var(--bg-surface)'"
-                                      [style.color]="selectedDays.includes(day) ? '#fff' : 'var(--text-primary)'"
-                                      [style.border-color]="selectedDays.includes(day) ? 'var(--primary-color)' : 'var(--border-color)'">
-                                {{ day }}
-                              </button>
-                            }
+                    @if (false) {
+                      <div style="margin-top: 16px;">
+                        @if (!isShortTerm) {
+                          <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Lịch làm việc hàng tuần</label>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">
+                              @for (day of availableDays; track day) {
+                                <button type="button" 
+                                        (click)="toggleDay(day)"
+                                        [class.active]="selectedDays.includes(day)"
+                                        style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 13px; font-weight: 500; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;"
+                                        [style.background]="selectedDays.includes(day) ? 'var(--primary-color)' : 'var(--bg-surface)'"
+                                        [style.color]="selectedDays.includes(day) ? '#fff' : 'var(--text-primary)'"
+                                        [style.border-color]="selectedDays.includes(day) ? 'var(--primary-color)' : 'var(--border-color)'">
+                                  {{ day }}
+                                </button>
+                              }
+                            </div>
                           </div>
-                        </div>
-                      } @else {
-                        <div class="form-group" style="margin: 0;">
-                          <label class="form-label">Khoảng thời gian / Các ngày cụ thể</label>
-                          <input type="text" class="form-input" [(ngModel)]="formData.workDays" name="workDays" placeholder="VD: 15/07 - 18/07">
-                        </div>
-                      }
-                    </div>
+                        } @else {
+                          <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Khoảng thời gian / Các ngày cụ thể</label>
+                            <input type="text" class="form-input" [(ngModel)]="formData.workDays" name="workDays" placeholder="VD: 15/07 - 18/07">
+                          </div>
+                        }
+                      </div>
+                    }
                   </div>
                 </div>
 
@@ -283,12 +285,12 @@ import { Subscription } from 'rxjs';
                     <div style="display: flex; flex-direction: column; gap: 20px;">
                       <div class="form-group" style="margin: 0;">
                         <label class="form-label">Mức lương / người (VND) <span style="color: #EF4444">*</span></label>
-                        <input type="number" class="form-input" [(ngModel)]="formData.salaryPerPerson" name="salaryPerPerson" placeholder="VD: 150000" min="50000" required>
+                        <input type="number" class="form-input" [(ngModel)]="formData.salaryPerPerson" (ngModelChange)="onFieldChange('salaryPerPerson')" name="salaryPerPerson" placeholder="VD: 150000" min="50000" required>
                         @if (formErrors['salaryPerPerson']) { <span class="error-text">{{ formErrors['salaryPerPerson'] }}</span> }
                       </div>
                       <div class="form-group" style="margin: 0;">
                         <label class="form-label">Hạn nộp hồ sơ <span style="color: #EF4444">*</span></label>
-                        <input type="date" class="form-input" [(ngModel)]="formData.deadline" name="deadline">
+                        <input type="date" class="form-input" [(ngModel)]="formData.deadline" (ngModelChange)="onFieldChange('deadline')" name="deadline">
                         @if (formErrors['deadline']) { <span class="error-text">{{ formErrors['deadline'] }}</span> }
                       </div>
                     </div>
@@ -1823,12 +1825,12 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
 
   employerJobs = computed(() => {
     const user = this.auth.currentUser();
-    if (user?.companyId) {
-      return this.jobService.getJobsByCompanyId(user.companyId);
+    if (user?.id) {
+      return this.jobService.getAllJobs().filter(j => j.employerId && String(j.employerId) === String(user.id));
     }
     return [];
   });
-  
+
   currentPage = signal(parseInt(sessionStorage.getItem('emp_dash_page') || '1', 10));
   pageSize = signal(parseInt(sessionStorage.getItem('emp_dash_pageSize') || '5', 10));
   sortOrder = signal<'newest' | 'oldest'>((sessionStorage.getItem('emp_dash_sortOrder') as 'newest' | 'oldest') || 'newest');
@@ -1865,9 +1867,9 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     const startIndex = (this.currentPage() - 1) * this.pageSize();
     return jobs.slice(startIndex, startIndex + this.pageSize());
   });
-  
+
   totalPages = computed(() => Math.ceil(this.filteredJobs().length / this.pageSize()) || 1);
-  
+
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages()) {
       this.currentPage.set(page);
@@ -1877,7 +1879,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   getPagesArray(): number[] {
     return Array.from({ length: this.totalPages() }, (_, i) => i + 1);
   }
-  
+
   totalViews = computed(() => this.employerJobs().reduce((sum, j) => sum + j.views, 0));
   totalApplications = computed(() => this.employerJobs().reduce((sum, j) => sum + j.applications, 0));
 
@@ -2005,23 +2007,23 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       return;
     }
     this.editingJobId.set(null);
-    
+
     // Giữ lại các thông tin lịch làm việc
     const prevType = this.formData.type;
     const prevStartTime = this.formData.workStartTime;
     const prevEndTime = this.formData.workEndTime;
     const prevDate = this.formData.workDate;
     const prevDays = this.formData.workDays;
-    
+
     this.formData = this.getEmptyForm();
-    
+
     // Khôi phục lại
     if (prevType) this.formData.type = prevType;
     if (prevStartTime) this.formData.workStartTime = prevStartTime;
     if (prevEndTime) this.formData.workEndTime = prevEndTime;
     if (prevDate) this.formData.workDate = prevDate;
     if (prevDays) this.formData.workDays = prevDays;
-    
+
     this.postMessage.set('');
     this.showPostForm.set(true);
   }
@@ -2043,14 +2045,14 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       if (type === 'Thực tập' || type === 'Full-time') {
         this.formData.workStartTime = '08:00';
         this.formData.workEndTime = type === 'Thực tập' ? '17:00' : '17:30';
-        this.selectedDays = ['T2', 'T3', 'T4', 'T5', 'T6'];
+        this.selectedDays = [];
       } else if (type === 'Part-time') {
         this.formData.workStartTime = '08:00';
         this.formData.workEndTime = '12:00';
         this.selectedDays = [];
       }
     }
-    this.formData.workDays = this.selectedDays.join(', ');
+    this.formData.workDays = '';
   }
 
   toggleDay(day: string) {
@@ -2071,7 +2073,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     if (!confirm('Bạn có chắc chắn muốn bắt đầu công việc này? Sinh viên sẽ nhận được thông báo để Check-in.')) {
       return;
     }
-    
+
     this.jobService.startJob(job.id).subscribe({
       next: (res) => {
         if (res.success) {
@@ -2107,11 +2109,11 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       workStartTime: job.workStartTime ? job.workStartTime.substring(0, 5) : '',
       workEndTime: job.workEndTime ? job.workEndTime.substring(0, 5) : '',
       workDate: job.workDate ? job.workDate.substring(0, 10) : '',
-      workDays: (job as any).workDays || '',
+      workDays: '',
     };
-    
+
     this.isShortTerm = job.type === 'Freelance';
-    this.selectedDays = this.formData.workDays ? this.formData.workDays.split(',').map(d => d.trim()).filter(d => d) : [];
+    this.selectedDays = [];
 
     this.postMessage.set('');
     this.showPostForm.set(true);
@@ -2135,6 +2137,12 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  onFieldChange(field: string) {
+    if (this.formErrors[field]) {
+      delete this.formErrors[field];
+    }
+  }
+
   onSubmitForm() {
     this.formErrors = {};
     let hasError = false;
@@ -2145,7 +2153,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     if (!this.formData.description) { this.formErrors['description'] = 'Vui lòng nhập mô tả công việc.'; hasError = true; }
     if (!this.formData.deadline) { this.formErrors['deadline'] = 'Vui lòng chọn hạn nộp hồ sơ.'; hasError = true; }
     if (!this.formData.headCount || this.formData.headCount < 1) { this.formErrors['headCount'] = 'Số lượng tuyển phải từ 1 trở lên.'; hasError = true; }
-    
+
     const parseLocalDate = (dateStr: string) => {
       const [y, m, d] = dateStr.split('-');
       return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
@@ -2172,7 +2180,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const workDate = parseLocalDate(this.formData.workDate);
-      
+
       if (workDate < today) {
         this.formErrors['workDate'] = 'Ngày làm việc không được ở trong quá khứ.';
         hasError = true;
@@ -2193,7 +2201,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
         hasError = true;
       }
     }
-    
+
     if (!this.formData.workEndTime) {
       if (!isFreelance) {
         this.formErrors['workEndTime'] = 'Vui lòng nhập giờ kết thúc.';
@@ -2202,11 +2210,11 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     }
 
     if (this.formData.workStartTime && this.formData.workEndTime) {
-      if (this.formData.workStartTime >= this.formData.workEndTime) {
-        this.formErrors['workEndTime'] = 'Giờ kết thúc phải lớn hơn giờ bắt đầu.';
+      if (this.formData.workStartTime === this.formData.workEndTime) {
+        this.formErrors['workEndTime'] = 'Giờ kết thúc không được trùng với giờ bắt đầu.';
         hasError = true;
       }
-      
+
       if (this.formData.workDate) {
         const today = new Date();
         const workDate = parseLocalDate(this.formData.workDate);
@@ -2216,7 +2224,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
           const startParts = this.formData.workStartTime.split(':');
           const startHour = parseInt(startParts[0], 10);
           const startMinute = parseInt(startParts[1], 10);
-          
+
           if (startHour < nowHour || (startHour === nowHour && startMinute < nowMinute)) {
             this.formErrors['workStartTime'] = 'Giờ bắt đầu không được trong quá khứ so với hiện tại.';
             hasError = true;
@@ -2500,22 +2508,22 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       // tuy nhiên jobService.fetchJobs() và viewApplicants() đã đủ để update UI.
       // Ẩn OTP popup nếu đang mở cho job này:
       if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
-         if (this.otpType() === 'checkin') {
-           this.handleOtpSuccess('checkin');
-         } else {
-           this.viewApplicants(this.selectedJobForApplicants()!);
-         }
+        if (this.otpType() === 'checkin') {
+          this.handleOtpSuccess('checkin');
+        } else {
+          this.viewApplicants(this.selectedJobForApplicants()!);
+        }
       }
       this.jobService.fetchJobs();
     });
 
     this.signalRService.applicationCheckOutOccurred$.subscribe(jobId => {
       if (this.selectedJobForApplicants() && Number(this.selectedJobForApplicants()!.id) === Number(jobId)) {
-         if (this.otpType() === 'checkout') {
-           this.handleOtpSuccess('checkout');
-         } else {
-           this.viewApplicants(this.selectedJobForApplicants()!);
-         }
+        if (this.otpType() === 'checkout') {
+          this.handleOtpSuccess('checkout');
+        } else {
+          this.viewApplicants(this.selectedJobForApplicants()!);
+        }
       }
       this.jobService.fetchJobs();
     });
@@ -2607,7 +2615,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
           this.disputeReasonOther = '';
           this.disputeEvidenceText = '';
           this.disputeEvidenceUrl = '';
-          
+
           if (this.selectedJobForApplicants()) {
             this.viewApplicants(this.selectedJobForApplicants()!);
           }
@@ -2629,6 +2637,17 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     this.formData.requirementsStr = tpl.requirementsStr;
     this.formData.benefitsStr = tpl.benefitsStr;
     this.formData.tagsStr = tpl.tagsStr;
+
+    // Tự động tính toán mức lương/người từ ngân sách mẫu
+    if (tpl.budget) {
+      this.formData.salaryPerPerson = Math.round(tpl.budget / (this.formData.headCount || 1));
+    } else {
+      this.formData.salaryPerPerson = null;
+    }
+
+    // Xóa toàn bộ báo lỗi cũ khi đổi mẫu mới
+    this.formErrors = {};
+
     this.toast.success(`Đã áp dụng mẫu công việc: "${tpl.name}"`);
   }
 

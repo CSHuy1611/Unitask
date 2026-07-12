@@ -214,22 +214,43 @@ import { CommonModule } from '@angular/common';
                 </div>
 
                 @if (auth.isLoggedIn() && auth.isStudent()) {
+                  @let appStatus = job()!.currentUserApplicationStatus;
                   @if (auth.currentUser()?.blacklistCount !== undefined && auth.currentUser()!.blacklistCount! >= 3) {
                     <button class="btn btn-danger btn-lg full-width" disabled style="background:#EF4444; border-color:#EF4444; color:white">
                       <span class="material-icons-round">block</span> Tài khoản bị khóa
                     </button>
-                  } @else if (job()!.status !== 'open') {
-                    <button class="btn btn-secondary btn-lg full-width" disabled>
-                      <span class="material-icons-round">block</span> Đã tuyển đủ người
-                    </button>
-                  } @else if (applied()) {
-                    <button class="btn btn-secondary btn-lg full-width" disabled>
-                      <span class="material-icons-round">check</span> Đã ứng tuyển
-                    </button>
+                  } @else if (appStatus === 'Accepted') {
+                    @if (job()!.status === 'open') {
+                      <button class="btn btn-success btn-lg full-width" disabled style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <span class="material-icons-round">check_circle</span> Đã trúng tuyển
+                      </button>
+                    } @else if (job()!.status === 'in_progress' || job()!.status === 'pending_confirmation' || job()!.status === 'disputed') {
+                      <button class="btn btn-warning btn-lg full-width" disabled style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3);">
+                        <span class="material-icons-round">pending_actions</span> Đang thực hiện
+                      </button>
+                    } @else if (job()!.status === 'completed') {
+                      <button class="btn btn-success btn-lg full-width" disabled style="background: #10B981; border-color: #10B981; color: white;">
+                        <span class="material-icons-round">task_alt</span> Đã hoàn thành
+                      </button>
+                    } @else {
+                      <button class="btn btn-secondary btn-lg full-width" disabled>
+                        <span class="material-icons-round">block</span> Đã tuyển đủ người
+                      </button>
+                    }
                   } @else {
-                    <button class="btn btn-primary btn-lg full-width" (click)="onApply()">
-                      <span class="material-icons-round">send</span> Ứng tuyển ngay
-                    </button>
+                    @if (job()!.status !== 'open' || (job()!.acceptedCount || 0) >= (job()!.headCount || 1)) {
+                      <button class="btn btn-secondary btn-lg full-width" disabled>
+                        <span class="material-icons-round">block</span> Đã tuyển đủ người
+                      </button>
+                    } @else if (applied()) {
+                      <button class="btn btn-secondary btn-lg full-width" disabled>
+                        <span class="material-icons-round">check</span> Đã ứng tuyển
+                      </button>
+                    } @else {
+                      <button class="btn btn-primary btn-lg full-width" (click)="onApply()">
+                        <span class="material-icons-round">send</span> Ứng tuyển ngay
+                      </button>
+                    }
                   }
                 } @else if (!auth.isLoggedIn()) {
                   <a routerLink="/login" class="btn btn-primary btn-lg full-width">

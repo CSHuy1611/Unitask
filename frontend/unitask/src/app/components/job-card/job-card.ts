@@ -101,14 +101,35 @@ import { ToastService } from '../../services/toast.service';
         </div>
         
         @if (auth.currentUser()?.role === 'student') {
-          @if (job().status !== 'open') {
-            <button class="btn btn-secondary btn-sm" disabled (click)="$event.preventDefault(); $event.stopPropagation()">
-              Đã đủ người
-            </button>
+          @let appStatus = job().currentUserApplicationStatus;
+          @if (appStatus === 'Accepted') {
+            @if (job().status === 'open') {
+              <button class="btn btn-success btn-sm" disabled style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); white-space: nowrap;" (click)="$event.preventDefault(); $event.stopPropagation()">
+                <span class="material-icons-round" style="font-size:14px; vertical-align:middle; margin-right:2px">check_circle</span> Đã trúng tuyển
+              </button>
+            } @else if (job().status === 'in_progress' || job().status === 'pending_confirmation' || job().status === 'disputed') {
+              <button class="btn btn-warning btn-sm" disabled style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3); white-space: nowrap;" (click)="$event.preventDefault(); $event.stopPropagation()">
+                <span class="material-icons-round" style="font-size:14px; vertical-align:middle; margin-right:2px">pending_actions</span> Đang thực hiện
+              </button>
+            } @else if (job().status === 'completed') {
+              <button class="btn btn-success btn-sm" disabled style="background: #10B981; border-color: #10B981; color: white; white-space: nowrap;" (click)="$event.preventDefault(); $event.stopPropagation()">
+                <span class="material-icons-round" style="font-size:14px; vertical-align:middle; margin-right:2px">task_alt</span> Đã hoàn thành
+              </button>
+            } @else {
+              <button class="btn btn-secondary btn-sm" disabled (click)="$event.preventDefault(); $event.stopPropagation()">
+                Đã đủ người
+              </button>
+            }
           } @else {
-            <button [class]="hasApplied() ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'" (click)="applyForJob($event)" [disabled]="hasApplied()">
-              {{ hasApplied() ? 'Đã ứng tuyển' : 'Ứng tuyển ngay' }}
-            </button>
+            @if (job().status !== 'open' || (job().acceptedCount || 0) >= (job().headCount || 1)) {
+              <button class="btn btn-secondary btn-sm" disabled (click)="$event.preventDefault(); $event.stopPropagation()">
+                Đã đủ người
+              </button>
+            } @else {
+              <button [class]="hasApplied() ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'" (click)="applyForJob($event)" [disabled]="hasApplied()">
+                {{ hasApplied() ? 'Đã ứng tuyển' : 'Ứng tuyển ngay' }}
+              </button>
+            }
           }
         }
       </div>

@@ -1803,7 +1803,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (!timeString) return '';
     const [h, m] = timeString.split(':');
     let hour = parseInt(h, 10);
-    const ampm = hour >= 12 ? 'CH' : 'SA';
+    const ampm = hour >= 12 ? 'PM' : 'AM';
     hour = hour % 12;
     hour = hour ? hour : 12; // the hour '0' should be '12'
     return `${hour.toString().padStart(2, '0')}:${m} ${ampm}`;
