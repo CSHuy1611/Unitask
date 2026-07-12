@@ -31,6 +31,8 @@ namespace UniTask.Business.DTOs.Application
 
         public DateTime? CheckInTime { get; set; }
         public DateTime? CheckOutTime { get; set; }
+        public string? CheckInStatusText { get; set; }
+        public string? CheckOutStatusText { get; set; }
         
         public string? DisputeReason { get; set; }
         public string? EmployerEvidenceText { get; set; }

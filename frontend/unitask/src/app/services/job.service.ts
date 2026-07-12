@@ -140,7 +140,7 @@ export class JobService {
   }
 
   getJobTypes(): string[] {
-    return [...new Set(this.allJobsSignal().map(j => j.type))];
+    return [...new Set(this.allJobsSignal().map(j => j.type))].filter(t => t !== 'Freelance');
   }
 
   getLocations(): string[] {
@@ -287,18 +287,18 @@ export class JobService {
     );
   }
 
-  studentCheckInApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string }> {
+  studentCheckInApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string; statusText?: string; reliabilityChangeText?: string }> {
     return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/checkin`, { otp }).pipe(
       tap(() => this.fetchJobs()),
-      map(res => ({ success: true, message: res.message })),
+      map(res => res),
       catchError(err => of({ success: false, message: err.error?.message || 'Lỗi Check-in.' }))
     );
   }
 
-  studentCheckOutApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string }> {
+  studentCheckOutApplication(applicationId: number, otp: string): Observable<{ success: boolean; message: string; statusText?: string; reliabilityChangeText?: string }> {
     return this.http.post<any>(`${API_BASE_URL}/application/${applicationId}/checkout`, { otp }).pipe(
       tap(() => this.fetchJobs()),
-      map(res => ({ success: true, message: res.message })),
+      map(res => res),
       catchError(err => of({ success: false, message: err.error?.message || 'Lỗi Check-out.' }))
     );
   }

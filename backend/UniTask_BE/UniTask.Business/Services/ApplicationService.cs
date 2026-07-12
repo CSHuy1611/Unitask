@@ -34,6 +34,23 @@ namespace UniTask.Business.Services
             var profile = await _context.StudentProfiles.FirstOrDefaultAsync(p => p.UserId == studentId);
             if (profile == null) return null;
 
+            // Kiểm tra điểm uy tín dưới 80 và thời gian khóa 3 ngày
+            if (profile.ReliabilityScore < 80)
+            {
+                if (profile.ReliabilityBlockedUntil.HasValue && DateTime.UtcNow < profile.ReliabilityBlockedUntil.Value)
+                {
+                    // Chuyển đổi thời gian khóa sang giờ Việt Nam (UTC+7) để hiển thị thân thiện
+                    var recoveryTimeLocal = profile.ReliabilityBlockedUntil.Value.AddHours(7).ToString("dd/MM/yyyy HH:mm");
+                    throw new System.InvalidOperationException($"Bạn không đủ điểm uy tín để ứng tuyển việc làm vì dưới 80 điểm. Bạn cần 3 ngày để phục hồi. Ngày khôi phục dự kiến: {recoveryTimeLocal}");
+                }
+                else
+                {
+                    // Đã qua 3 ngày: Tự động khôi phục điểm về 85 và gỡ khóa
+                    profile.ReliabilityScore = 85;
+                    profile.ReliabilityBlockedUntil = null;
+                }
+            }
+
             // VIP Job check
             if (profile.ReliabilityScore < job.RequiredReliabilityScore)
             {
@@ -208,43 +225,239 @@ namespace UniTask.Business.Services
             return otp;
         }
 
-        public async Task<bool> StudentCheckInAsync(int applicationId, string studentId, string otp)
-        {
-            var application = await _context.Applications
-                .Include(a => a.StudentProfile)
-                .FirstOrDefaultAsync(a => a.Id == applicationId);
-
-            if (application == null || application.StudentProfile.UserId != studentId) return false;
-            
-            if (application.CheckInOtp != otp || application.CheckInOtpExpiredAt < DateTime.UtcNow)
-                return false;
-
-            application.CheckInTime = DateTime.UtcNow;
-            application.CheckInOtp = null; // Clear OTP
-            
-            await _context.SaveChangesAsync();
-            await _hubContext.Clients.All.SendAsync("ApplicationCheckInOccurred", application.JobId);
-            
-            // Notify employer via SignalR
-            await _hubContext.Clients.All.SendAsync("CheckInSuccess", application.Id);
-            return true;
-        }
-
-        public async Task<bool> StudentCheckOutAsync(int applicationId, string studentId, string otp)
+        public async Task<CheckInOutResponseDto> StudentCheckInAsync(int applicationId, string studentId, string otp)
         {
             var application = await _context.Applications
                 .Include(a => a.Job)
                 .Include(a => a.StudentProfile)
                 .FirstOrDefaultAsync(a => a.Id == applicationId);
 
-            if (application == null || application.StudentProfile.UserId != studentId) return false;
+            if (application == null || application.StudentProfile.UserId != studentId)
+            {
+                return new CheckInOutResponseDto { Success = false, Message = "Không tìm thấy hồ sơ đăng ký của sinh viên." };
+            }
+            
+            if (application.CheckInOtp != otp || application.CheckInOtpExpiredAt < DateTime.UtcNow)
+            {
+                return new CheckInOutResponseDto { Success = false, Message = "Mã OTP check-in không đúng hoặc đã hết hạn." };
+            }
+
+            application.CheckInTime = DateTime.UtcNow;
+            application.CheckInOtp = null; // Clear OTP
+
+            var studentProfile = application.StudentProfile;
+            var job = application.Job;
+            string statusText = "";
+            string reliabilityChangeText = "";
+
+            if (studentProfile != null)
+            {
+                var oldScore = studentProfile.ReliabilityScore;
+                var checkInLocal = application.CheckInTime.Value.AddHours(7);
+                var checkInStr = checkInLocal.ToString("HH:mm");
+                bool isEarly = false;
+                bool isOnTime = false;
+                bool isLate = false;
+
+                if (job != null && job.WorkDate.HasValue && job.WorkStartTime.HasValue)
+                {
+                    var shiftStart = job.WorkDate.Value.Date + job.WorkStartTime.Value;
+                    if (checkInLocal < shiftStart)
+                    {
+                        isEarly = true;
+                        if (studentProfile.ReliabilityScore < 100)
+                            studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                    }
+                    else if (checkInLocal == shiftStart)
+                    {
+                        isOnTime = true;
+                        if (studentProfile.ReliabilityScore < 100)
+                            studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                    }
+                    else
+                    {
+                        isLate = true;
+                        studentProfile.ReliabilityScore = Math.Max(0, studentProfile.ReliabilityScore - 1);
+
+                        // Nếu dưới 80 điểm, thiết lập thời gian khóa 3 ngày
+                        if (studentProfile.ReliabilityScore < 80 &&
+                            (!studentProfile.ReliabilityBlockedUntil.HasValue || DateTime.UtcNow >= studentProfile.ReliabilityBlockedUntil.Value))
+                        {
+                            studentProfile.ReliabilityBlockedUntil = DateTime.UtcNow.AddDays(3);
+                        }
+                    }
+                }
+                else
+                {
+                    isOnTime = true;
+                    if (studentProfile.ReliabilityScore < 100)
+                        studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                }
+
+                var newScore = studentProfile.ReliabilityScore;
+
+                if (isEarly)
+                {
+                    if (oldScore >= 100)
+                    {
+                        statusText = $"Bạn đã check-in sớm lúc {checkInStr}. Điểm uy tín của bạn vẫn giữ nguyên 100";
+                        reliabilityChangeText = "Điểm uy tín được giữ nguyên ở mức tối đa 100/100.";
+                    }
+                    else
+                    {
+                        statusText = $"Bạn đã check-in sớm lúc {checkInStr}! Bạn được cộng 1 điểm uy tín";
+                        reliabilityChangeText = $"Bạn được cộng 1 điểm uy tín (Lên {newScore}/100).";
+                    }
+                }
+                else if (isOnTime)
+                {
+                    if (oldScore >= 100)
+                    {
+                        statusText = $"Bạn đã check-in đúng giờ lúc {checkInStr}. Điểm uy tín của bạn vẫn giữ nguyên 100";
+                        reliabilityChangeText = "Điểm uy tín được giữ nguyên ở mức tối đa 100/100.";
+                    }
+                    else
+                    {
+                        statusText = $"Bạn đã check-in đúng giờ lúc {checkInStr}! Bạn được cộng 1 điểm uy tín";
+                        reliabilityChangeText = $"Bạn được cộng 1 điểm uy tín (Lên {newScore}/100).";
+                    }
+                }
+                else // isLate
+                {
+                    statusText = $"Bạn đã check-in muộn lúc {checkInStr}! Bạn bị trừ 1 điểm uy tín";
+                    reliabilityChangeText = $"Bạn bị trừ 1 điểm uy tín (Còn {newScore}/100).";
+                }
+            }
+
+            if (studentProfile != null)
+            {
+                studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore);
+            }
+
+            await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ApplicationCheckInOccurred", application.JobId);
+            
+            // Notify employer via SignalR
+            await _hubContext.Clients.All.SendAsync("CheckInSuccess", application.Id);
+
+            return new CheckInOutResponseDto
+            {
+                Success = true,
+                Message = "Check-in thành công.",
+                StatusText = statusText,
+                ReliabilityChangeText = reliabilityChangeText
+            };
+        }
+
+        public async Task<CheckInOutResponseDto> StudentCheckOutAsync(int applicationId, string studentId, string otp)
+        {
+            var application = await _context.Applications
+                .Include(a => a.Job)
+                .Include(a => a.StudentProfile)
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null || application.StudentProfile.UserId != studentId)
+            {
+                return new CheckInOutResponseDto { Success = false, Message = "Không tìm thấy hồ sơ đăng ký của sinh viên." };
+            }
             
             if (application.CheckOutOtp != otp || application.CheckOutOtpExpiredAt < DateTime.UtcNow)
-                return false;
+            {
+                return new CheckInOutResponseDto { Success = false, Message = "Mã OTP check-out không đúng hoặc đã hết hạn." };
+            }
 
             application.CheckOutTime = DateTime.UtcNow;
             application.CheckOutOtp = null; // Clear OTP
-            
+
+            var studentProfile = application.StudentProfile;
+            var job = application.Job;
+            string statusText = "";
+            string reliabilityChangeText = "";
+
+            if (studentProfile != null)
+            {
+                var oldScore = studentProfile.ReliabilityScore;
+                var checkOutLocal = application.CheckOutTime.Value.AddHours(7);
+                var checkOutStr = checkOutLocal.ToString("HH:mm");
+                bool isEarly = false;
+                bool isOnTime = false;
+                bool isLate = false;
+
+                if (job != null && job.WorkDate.HasValue && job.WorkEndTime.HasValue)
+                {
+                    var shiftEnd = job.WorkDate.Value.Date + job.WorkEndTime.Value;
+                    if (checkOutLocal > shiftEnd)
+                    {
+                        isLate = true;
+                        if (studentProfile.ReliabilityScore < 100)
+                            studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                    }
+                    else if (checkOutLocal == shiftEnd)
+                    {
+                        isOnTime = true;
+                        if (studentProfile.ReliabilityScore < 100)
+                            studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                    }
+                    else
+                    {
+                        isEarly = true;
+                        studentProfile.ReliabilityScore = Math.Max(0, studentProfile.ReliabilityScore - 1);
+
+                        // Nếu dưới 80 điểm, thiết lập thời gian khóa 3 ngày
+                        if (studentProfile.ReliabilityScore < 80 &&
+                            (!studentProfile.ReliabilityBlockedUntil.HasValue || DateTime.UtcNow >= studentProfile.ReliabilityBlockedUntil.Value))
+                        {
+                            studentProfile.ReliabilityBlockedUntil = DateTime.UtcNow.AddDays(3);
+                        }
+                    }
+                }
+                else
+                {
+                    isOnTime = true;
+                    if (studentProfile.ReliabilityScore < 100)
+                        studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                }
+
+                var newScore = studentProfile.ReliabilityScore;
+
+                if (isEarly)
+                {
+                    statusText = $"Bạn đã check-out sớm lúc {checkOutStr}! Bạn bị trừ 1 điểm uy tín";
+                    reliabilityChangeText = $"Bạn bị trừ 1 điểm uy tín (Còn {newScore}/100).";
+                }
+                else if (isOnTime)
+                {
+                    if (oldScore >= 100)
+                    {
+                        statusText = $"Bạn đã check-out đúng giờ lúc {checkOutStr}. Điểm uy tín của bạn vẫn giữ nguyên 100";
+                        reliabilityChangeText = "Điểm uy tín được giữ nguyên ở mức tối đa 100/100.";
+                    }
+                    else
+                    {
+                        statusText = $"Bạn đã check-out đúng giờ lúc {checkOutStr}! Bạn được cộng 1 điểm uy tín";
+                        reliabilityChangeText = $"Bạn được cộng 1 điểm uy tín (Lên {newScore}/100).";
+                    }
+                }
+                else // isLate
+                {
+                    if (oldScore >= 100)
+                    {
+                        statusText = $"Bạn đã check-out trễ lúc {checkOutStr}. Điểm uy tín của bạn vẫn giữ nguyên 100";
+                        reliabilityChangeText = "Điểm uy tín được giữ nguyên ở mức tối đa 100/100.";
+                    }
+                    else
+                    {
+                        statusText = $"Bạn đã check-out trễ lúc {checkOutStr}! Bạn được cộng 1 điểm uy tín";
+                        reliabilityChangeText = $"Bạn được cộng 1 điểm uy tín (Lên {newScore}/100).";
+                    }
+                }
+            }
+
+            if (studentProfile != null)
+            {
+                studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore);
+            }
+
             await _context.SaveChangesAsync();
 
             // Auto-Approve Completion immediately
@@ -254,7 +467,13 @@ namespace UniTask.Business.Services
             await _hubContext.Clients.All.SendAsync("ApplicationCheckOutOccurred", application.JobId);
             await _hubContext.Clients.All.SendAsync("CheckOutSuccess", application.Id);
 
-            return true;
+            return new CheckInOutResponseDto
+            {
+                Success = true,
+                Message = "Check-out thành công.",
+                StatusText = statusText,
+                ReliabilityChangeText = reliabilityChangeText
+            };
         }
 
         public async Task<bool> ReportNoShowAsync(int applicationId, string employerId, string reason, string evidenceUrl)
@@ -346,6 +565,82 @@ namespace UniTask.Business.Services
                     .ToList();
             }
 
+            string? checkInStatusText = null;
+            if (a.CheckInTime.HasValue)
+            {
+                var checkInLocal = a.CheckInTime.Value.AddHours(7);
+                var checkInStr = checkInLocal.ToString("HH:mm");
+                if (a.Job != null && a.Job.WorkDate.HasValue && a.Job.WorkStartTime.HasValue)
+                {
+                    var shiftStart = a.Job.WorkDate.Value.Date + a.Job.WorkStartTime.Value;
+                    if (checkInLocal < shiftStart)
+                    {
+                        checkInStatusText = $"Check-in sớm lúc {checkInStr}! Bạn được cộng 1 điểm uy tín";
+                    }
+                    else if (checkInLocal == shiftStart)
+                    {
+                        checkInStatusText = $"Check-in đúng giờ lúc {checkInStr}! Bạn được cộng 1 điểm uy tín";
+                    }
+                    else
+                    {
+                        checkInStatusText = $"Check-in muộn lúc {checkInStr}! Bạn bị trừ 1 điểm uy tín";
+                    }
+                }
+                else
+                {
+                    checkInStatusText = $"Check-in đúng giờ lúc {checkInStr}! Bạn được cộng 1 điểm uy tín";
+                }
+            }
+            else if (a.Status == ApplicationStatus.NoShow)
+            {
+                checkInStatusText = "Bạn không đi làm hôm nay (Vắng mặt)! Bạn bị trừ 2 điểm uy tín";
+            }
+            else if (a.Job != null && a.Job.WorkDate.HasValue && a.Job.WorkEndTime.HasValue)
+            {
+                var nowVn = DateTime.UtcNow.AddHours(7);
+                var shiftEnd = a.Job.WorkDate.Value.Date + a.Job.WorkEndTime.Value;
+                if (nowVn > shiftEnd)
+                {
+                    checkInStatusText = "Bạn không đi làm hôm nay (Vắng mặt)! Bạn bị trừ 2 điểm uy tín";
+                }
+            }
+
+            string? checkOutStatusText = null;
+            if (a.CheckOutTime.HasValue)
+            {
+                var checkOutLocal = a.CheckOutTime.Value.AddHours(7);
+                var checkOutStr = checkOutLocal.ToString("HH:mm");
+                if (a.Job != null && a.Job.WorkDate.HasValue && a.Job.WorkEndTime.HasValue)
+                {
+                    var shiftEnd = a.Job.WorkDate.Value.Date + a.Job.WorkEndTime.Value;
+                    if (checkOutLocal > shiftEnd)
+                    {
+                        checkOutStatusText = $"Check-out trễ lúc {checkOutStr}! Bạn được cộng 1 điểm uy tín";
+                    }
+                    else if (checkOutLocal == shiftEnd)
+                    {
+                        checkOutStatusText = $"Check-out đúng giờ lúc {checkOutStr}! Bạn được cộng 1 điểm uy tín";
+                    }
+                    else
+                    {
+                        checkOutStatusText = $"Check-out sớm lúc {checkOutStr}! Bạn bị trừ 1 điểm uy tín";
+                    }
+                }
+                else
+                {
+                    checkOutStatusText = $"Check-out đúng giờ lúc {checkOutStr}! Bạn được cộng 1 điểm uy tín";
+                }
+            }
+            else if (a.CheckInTime.HasValue && a.Job != null && a.Job.WorkDate.HasValue && a.Job.WorkEndTime.HasValue)
+            {
+                var nowVn = DateTime.UtcNow.AddHours(7);
+                var shiftEnd = a.Job.WorkDate.Value.Date + a.Job.WorkEndTime.Value;
+                if (nowVn > shiftEnd)
+                {
+                    checkOutStatusText = "Thiếu Check-out (Quên check-out)! Bạn bị trừ 1 điểm uy tín";
+                }
+            }
+
             return new ApplicationDto
             {
                 Id = a.Id,
@@ -370,6 +665,8 @@ namespace UniTask.Business.Services
                 AppliedDate = a.AppliedDate,
                 CheckInTime = a.CheckInTime,
                 CheckOutTime = a.CheckOutTime,
+                CheckInStatusText = checkInStatusText,
+                CheckOutStatusText = checkOutStatusText,
                 DisputeReason = a.DisputeReason,
                 EmployerEvidenceText = a.EmployerEvidenceText,
                 EmployerEvidenceUrl = a.EmployerEvidenceUrl,
