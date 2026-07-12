@@ -208,7 +208,6 @@ import { Subscription } from 'rxjs';
                       <select class="form-select" [(ngModel)]="formData.type" (ngModelChange)="onTypeChange($event)" name="type">
                         <option>Thực tập</option>
                         <option>Part-time</option>
-                        <option>Freelance</option>
                         <option>Full-time</option>
                       </select>
                     </div>
