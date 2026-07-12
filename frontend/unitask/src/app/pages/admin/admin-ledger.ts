@@ -13,7 +13,7 @@ import { AdminSearchService } from '../../services/admin-search.service';
   template: `
     <div class="admin-page-content">
           <div class="dashboard-header animate-fade-in-up">
-            <h1>Sổ Cái <span class="gradient-text">Giao Dịch Toàn Hệ Thống</span></h1>
+            <h1>Tổng Hợp <span class="gradient-text">Giao Dịch Toàn Hệ Thống</span></h1>
             <p>Theo dõi mọi biến động số dư, đối soát dòng tiền và giải quyết khiếu nại</p>
           </div>
 
@@ -182,7 +182,7 @@ export class AdminLedgerComponent implements OnInit {
   http = inject(HttpClient);
   toast = inject(ToastService);
   searchService = inject(AdminSearchService);
-  
+
   transactions = signal<any[]>([]);
   isLoading = signal(false);
   currentPage = signal(1);
@@ -194,7 +194,7 @@ export class AdminLedgerComponent implements OnInit {
     let list = this.transactions();
     const query = this.searchService.searchQuery().toLowerCase().trim();
     if (query) {
-      list = list.filter((item: any) => 
+      list = list.filter((item: any) =>
         (item.fullName || '').toLowerCase().includes(query) ||
         (item.email || '').toLowerCase().includes(query) ||
         (item.description || '').toLowerCase().includes(query)

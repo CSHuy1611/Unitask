@@ -52,9 +52,14 @@ namespace UniTask.Api.Controllers
         }
 
         [HttpGet("users")]
-        public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetUsers(
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string role = "all",
+            [FromQuery] string status = "all",
+            [FromQuery] string search = "")
         {
-            var users = await _adminService.GetAllUsersAsync(page, pageSize);
+            var users = await _adminService.GetAllUsersAsync(page, pageSize, role, status, search);
             return Ok(users);
         }
 

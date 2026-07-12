@@ -103,7 +103,7 @@ namespace UniTask.Business.Services
             };
         }
 
-        public async Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10)
+        public async Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10, string role = "all", string status = "all", string search = "")
         {
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 10;
@@ -114,18 +114,64 @@ namespace UniTask.Business.Services
                     .ThenInclude(ep => ep != null ? ep.Company : null)
                 .AsQueryable();
 
+            // 1. Filter by Role
+            if (!string.IsNullOrEmpty(role) && role != "all")
+            {
+                if (role == "student")
+                {
+                    query = query.Where(u => u.UserType == UserType.Student);
+                }
+                else if (role == "employer")
+                {
+                    query = query.Where(u => u.UserType == UserType.Employer);
+                }
+                else if (role == "household")
+                {
+                    query = query.Where(u => u.UserType == UserType.Employer && u.EmployerProfile != null && u.EmployerProfile.Type == EmployerType.SmallBusinessHousehold);
+                }
+                else if (role == "business")
+                {
+                    query = query.Where(u => u.UserType == UserType.Employer && u.EmployerProfile != null && u.EmployerProfile.Type == EmployerType.Business);
+                }
+            }
+
+            // 2. Filter by Status
+            if (!string.IsNullOrEmpty(status) && status != "all")
+            {
+                if (status == "pending")
+                    query = query.Where(u => u.EkycStatus == EkycStatus.Pending);
+                else if (status == "verified")
+                    query = query.Where(u => u.EkycStatus == EkycStatus.Verified);
+                else if (status == "rejected")
+                    query = query.Where(u => u.EkycStatus == EkycStatus.Rejected);
+                else if (status == "none")
+                    query = query.Where(u => u.EkycStatus == EkycStatus.None);
+            }
+
+            // 3. Filter by Search
+            if (!string.IsNullOrEmpty(search))
+            {
+                var s = search.ToLower();
+                query = query.Where(u => 
+                    (u.FullName != null && u.FullName.ToLower().Contains(s)) || 
+                    (u.Email != null && u.Email.ToLower().Contains(s)) || 
+                    u.Id.ToLower().Contains(s)
+                );
+            }
+
             var totalCount = await query.CountAsync();
 
-            // Load raw entities first, then do sorting + projection in memory
-            // EF Core cannot translate nested ternaries, .ToString(format), or complex navigation checks to SQL
-            var rawUsers = await query.ToListAsync();
-
-            var items = rawUsers
+            // Perform sorting and pagination at the database level
+            var pagedRawUsers = await query
                 .OrderByDescending(u => u.EkycStatus == EkycStatus.Pending)
                 .ThenByDescending(u => u.EkycStatus == EkycStatus.None)
                 .ThenByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .ToListAsync();
+
+            // Perform complex projection in memory
+            var items = pagedRawUsers
                 .Select(u => new
                 {
                     id = u.Id,
