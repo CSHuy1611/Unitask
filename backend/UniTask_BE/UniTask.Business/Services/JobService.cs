@@ -216,7 +216,7 @@ namespace UniTask.Business.Services
                 // Check job type (No Full-time)
                 if (dto.Type.Contains("Full-time", StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new InvalidOperationException("Hộ kinh doanh chỉ được phép đăng các công việc Part-time hoặc Freelance (thời vụ).");
+                    throw new InvalidOperationException("Hộ kinh doanh chỉ được phép đăng các công việc Part-time.");
                 }
                 
                 // Check deadline (<= 30 days)
