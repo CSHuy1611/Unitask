@@ -66,15 +66,7 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
                   <span class="stat-label">Doanh thu thực tế</span>
                 </div>
               </div>
-              <div class="stat-card glass-card hover-lift" (click)="router.navigate(['/admin/escrow-logs'])" style="cursor: pointer; position: relative;">
-                <div class="stat-icon" style="background:linear-gradient(135deg,#F59E0B,#D97706)">
-                  <span class="material-icons-round">gavel</span>
-                </div>
-                <div>
-                  <span class="stat-number">{{ formatCurrency(totalEscrowBalance() || 0) }}</span>
-                  <span class="stat-label">Tổng tiền giữ tạm (Escrow)</span>
-                </div>
-              </div>
+
             }
           </div>
 
@@ -615,12 +607,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
   });
 
   summary = computed(() => this.data().summary);
-  netPlatformCash = computed(() => (this.summary().totalDeposits || 0) - (this.summary().totalWithdrawals || 0));
-  totalWalletBalance = computed(() => this.summary().totalWalletBalance || 0);
-  totalRevenue = computed(() => this.summary().totalRevenue || 0);
-  totalEscrowBalance = computed(() => (this.summary().totalEscrowHold || 0) - (this.summary().totalEscrowRelease || 0) - (this.summary().totalRefund || 0));
-  totalPlatformLiabilities = computed(() => this.totalWalletBalance() + this.totalEscrowBalance() + this.totalRevenue());
-  isBalanceMatched = computed(() => Math.abs(this.netPlatformCash() - this.totalPlatformLiabilities()) < 100);
+
 
   maxRevenue = signal(1);
   isLoading = signal(true);
