@@ -121,7 +121,11 @@ import { ToastService } from '../../services/toast.service';
               </button>
             }
           } @else {
-            @if (job().status !== 'open' || (job().acceptedCount || 0) >= (job().headCount || 1)) {
+            @if (isExpired()) {
+              <button class="btn btn-secondary btn-sm" disabled (click)="$event.preventDefault(); $event.stopPropagation()">
+                Đã hết hạn
+              </button>
+            } @else if (job().status !== 'open' || (job().acceptedCount || 0) >= (job().headCount || 1)) {
               <button class="btn btn-secondary btn-sm" disabled (click)="$event.preventDefault(); $event.stopPropagation()">
                 Đã đủ người
               </button>
@@ -274,6 +278,14 @@ export class JobCardComponent {
 
   hasApplied() {
     return this.job().isAppliedByCurrentUser || false;
+  }
+
+  isExpired() {
+    if (!this.job().deadline) return false;
+    const deadlineDate = new Date(this.job().deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return deadlineDate < today;
   }
 
   applyForJob(event: Event) {

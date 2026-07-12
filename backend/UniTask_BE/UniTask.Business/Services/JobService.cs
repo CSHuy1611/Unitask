@@ -226,6 +226,26 @@ namespace UniTask.Business.Services
                 }
             }
 
+            // Validate Deadline vs WorkDate/WorkStartTime
+            if (dto.Deadline.HasValue && dto.WorkDate.HasValue)
+            {
+                if (dto.WorkStartTime.HasValue)
+                {
+                    var startDateTime = dto.WorkDate.Value.Date.Add(dto.WorkStartTime.Value);
+                    if (dto.Deadline.Value > startDateTime.AddHours(-2))
+                    {
+                        throw new InvalidOperationException("Hạn ứng tuyển phải kết thúc trước giờ bắt đầu làm việc ít nhất 2 tiếng để bạn có thời gian duyệt ứng viên.");
+                    }
+                }
+                else
+                {
+                    if (dto.Deadline.Value.Date >= dto.WorkDate.Value.Date)
+                    {
+                        throw new InvalidOperationException("Hạn ứng tuyển phải kết thúc trước ngày bắt đầu làm việc để ứng viên có thời gian chuẩn bị.");
+                    }
+                }
+            }
+
             // Check Blacklist Count
             if (user != null && user.BlacklistCount >= 3)
             {
