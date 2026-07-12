@@ -289,7 +289,7 @@ import { Subscription } from 'rxjs';
                       </div>
                       <div class="form-group" style="margin: 0;">
                         <label class="form-label">Hạn nộp hồ sơ <span style="color: #EF4444">*</span></label>
-                        <input type="date" class="form-input" [(ngModel)]="formData.deadline" (ngModelChange)="onFieldChange('deadline')" name="deadline">
+                        <input type="datetime-local" class="form-input" [(ngModel)]="formData.deadline" (ngModelChange)="onFieldChange('deadline')" name="deadline">
                         @if (formErrors['deadline']) { <span class="error-text">{{ formErrors['deadline'] }}</span> }
                       </div>
                     </div>

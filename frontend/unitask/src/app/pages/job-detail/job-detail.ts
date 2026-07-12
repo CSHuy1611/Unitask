@@ -238,7 +238,11 @@ import { CommonModule } from '@angular/common';
                       </button>
                     }
                   } @else {
-                    @if (job()!.status !== 'open' || (job()!.acceptedCount || 0) >= (job()!.headCount || 1)) {
+                    @if (isExpired()) {
+                      <button class="btn btn-secondary btn-lg full-width" disabled>
+                        <span class="material-icons-round">timer_off</span> Đã hết hạn ứng tuyển
+                      </button>
+                    } @else if (job()!.status !== 'open' || (job()!.acceptedCount || 0) >= (job()!.headCount || 1)) {
                       <button class="btn btn-secondary btn-lg full-width" disabled>
                         <span class="material-icons-round">block</span> Đã tuyển đủ người
                       </button>
@@ -604,6 +608,15 @@ export class JobDetailComponent implements OnInit {
       'linear-gradient(135deg, #D0021B, #EF4444)',
     ];
     return colors[((this.job()?.companyId || 1) - 1) % colors.length];
+  }
+
+  isExpired(): boolean {
+    const job = this.job();
+    if (!job || !job.deadline) return false;
+    const deadlineDate = new Date(job.deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return deadlineDate < today;
   }
 
   onApply() {
