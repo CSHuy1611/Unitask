@@ -67,6 +67,9 @@ namespace UniTask.DataAcesss
 
         // ===== 3. Gọi MockDataSeeder để sinh 50 Users mới =====
         await MockDataSeeder.SeedMockDataAsync(serviceProvider);
+
+        // ===== 4. Gọi NewStudentSeeder để sinh thêm 100 Users sinh viên mới =====
+        await NewStudentSeeder.SeedStudentsAsync(serviceProvider);
     }
 }
 }
