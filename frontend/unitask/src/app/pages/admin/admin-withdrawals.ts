@@ -147,7 +147,16 @@ interface Withdrawal {
 
                         <!-- Ngân hàng -->
                         <td>
-                          <span class="bank-tag">{{ w.bank }}</span>
+                          <div style="display: flex; align-items: center; gap: 12px;">
+                            @if (getBankLogo(w.bank)) {
+                              <img [src]="getBankLogo(w.bank)" alt="Bank Logo" style="height: 36px; width: auto; max-width: 100px; object-fit: contain;">
+                            } @else {
+                              <span class="material-icons-round" style="color: var(--text-muted); font-size: 28px;">account_balance</span>
+                            }
+                            <span class="bank-tag" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary); font-size: 0.85rem; padding: 4px 8px;">
+                              {{ w.bank }}
+                            </span>
+                          </div>
                         </td>
 
                         <!-- Số tài khoản -->
@@ -628,7 +637,11 @@ export class AdminWithdrawalsComponent implements OnInit {
   pageSize = 10;
   hasMore = signal<boolean>(false);
   isLoading = signal<boolean>(false);
+  isCheckingPayos = signal<boolean>(false);
+  payosCheckResult = signal<any>(null);
 
+  banks = signal<any[]>([]);
+  isBanksLoading = signal(true);
   totalPendingAmount = signal<number>(0);
   totalProcessingAmount = signal<number>(0);
   totalCompletedAmount = signal<number>(0);
@@ -658,9 +671,66 @@ export class AdminWithdrawalsComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.loadBanks();
     if (this.auth.isAdmin()) {
       this.loadWithdrawals();
     }
+  }
+
+  loadBanks() {
+    this.isBanksLoading.set(true);
+    this.http.get<any>('https://api.vietqr.io/v2/banks').subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.banks.set(res.data);
+        }
+        this.isBanksLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load VietQR banks', err);
+        this.isBanksLoading.set(false);
+      }
+    });
+  }
+
+  getBankLogo(bankName: string | null | undefined): string | null {
+    if (!bankName || bankName === 'N/A') return null;
+    const nameLower = bankName.toLowerCase().trim();
+    const bankList = this.banks();
+    
+    if (bankList.length === 0) return null;
+
+    // 1. Try exact match on shortName or code
+    let match = bankList.find(b => 
+      b.shortName?.toLowerCase() === nameLower || 
+      b.code?.toLowerCase() === nameLower
+    );
+    
+    // 2. Try partial match on shortName
+    if (!match) {
+      match = bankList.find(b => b.shortName && nameLower.includes(b.shortName.toLowerCase()));
+    }
+    
+    // 3. Try partial match on full name
+    if (!match) {
+      match = bankList.find(b => b.name && (b.name.toLowerCase().includes(nameLower) || nameLower.includes(b.name.toLowerCase())));
+    }
+
+    // Edge cases mapping
+    if (!match && nameLower.includes('mb')) {
+      match = bankList.find(b => b.code === 'MB');
+    }
+    if (!match && nameLower.includes('vietcombank')) {
+      match = bankList.find(b => b.code === 'VCB');
+    }
+    if (!match && nameLower.includes('techcombank')) {
+      match = bankList.find(b => b.code === 'TCB');
+    }
+    if (!match && nameLower.includes('mbbank')) {
+      match = bankList.find(b => b.code === 'MB');
+    }
+    
+    return match ? match.logo : null;
   }
 
   loadWithdrawals(page: number = 1) {

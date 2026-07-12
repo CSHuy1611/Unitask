@@ -1,5 +1,6 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
@@ -9,7 +10,7 @@ import { AdminSearchService } from '../../services/admin-search.service';
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, DecimalPipe],
   template: `
     <div class="admin-page-content">
           <div class="dashboard-header animate-fade-in-up" style="animation-delay:0.1s">
@@ -20,7 +21,7 @@ import { AdminSearchService } from '../../services/admin-search.service';
             <div class="header-actions">
               <div class="filter-group">
                 <span class="material-icons-round">filter_list</span>
-                <select class="form-select status-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+                <select class="form-select status-select" [ngModel]="statusFilter()" (ngModelChange)="onStatusChange($event)">
                   <option value="all">Tất cả trạng thái eKYC</option>
                   <option value="pending">Chờ duyệt</option>
                   <option value="verified">Đã xác thực</option>
@@ -30,7 +31,7 @@ import { AdminSearchService } from '../../services/admin-search.service';
               </div>
               <div class="filter-group">
                 <span class="material-icons-round">category</span>
-                <select class="form-select role-select" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
+                <select class="form-select role-select" [ngModel]="roleFilter()" (ngModelChange)="onRoleChange($event)">
                   <option value="all">Tất cả vai trò</option>
                   <option value="student">Sinh viên</option>
                   <option value="employer">Tất cả NTD</option>
@@ -39,6 +40,12 @@ import { AdminSearchService } from '../../services/admin-search.service';
                 </select>
               </div>
             </div>
+          </div>
+
+          <div style="margin-bottom: var(--space-4); display: flex; justify-content: flex-end;">
+             <span class="badge" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary); font-size: 0.9rem; padding: 6px 12px;">
+                Tổng cộng: {{ totalCount() | number }} người dùng
+             </span>
           </div>
 
           <div class="users-section glass-card animate-fade-in-up" style="animation-delay:0.15s">
@@ -607,6 +614,7 @@ export class AdminUsersComponent {
   pageSize = 10;
   hasMore = signal<boolean>(false);
   isLoading = signal<boolean>(false);
+  totalCount = signal<number>(0);
   
   // Edit Modal State
   isEditModalOpen = signal<boolean>(false);
@@ -630,42 +638,35 @@ export class AdminUsersComponent {
   }
 
   filteredUsers = computed(() => {
-    let result = this.users();
-    
-    if (this.statusFilter() !== 'all') {
-      result = result.filter((u: any) => {
-        const status = (u.ekycStatus || 'none').toLowerCase();
-        return status === this.statusFilter();
-      });
-    }
-    
-    if (this.roleFilter() === 'household') {
-      result = result.filter((u: any) => u.role === 'employer' && u.employerType === 1);
-    } else if (this.roleFilter() === 'business') {
-      result = result.filter((u: any) => u.role === 'employer' && (u.employerType === 0 || u.employerType === null));
-    } else if (this.roleFilter() !== 'all') {
-      result = result.filter((u: any) => (u.role || '').toLowerCase() === this.roleFilter());
-    }
-
-    const query = this.searchService.searchQuery().toLowerCase().trim();
-    if (query) {
-      result = result.filter((u: any) => 
-        (u.fullName || '').toLowerCase().includes(query) || 
-        (u.email || '').toLowerCase().includes(query) ||
-        (u.id || '').toString().toLowerCase().includes(query)
-      );
-    }
-
-    return result;
+    return this.users();
   });
 
   constructor() {
-    this.loadUsers();
+    effect(() => {
+      // Trigger API call when search query changes
+      const query = this.searchService.searchQuery();
+      this.loadUsers(1);
+    }, { allowSignalWrites: true });
+  }
+
+  onRoleChange(newRole: string) {
+    this.roleFilter.set(newRole);
+    this.loadUsers(1);
+  }
+
+  onStatusChange(newStatus: string) {
+    this.statusFilter.set(newStatus);
+    this.loadUsers(1);
   }
 
   loadUsers(page: number = 1) {
+    // Avoid multiple concurrent requests or use a debounce in real scenario
     this.isLoading.set(true);
-    this.http.get<any>(`${API_BASE_URL}/admin/users?page=${page}&pageSize=${this.pageSize}`).subscribe({
+    const role = this.roleFilter();
+    const status = this.statusFilter();
+    const search = encodeURIComponent(this.searchService.searchQuery().trim());
+
+    this.http.get<any>(`${API_BASE_URL}/admin/users?page=${page}&pageSize=${this.pageSize}&role=${role}&status=${status}&search=${search}`).subscribe({
       next: (res) => {
         this.isLoading.set(false);
         const newUsers = Array.isArray(res) ? res : (res?.items || []);
@@ -676,6 +677,7 @@ export class AdminUsersComponent {
         }
         this.currentPage.set(page);
         this.hasMore.set(Array.isArray(res) ? false : (res?.hasMore || false));
+        this.totalCount.set(Array.isArray(res) ? newUsers.length : (res?.totalCount || 0));
       },
       error: (err) => {
         this.isLoading.set(false);

@@ -6,7 +6,7 @@ namespace UniTask.Business.Interfaces
     public interface IAdminService
     {
         Task<object> GetDashboardStatsAsync();
-        Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10);
+        Task<object> GetAllUsersAsync(int page = 1, int pageSize = 10, string role = "all", string status = "all", string search = "");
         Task<bool> ForceVerifyUserAsync(string userId);
         Task<bool> UpdateUserEmailAsync(string userId, string newEmail);
         Task<bool> BanUserAsync(string userId);
