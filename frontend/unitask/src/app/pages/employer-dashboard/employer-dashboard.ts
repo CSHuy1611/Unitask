@@ -2138,7 +2138,8 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
 
   onFieldChange(field: string) {
     if (this.formErrors[field]) {
-      delete this.formErrors[field];
+      const { [field]: _, ...rest } = this.formErrors;
+      this.formErrors = rest;
     }
   }
 
