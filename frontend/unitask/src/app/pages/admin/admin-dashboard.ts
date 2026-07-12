@@ -13,7 +13,7 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule],
   template: `
     <div class="admin-page-content">
           <div class="dashboard-header animate-fade-in-up">
