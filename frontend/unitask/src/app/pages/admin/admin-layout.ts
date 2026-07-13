@@ -36,9 +36,6 @@ import { AdminSearchService } from '../../services/admin-search.service';
               <a routerLink="/admin/withdrawals" class="sidebar-link" routerLinkActive="active">
                 <span class="material-icons-round">account_balance_wallet</span> Duyệt rút tiền
               </a>
-              <a routerLink="/admin/disputes" class="sidebar-link" routerLinkActive="active">
-                <span class="material-icons-round">gavel</span> Giải quyết tranh chấp
-              </a>
               <a routerLink="/admin/revenue" class="sidebar-link" routerLinkActive="active">
                 <span class="material-icons-round">receipt_long</span> Doanh thu & Dòng tiền
               </a>
