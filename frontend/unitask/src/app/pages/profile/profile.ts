@@ -231,7 +231,7 @@ import Tesseract from 'tesseract.js';
                           <input type="text" class="form-input" [(ngModel)]="editForm.position" name="position" required placeholder="VD: Giám đốc nhân sự, CEO, Recruiter">
                         </div>
                         <div class="form-group">
-                          <label class="form-label">{{ auth.currentUser()?.employerType === 1 ? 'Tên Hộ kinh doanh *' : 'Tên công ty *' }}</label>
+                          <label class="form-label">{{ auth.currentUser()?.employerType === 1 ? 'Tên Hộ kinh doanh *' : 'Tên Hộ kinh doanh *' }}</label>
                           <input type="text" class="form-input" [(ngModel)]="editForm.companyName" name="companyName" required [placeholder]="auth.currentUser()?.employerType === 1 ? 'VD: Cửa hàng tiện lợi 24h' : 'VD: Studio Ánh Sáng'">
                         </div>
                       </div>
@@ -277,7 +277,7 @@ import Tesseract from 'tesseract.js';
               <!-- Company Info Section (Employer only) -->
               @if (auth.isEmployer()) {
                 <div class="cv-section glass-card animate-fade-in-up" style="animation-delay:0.1s">
-                  <h3><span class="material-icons-round">business</span> {{ auth.currentUser()?.employerType === 1 ? 'Thông tin Hộ kinh doanh' : 'Thông tin công ty / doanh nghiệp' }}</h3>
+                  <h3><span class="material-icons-round">business</span> {{ auth.currentUser()?.employerType === 1 ? 'Thông tin Hộ kinh doanh' : 'Thông tin hộ kinh doanh' }}</h3>
                   
                   <div style="display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-4);">
                     <div class="grid-2-cols">
