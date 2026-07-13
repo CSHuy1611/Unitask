@@ -241,7 +241,7 @@ import Tesseract from 'tesseract.js';
                           <input type="text" class="form-input" [(ngModel)]="editForm.companyIndustry" name="companyIndustry" placeholder="VD: Nhiếp ảnh / Media, Thời trang, F&B">
                         </div>
                         <div class="form-group">
-                          <label class="form-label">Địa chỉ công ty/hộ kinh doanh</label>
+                          <label class="form-label">Địa chỉ hộ kinh doanh</label>
                           <input type="text" class="form-input" [(ngModel)]="editForm.companyLocation" name="companyLocation" placeholder="VD: Quận 9, TP. HCM">
                         </div>
                       </div>
