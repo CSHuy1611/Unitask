@@ -37,7 +37,7 @@ import { Subscription } from 'rxjs';
                 </div>
                 <h2 style="margin-bottom: 16px; font-size: 20px;">Đăng ký thành công!</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;">
-                  Tài khoản của bạn mặc định là <strong>Hộ kinh doanh</strong>. Bạn được miễn phí đăng việc 3 lần, sau đó bạn sẽ cần trả phí để tiếp tục đăng việc.
+                  Tài khoản của bạn là <strong>Hộ kinh doanh</strong>. Bạn được miễn phí đăng việc 3 lần, sau đó bạn sẽ cần trả phí để tiếp tục đăng việc.
                 </p>
                 <button type="button" class="btn btn-primary full-width" (click)="closeWelcomePopup()">Bắt đầu ngay</button>
               </div>
@@ -206,9 +206,7 @@ import { Subscription } from 'rxjs';
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Loại hình</label>
                       <select class="form-select" [(ngModel)]="formData.type" (ngModelChange)="onTypeChange($event)" name="type">
-                        <option>Thực tập</option>
                         <option>Part-time</option>
-                        <option>Full-time</option>
                       </select>
                     </div>
                     <div class="form-group" style="margin: 0;">

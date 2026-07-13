@@ -146,12 +146,7 @@ import Tesseract from 'tesseract.js';
                 </div>
               }
 
-              @if (auth.currentUser()?.employerType === 1 || (auth.currentUser()?.employerType === 0 && !auth.currentUser()?.isBusinessLicenseVerified)) {
-                <button class="btn btn-warning full-width" style="margin-top:var(--space-5); background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; font-weight: 600;" (click)="showUpgradeModal.set(true)">
-                  <span class="material-icons-round" style="font-size:18px">upgrade</span>
-                  {{ auth.currentUser()?.employerType === 1 ? 'Nâng cấp Doanh nghiệp' : 'Xác thực lại GPKD' }}
-                </button>
-              }
+
               <button class="btn btn-secondary full-width" [style.marginTop]="auth.currentUser()?.employerType === 1 ? 'var(--space-3)' : 'var(--space-5)'" (click)="toggleEditMode()">
                 <span class="material-icons-round" style="font-size:18px">edit</span>
                 {{ isEditing() ? 'Đóng chỉnh sửa' : 'Chỉnh sửa hồ sơ' }}
@@ -255,18 +250,7 @@ import Tesseract from 'tesseract.js';
                           <label class="form-label">Quy mô</label>
                           <input type="text" class="form-input" [(ngModel)]="editForm.companySize" name="companySize" placeholder="VD: 5-10 nhân viên, Cá nhân">
                         </div>
-                        @if (editForm.employerType === 0) {
-                          <div class="form-group">
-                            <label class="form-label">Mã số thuế</label>
-                            <input type="text" class="form-input" [(ngModel)]="editForm.taxCode" name="taxCode" placeholder="VD: 0101234567">
-                            @if (isTaxCodeChanged()) {
-                              <span style="font-size: 11px; color: var(--warning); margin-top: 4px; display: block; font-weight: bold;">
-                                <span class="material-icons-round" style="font-size: 12px; vertical-align: middle; margin-right: 2px;">warning</span>
-                                Lưu ý: Thay đổi Mã số thuế sẽ yêu cầu bạn phải xác thực lại Giấy phép kinh doanh.
-                              </span>
-                            }
-                          </div>
-                        }
+
                       </div>
                       
                       <div class="form-row">
@@ -321,12 +305,7 @@ import Tesseract from 'tesseract.js';
                     </div>
                     
                     <div class="grid-2-cols">
-                      @if (auth.currentUser()?.employerType !== 1) {
-                        <div>
-                          <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Mã số thuế</span>
-                          <strong style="color: var(--success); font-size: 15px;">{{ auth.currentUser()?.taxCode || 'Chưa cập nhật' }}</strong>
-                        </div>
-                      }
+
                       <div>
                         <span class="info-label" style="font-size: 12px; color: var(--text-muted); display: block;">Website</span>
                         @if (auth.currentUser()?.companyWebsite && auth.currentUser()?.companyWebsite !== '#') {
@@ -344,44 +323,7 @@ import Tesseract from 'tesseract.js';
                       </p>
                     </div>
 
-                    @if (auth.currentUser()?.employerType !== 1) {
-                      <div style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px dashed var(--border-color);">
-                        <h4 style="margin-bottom: var(--space-3);"><span class="material-icons-round" style="vertical-align: middle; font-size: 18px;">verified</span> Giấy phép kinh doanh</h4>
-                        
-                        @if (auth.currentUser()?.businessLicenseUrl) {
-                          <div class="cv-uploaded" style="margin-bottom: var(--space-3);">
-                            <div class="cv-file-info">
-                              <span class="material-icons-round cv-file-icon" style="color: var(--primary-light);">receipt_long</span>
-                              <div>
-                                <strong>Giấy phép kinh doanh (Đã tải lên)</strong>
-                                <span class="cv-date">Trạng thái: 
-                                  @if (auth.currentUser()?.isBusinessLicenseVerified) {
-                                    <strong style="color: var(--success);">Đã xác thực thành công</strong>
-                                  } @else {
-                                    <strong style="color: var(--warning);">Đang chờ hoặc không hợp lệ</strong>
-                                  }
-                                </span>
-                              </div>
-                            </div>
-                            <div class="cv-actions">
-                              <a [href]="auth.currentUser()?.businessLicenseUrl" target="_blank" class="btn btn-secondary btn-sm">Xem chi tiết</a>
-                            </div>
-                          </div>
-                        }
-                        
-                        <div class="upload-area" (click)="licenseInput.click()" [class.disabled]="licenseUploading()" style="min-height: 120px;">
-                          @if (licenseUploading()) {
-                            <div class="upload-spinner"></div>
-                            <p><strong>{{ licenseUploadStatus() }}</strong></p>
-                          } @else {
-                            <span class="material-icons-round upload-icon" style="font-size: 32px; color: var(--primary-light);">add_photo_alternate</span>
-                            <p><strong>Tải lên Giấy phép kinh doanh mới</strong></p>
-                            <span class="upload-note">Hỗ trợ JPG, PNG</span>
-                          }
-                        </div>
-                        <input #licenseInput type="file" accept="image/*" style="display:none" (change)="onLicenseSelected($event)">
-                      </div>
-                    }
+
                   </div>
                 </div>
               }
@@ -881,80 +823,7 @@ import Tesseract from 'tesseract.js';
         }
       </div>
 
-      <!-- Upgrade to Business Modal -->
-      @if (showUpgradeModal()) {
-        <div class="modal-overlay animate-fade-in">
-          <div class="modal-content glass-card p-6" style="width: 100%; max-width: 500px;">
-            <div class="modal-header d-flex justify-between items-center mb-4">
-              <h3 style="font-size:1.25rem; font-weight:700; color: var(--warning)">{{ auth.currentUser()?.employerType === 1 ? 'Nâng cấp Doanh nghiệp' : 'Xác thực lại GPKD' }}</h3>
-              <button class="btn btn-secondary icon-btn" (click)="showUpgradeModal.set(false)" [disabled]="upgradeUploading()">
-                <span class="material-icons-round">close</span>
-              </button>
-            </div>
-            
-            <div class="modal-body">
-              <div class="alert alert-warning mb-4" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #b45309">
-                <span class="material-icons-round" style="color: #f59e0b">info</span>
-                {{ auth.currentUser()?.employerType === 1 ? 'Sau khi nâng cấp, bạn sẽ có thể mua các gói dịch vụ cao cấp và tuyển dụng không giới hạn.' : 'Vui lòng tải lên Giấy phép kinh doanh mới để xác thực lại Mã số thuế của bạn.' }}
-              </div>
-              
-              @if (upgradeError()) {
-                <div class="alert alert-error mb-4">
-                  <span class="material-icons-round">error</span>
-                  {{ upgradeError() }}
-                </div>
-              }
-              
-              @if (upgradeSuccess()) {
-                <div class="alert alert-success mb-4">
-                  <span class="material-icons-round">check_circle</span>
-                  {{ upgradeSuccess() }}
-                </div>
-              }
 
-              <form (ngSubmit)="submitUpgrade()" class="upgrade-form">
-                <div class="form-group mb-3">
-                  <label class="form-label">Tên công ty *</label>
-                  <input type="text" class="form-input" [(ngModel)]="upgradeForm.companyName" name="companyName" required placeholder="VD: Công ty TNHH ABC">
-                </div>
-                
-                <div class="form-group mb-4">
-                  <label class="form-label">Mã số thuế *</label>
-                  <input type="text" class="form-input" [(ngModel)]="upgradeForm.taxCode" name="taxCode" required placeholder="VD: 0101234567">
-                </div>
-                
-                <div class="form-group mb-4">
-                  <label class="form-label">Giấy phép kinh doanh *</label>
-                  <div class="upload-area" (click)="upgradeFileInput.click()" [class.disabled]="upgradeUploading()" style="min-height: 100px; padding: var(--space-3)">
-                    @if (upgradeFile) {
-                      <div class="d-flex items-center gap-2" style="color: var(--primary)">
-                        <span class="material-icons-round">image</span>
-                        <strong>{{ upgradeFile.name }}</strong>
-                      </div>
-                    } @else {
-                      <span class="material-icons-round upload-icon" style="font-size: 28px; color: var(--primary-light);">add_photo_alternate</span>
-                      <p style="margin: 4px 0"><strong>Tải lên hình ảnh bản gốc GPKD</strong></p>
-                      <span class="upload-note">Hệ thống sẽ tự động quét bằng AI</span>
-                    }
-                  </div>
-                  <input #upgradeFileInput type="file" accept="image/*" style="display:none" (change)="onUpgradeFileSelected($event)">
-                </div>
-
-                <div class="form-actions d-flex justify-end gap-3 mt-4">
-                  <button type="button" class="btn btn-secondary" (click)="showUpgradeModal.set(false)" [disabled]="upgradeUploading()">Hủy</button>
-                  <button type="submit" class="btn btn-warning" [disabled]="upgradeUploading() || !upgradeForm.companyName || !upgradeForm.taxCode || !upgradeFile" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none;">
-                    @if (upgradeUploading()) {
-                      <span class="spinner" style="border-top-color: white"></span> Đang xử lý...
-                    } @else {
-                      {{ auth.currentUser()?.employerType === 1 ? 'Xác nhận nâng cấp' : 'Gửi xác thực' }}
-                    }
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      }
 
       <!-- Withdraw Modal -->
       @if (showWithdrawModal()) {
@@ -1802,12 +1671,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   editSuccess = signal(false);
   editMessage = signal('');
 
-  showUpgradeModal = signal(false);
-  upgradeForm = { companyName: '', taxCode: '' };
-  upgradeFile: File | null = null;
-  upgradeUploading = signal(false);
-  upgradeError = signal('');
-  upgradeSuccess = signal('');
+
 
   showWithdrawModal = signal(false);
   withdrawSuccess = signal(false);
@@ -2001,9 +1865,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     taxCode: ''
   };
 
-  isTaxCodeChanged(): boolean {
-    return this.editForm.employerType === 0 && this.editForm.taxCode !== (this.auth.currentUser()?.taxCode || '');
-  }
+
 
   constructor() {
   }
@@ -2178,52 +2040,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   }
 
-  onUpgradeFileSelected(event: any) {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        this.toast.error('Kích thước file không được vượt quá 10MB');
-        return;
-      }
-      this.upgradeFile = file;
-      this.upgradeError.set('');
-    }
-  }
 
-  submitUpgrade() {
-    if (!this.upgradeForm.companyName || !this.upgradeForm.taxCode || !this.upgradeFile) {
-      this.upgradeError.set('Vui lòng điền đầy đủ thông tin và tải lên Giấy phép kinh doanh.');
-      return;
-    }
-
-    this.upgradeUploading.set(true);
-    this.upgradeError.set('');
-    this.upgradeSuccess.set('');
-
-    this.auth.upgradeToBusiness(
-      this.upgradeForm.companyName, 
-      this.upgradeForm.taxCode, 
-      this.upgradeFile
-    ).subscribe({
-      next: (res) => {
-        this.upgradeUploading.set(false);
-        if (res.success) {
-          this.upgradeSuccess.set(res.message);
-          setTimeout(() => {
-            this.showUpgradeModal.set(false);
-            this.toast.success(res.message);
-            window.location.reload(); // Reload to reflect changes globally
-          }, 2000);
-        } else {
-          this.upgradeError.set(res.message);
-        }
-      },
-      error: () => {
-        this.upgradeUploading.set(false);
-        this.upgradeError.set('Có lỗi xảy ra khi nâng cấp, vui lòng thử lại.');
-      }
-    });
-  }
 
   onSubmitWithdraw() {
     let amountStr = String(this.withdrawForm.amount || '').trim();
