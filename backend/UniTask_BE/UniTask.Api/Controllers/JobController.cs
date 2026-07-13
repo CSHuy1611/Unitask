@@ -63,7 +63,7 @@ namespace UniTask.Api.Controllers
             try
             {
                 var job = await _jobService.CreateJobAsync(employerId, dto);
-                if (job == null) return BadRequest(new { message = "Vui lòng hoàn thiện hồ sơ doanh nghiệp trước khi đăng tin." });
+                if (job == null) return BadRequest(new { message = "Vui lòng hoàn thiện hồ sơ hộ kinh doanh trước khi đăng tin." });
 
                 return CreatedAtAction(nameof(GetJobById), new { id = job.Id }, job);
             }

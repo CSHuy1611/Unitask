@@ -23,7 +23,7 @@ import { Subscription } from 'rxjs';
           <div class="auth-required glass-card animate-fade-in-up" style="width: 100%">
             <span class="material-icons-round" style="font-size:64px;color:var(--primary-light)">lock</span>
             <h2>Chỉ dành cho Nhà tuyển dụng</h2>
-            <p>Vui lòng đăng nhập bằng tài khoản doanh nghiệp để truy cập dashboard.</p>
+            <p>Vui lòng đăng nhập bằng tài khoản hộ kinh doanh để truy cập dashboard.</p>
             <a routerLink="/login" class="btn btn-primary btn-lg">Đăng nhập</a>
           </div>
         } @else {
@@ -435,15 +435,9 @@ import { Subscription } from 'rxjs';
                           <li style="margin-bottom: 4px; display: flex; gap: 4px;"><span class="material-icons-round" style="font-size: 14px; color: var(--success);">check</span> Đăng không giới hạn tin</li>
                           @if (pkg.id >= 2) { <li style="margin-bottom: 4px; display: flex; gap: 4px;"><span class="material-icons-round" style="font-size: 14px; color: var(--success);">check</span> Ưu tiên hiển thị top</li> }
                         </ul>
-                        @if (auth.currentUser()?.employerType === 1) {
-                          <button class="btn full-width" style="background: var(--bg-card); color: var(--text-muted); border: 1px dashed var(--border-color); cursor: not-allowed;" title="Vui lòng nâng cấp lên Doanh nghiệp để mua gói.">
-                            Chỉ dành cho Doanh nghiệp
-                          </button>
-                        } @else {
                           <button class="btn full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)" [disabled]="isProcessingPackage()">
                             Mua gói
                           </button>
-                        }
                       </div>
                     }
                   </div>
@@ -1789,7 +1783,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
       budget: 350000,
       description: 'Cần 2 bạn nam/nữ hỗ trợ check-in khách mời, phát tài liệu và hướng dẫn chỗ ngồi tại hội thảo sự kiện công ty.',
       requirementsStr: 'Ngoại hình sáng, Giao tiếp tốt, Đúng giờ, Trang phục lịch sự (quần âu, áo sơ mi trắng)',
-      benefitsStr: 'Được phục vụ ăn nhẹ, Giao lưu với các diễn giả và khách mời doanh nghiệp',
+      benefitsStr: 'Được phục vụ ăn nhẹ, Giao lưu với các diễn giả và đối tác',
       tagsStr: 'Sự kiện, Lễ tân, Check-in'
     }
   ];
@@ -1951,10 +1945,6 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user) return;
 
-    if (user.employerType === 1) {
-      this.toast.error('Vui lòng nâng cấp lên Doanh nghiệp để mua gói dịch vụ.');
-      return;
-    }
 
     if ((user.balance || 0) < pkg.price) {
       this.toast.error('Số dư ví không đủ để mua gói này. Vui lòng nạp thêm tiền!');
@@ -2129,11 +2119,6 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user) return;
 
-    if (user.employerType === 1) {
-      setTimeout(() => this.formData.isUrgent = false, 0);
-      this.toast.warning('Tính năng Tuyển gấp chỉ dành cho Doanh nghiệp. Vui lòng vào trang Hồ sơ để nâng cấp!');
-      return;
-    }
 
     const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
     if (this.formData.isUrgent && !hasActivePackage) {
@@ -2255,11 +2240,6 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user) return;
 
-    if (this.formData.isUrgent && user.employerType === 1) {
-      this.formErrors['isUrgent'] = 'Tính năng Tuyển gấp chỉ dành cho Doanh nghiệp!';
-      this.toast.error('Vui lòng vào trang Hồ sơ nâng cấp lên Doanh nghiệp để đăng tin tuyển gấp!');
-      return;
-    }
 
     const hasActivePackage = !!user.activePackage && user.packageExpiry && new Date(user.packageExpiry) > new Date();
     if (this.formData.isUrgent && !hasActivePackage) {

@@ -897,7 +897,7 @@ import Tesseract from 'tesseract.js';
           <div class="modal-content glass-card p-6" (click)="$event.stopPropagation()" style="width: 100%; max-width: 450px;">
             <div class="d-flex justify-between items-center mb-4">
               <h3 style="font-size:1.25rem; font-weight:700; color: #EF4444; display: flex; align-items: center; gap: 8px;">
-                <span class="material-icons-round">report_problem</span> Khiếu nại doanh nghiệp
+                <span class="material-icons-round">report_problem</span> Khiếu nại hộ kinh doanh
               </h3>
               <button class="icon-btn" (click)="selectedJobToReport.set(null)">
                 <span class="material-icons-round">close</span>

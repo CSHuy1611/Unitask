@@ -89,7 +89,7 @@ namespace UniTask.Business.Services
             {
                 if (string.IsNullOrWhiteSpace(request.CompanyName))
                 {
-                    return new AuthResponse { IsSuccess = false, Message = "Tên công ty là bắt buộc khi đăng ký tài khoản Doanh nghiệp." };
+                    return new AuthResponse { IsSuccess = false, Message = "Tên Hộ kinh doanh là bắt buộc khi đăng ký." };
                 }
 
                 if (!string.IsNullOrWhiteSpace(request.TaxCode))
@@ -192,7 +192,7 @@ namespace UniTask.Business.Services
                                             }
                                             else
                                             {
-                                                return new AuthResponse { IsSuccess = false, Message = "Hệ thống AI không tìm thấy Mã số thuế trên ảnh Giấy phép kinh doanh. Vui lòng tải lên ảnh rõ nét hoặc đúng giấy phép của doanh nghiệp bạn nhập." };
+                                                return new AuthResponse { IsSuccess = false, Message = "Hệ thống AI không tìm thấy Mã số thuế trên ảnh Giấy phép kinh doanh. Vui lòng tải lên ảnh rõ nét hoặc đúng giấy phép của hộ kinh doanh bạn nhập." };
                                             }
                                         }
                                     }
