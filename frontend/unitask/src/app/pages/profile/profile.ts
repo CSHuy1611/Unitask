@@ -548,7 +548,7 @@ import Tesseract from 'tesseract.js';
                               <!-- Accepted but waiting for more people -->
                               <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818CF8; border: 1px solid rgba(99, 102, 241, 0.3); white-space: nowrap;">
                                 <span class="material-icons-round" style="font-size:13px; vertical-align:middle">hourglass_top</span>
-                                Chờ đủ người
+                                Chờ bắt đầu 
                               </span>
                             } @else if (job.status === 'in_progress') {
                               @if (myApp && !myApp.checkInTime) {
@@ -571,7 +571,7 @@ import Tesseract from 'tesseract.js';
                             <div style="margin-top: 8px; padding: 10px 14px; background: rgba(99, 102, 241, 0.06); border: 1px dashed rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: 8px;">
                               <span class="material-icons-round" style="font-size:18px; color:#818CF8; flex-shrink:0; margin-top:1px">info</span>
                               <p style="margin:0; font-size:13px; color: var(--text-secondary); line-height:1.5">
-                                Công việc đã được giao cho bạn nhưng <strong style="color:#818CF8">chưa đủ người</strong>. Vui lòng chờ nhà tuyển dụng hoàn tất tuyển đủ nhân sự, bạn sẽ có thể Check-in để bắt đầu làm việc.
+                                Công việc đã được giao cho bạn nhưng <strong style="color:#818CF8">công việc chưa bắt đầu</strong>. Vui lòng chờ nhà tuyển dụng bắt đầu công việc , bạn sẽ có thể Check-in để bắt đầu làm việc.
                               </p>
                             </div>
                           }
@@ -1759,7 +1759,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return true;
     }).map(j => {
       const myApp = this.myApplications().find(app => app.jobId === j.id);
-      
+
       let isMissedSchedule = false;
       if (j.status === 'in_progress' && j.workDate && j.workEndTime && (!myApp?.checkInTime || !myApp?.checkOutTime)) {
         try {
@@ -1769,9 +1769,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
           if (endDateTime.getTime() < Date.now()) {
             isMissedSchedule = true;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
-      
+
       return {
         ...j,
         checkInTime: myApp?.checkInTime ? (myApp.checkInTime.endsWith('Z') ? myApp.checkInTime : myApp.checkInTime + 'Z') : undefined,
@@ -1792,7 +1792,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .map(app => app.jobId);
 
     return this.jobService.getAllJobs().filter(j =>
-      historyAppJobIds.includes(j.id) || 
+      historyAppJobIds.includes(j.id) ||
       (j.selectedStudentId === user.id && (j.status === 'completed' || j.status === 'disputed' || j.status === 'closed'))
     ).map(j => {
       const myApp = this.myApplications().find(app => app.jobId === j.id);
@@ -2159,10 +2159,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       next: (res) => {
         if (res.success) {
           this.showCheckOutModal.set(false);
-          
+
           const now = new Date();
           const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-          
+
           // Refresh everything immediately so the job moves to History and wallet updates
           this.refreshStudentApplications();
           this.jobService.fetchJobs();
