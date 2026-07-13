@@ -61,6 +61,14 @@ export class JobService {
     });
   }
 
+  getPublicStats(): Observable<any> {
+    return this.http.get<any>(`${API_BASE_URL}/job/public/stats`);
+  }
+
+  getTopCompanies(count: number = 6): Observable<any[]> {
+    return this.http.get<any[]>(`${API_BASE_URL}/job/public/top-companies?count=${count}`);
+  }
+
   private mapDtoToJob(dto: any): Job {
     const statusMap: Record<number, Job['status']> = {
       0: 'open',

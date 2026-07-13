@@ -34,9 +34,7 @@ import { AdminSearchService } from '../../services/admin-search.service';
                 <select class="form-select role-select" [ngModel]="roleFilter()" (ngModelChange)="onRoleChange($event)">
                   <option value="all">Tất cả vai trò</option>
                   <option value="student">Sinh viên</option>
-                  <option value="employer">Tất cả NTD</option>
-                  <option value="household">Hộ kinh doanh</option>
-                  <option value="business">Doanh nghiệp</option>
+                  <option value="employer">Hộ kinh doanh</option>
                 </select>
               </div>
             </div>
@@ -86,8 +84,8 @@ import { AdminSearchService } from '../../services/admin-search.service';
                           </div>
                         </td>
                         <td>
-                          <span class="role-badge" [class]="user.role === 'student' ? 'student' : (user.employerType === 1 ? 'household' : 'business')">
-                            {{ user.role === 'student' ? 'Sinh viên' : (user.employerType === 1 ? 'Hộ kinh doanh' : 'Doanh nghiệp') }}
+                          <span class="role-badge" [class]="user.role === 'student' ? 'student' : 'household'">
+                            {{ user.role === 'student' ? 'Sinh viên' : 'Hộ kinh doanh' }}
                           </span>
                           @if (user.role === 'student') {
                             <div class="text-caption" style="margin-top: 4px; display: flex; align-items: center; gap: 2px;">

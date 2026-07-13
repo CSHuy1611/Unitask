@@ -2,7 +2,6 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { JobCardComponent } from '../../components/job-card/job-card';
 import { JobService } from '../../services/job.service';
-import { CompanyService } from '../../services/company.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -27,12 +26,12 @@ import { AuthService } from '../../services/auth.service';
           </div>
         }
         <div class="hero-text animate-fade-in-up">
-          <span class="hero-badge">🎓 #1 Nền tảng việc làm cho sinh viên</span>
+          <span class="hero-badge">🎓 #1 Nền tảng việc làm ngắn hạn cho sinh viên</span>
           <h1 class="hero-title">
-            Tìm kiếm <span class="gradient-text">việc làm</span> phù hợp cho sinh viên
+            Tìm kiếm <span class="gradient-text">việc làm ngắn hạn</span> linh hoạt cho sinh viên
           </h1>
           <p class="hero-desc">
-            Kết nối sinh viên với hàng nghìn cơ hội thực tập, part-time và freelance từ các doanh nghiệp uy tín hàng đầu Việt Nam.
+            Kết nối sinh viên với hàng nghìn cơ hội việc làm ngắn hạn, part-time và freelance từ các Hộ kinh doanh và Đối tác uy tín.
           </p>
         </div>
 
@@ -61,18 +60,18 @@ import { AuthService } from '../../services/auth.service';
 
         <div class="hero-stats animate-fade-in-up" style="animation-delay: 0.4s">
           <div class="stat-item">
-            <span class="stat-number">10,000+</span>
+            <span class="stat-number">{{ stats().totalStudents }}+</span>
             <span class="stat-label">Sinh viên</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-number">500+</span>
-            <span class="stat-label">Doanh nghiệp</span>
+            <span class="stat-number">{{ stats().totalEmployers }}+</span>
+            <span class="stat-label">Hộ kinh doanh / Đối tác</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-number">2,000+</span>
-            <span class="stat-label">Việc làm</span>
+            <span class="stat-number">{{ stats().totalJobs }}+</span>
+            <span class="stat-label">Công việc ngắn hạn</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
@@ -148,16 +147,16 @@ import { AuthService } from '../../services/auth.service';
       <div class="container">
         <div class="section-header center">
           <span class="section-badge">🏢 Đối tác</span>
-          <h2 class="section-title">Doanh nghiệp hàng đầu</h2>
+          <h2 class="section-title">Hộ kinh doanh nổi bật</h2>
         </div>
         <div class="companies-grid">
-          @for (company of companies; track company.id; let i = $index) {
+          @for (company of topCompanies(); track company.id; let i = $index) {
             <div class="company-card glass-card animate-fade-in-up" [style.animation-delay]="i * 0.1 + 's'">
-              <div class="company-logo" [style.background]="company.color">
-                {{ company.logo }}
+              <div class="company-logo" style="background: linear-gradient(135deg, #4F46E5, #7C3AED);">
+                {{ company.logoUrl === 'UT' ? 'UT' : '' }}
               </div>
               <h4 class="company-name">{{ company.name }}</h4>
-              <span class="company-industry">{{ company.industry }}</span>
+              <span class="company-industry">{{ company.industry || 'Hộ kinh doanh' }}</span>
               <div class="company-meta">
                 <span class="badge badge-primary">{{ company.jobsCount }} việc</span>
                 <span class="company-rating">⭐ {{ company.rating }}</span>
@@ -174,11 +173,11 @@ import { AuthService } from '../../services/auth.service';
         <div class="cta-card">
           <div class="cta-content">
             <h2>Sẵn sàng bắt đầu?</h2>
-            <p>Đăng ký ngay hôm nay để khám phá hàng nghìn cơ hội việc làm dành riêng cho sinh viên.</p>
+            <p>Đăng ký ngay hôm nay để khám phá hàng nghìn cơ hội việc làm ngắn hạn dành riêng cho sinh viên.</p>
           </div>
           <div class="cta-actions">
             <a routerLink="/register" class="btn btn-accent btn-lg">🎓 Tôi là Sinh viên</a>
-            <a routerLink="/register" class="btn btn-outline btn-lg">🏢 Tôi là Doanh nghiệp</a>
+            <a routerLink="/register" class="btn btn-outline btn-lg">🏢 Tôi là Hộ kinh doanh</a>
           </div>
         </div>
       </div>
@@ -505,14 +504,27 @@ import { AuthService } from '../../services/auth.service';
 export class HomeComponent {
   auth = inject(AuthService);
   private jobService = inject(JobService);
-  private companyService = inject(CompanyService);
   private router = inject(Router);
 
   searchQuery = signal('');
   locationFilter = signal('');
   featuredJobs = this.jobService.featuredJobs;
-  companies = this.companyService.getTopCompanies(6);
   locations = this.jobService.getLocations();
+
+  stats = signal({ totalStudents: 10000, totalEmployers: 500, totalJobs: 2000 });
+  topCompanies = signal<any[]>([]);
+
+  constructor() {
+    this.jobService.getPublicStats().subscribe({
+      next: (s) => this.stats.set(s),
+      error: (err) => console.error(err)
+    });
+
+    this.jobService.getTopCompanies(6).subscribe({
+      next: (c) => this.topCompanies.set(c),
+      error: (err) => console.error(err)
+    });
+  }
 
   hasDisputedJobs = computed(() => {
     const user = this.auth.currentUser();

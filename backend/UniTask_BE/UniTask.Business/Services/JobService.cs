@@ -884,5 +884,38 @@ namespace UniTask.Business.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        public async Task<object> GetPublicStatsAsync()
+        {
+            var totalStudents = await _context.StudentProfiles.CountAsync();
+            var totalEmployers = await _context.EmployerProfiles.CountAsync();
+            var totalJobs = await _context.Jobs.CountAsync();
+
+            return new
+            {
+                totalStudents,
+                totalEmployers,
+                totalJobs
+            };
+        }
+
+        public async Task<IEnumerable<object>> GetTopCompaniesAsync(int count)
+        {
+            var companies = await _context.Companies
+                .Select(c => new
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    LogoUrl = c.LogoUrl ?? "UT",
+                    Industry = c.Industry,
+                    Rating = c.Rating,
+                    JobsCount = c.Jobs.Count(j => j.Status == JobStatus.Open)
+                })
+                .OrderByDescending(c => c.Rating)
+                .ThenByDescending(c => c.JobsCount)
+                .Take(count)
+                .ToListAsync();
+
+            return companies;
+        }
     }
 }

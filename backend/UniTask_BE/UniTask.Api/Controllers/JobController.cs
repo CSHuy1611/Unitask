@@ -18,6 +18,22 @@ namespace UniTask.Api.Controllers
             _jobService = jobService;
         }
 
+        [HttpGet("public/stats")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPublicStats()
+        {
+            var stats = await _jobService.GetPublicStatsAsync();
+            return Ok(stats);
+        }
+
+        [HttpGet("public/top-companies")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetTopCompanies([FromQuery] int count = 6)
+        {
+            var companies = await _jobService.GetTopCompaniesAsync(count);
+            return Ok(companies);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetJobs([FromQuery] JobFilterDto filter)
         {
