@@ -851,12 +851,7 @@ import { Subscription } from 'rxjs';
                                 Check-out
                               </button>
                             </div>
-                            <!-- Report violation -->
-                            <button (click)="appToDispute.set(app)"
-                                    style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; background: transparent; color: #EF4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                              <span class="material-icons-round" style="font-size: 18px;">report_problem</span>
-                              Báo cáo vi phạm
-                            </button>
+                            <!-- Report violation hidden by user request -->
 
                           } @else if (app.status == 0 || app.status === 'Applied' || app.status === 'applied') {
                             <!-- Assign job -->
