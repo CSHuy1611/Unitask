@@ -199,25 +199,7 @@ export class AuthService {
     );
   }
 
-  upgradeToBusiness(companyName: string, taxCode: string, file: File): Observable<{ success: boolean; message: string }> {
-    const formData = new FormData();
-    formData.append('CompanyName', companyName);
-    formData.append('TaxCode', taxCode);
-    formData.append('BusinessLicenseFile', file);
 
-    return this.http.post<any>(`${API_BASE_URL}/profile/employer/upgrade`, formData).pipe(
-      tap(() => {
-        const user = this.currentUser();
-        if (user) {
-          const updated = { ...user, employerType: 0, companyName, taxCode };
-          this.currentUser.set(updated);
-          this.saveToStorage(updated);
-        }
-      }),
-      map(res => ({ success: true, message: res.message || 'Nâng cấp Doanh nghiệp thành công!' })),
-      catchError(err => of({ success: false, message: err.error?.message || 'Nâng cấp thất bại.' }))
-    );
-  }
 
   // CV upload
   uploadCV(file: File): Observable<{ success: boolean; message: string }> {

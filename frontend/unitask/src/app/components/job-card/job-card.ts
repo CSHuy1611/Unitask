@@ -20,11 +20,7 @@ import { ToastService } from '../../services/toast.service';
         <div class="card-meta">
           <span class="company-name">
             {{ job().company }}
-            @if (job().employerType === 1) {
-              <span class="soft-badge soft-badge-warning" style="margin-left: 4px;">🏠 Hộ KD</span>
-            } @else {
-              <span class="soft-badge soft-badge-primary" style="margin-left: 4px;">🏢 Doanh nghiệp</span>
-            }
+            <span class="soft-badge soft-badge-warning" style="margin-left: 4px;">🏠 Hộ KD</span>
             @if (job().isCompanyPremium) {
               <span class="premium-badge" title="Nhà tuyển dụng Premium">
                 <span class="material-icons-round" style="font-size: 14px;">workspace_premium</span>

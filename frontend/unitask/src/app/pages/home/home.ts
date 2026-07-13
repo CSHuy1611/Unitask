@@ -115,7 +115,7 @@ import { AuthService } from '../../services/auth.service';
               <span class="material-icons-round">verified_user</span>
             </div>
             <h3>Xác thực eKYC</h3>
-            <p>Mọi người dùng đều được xác thực danh tính, đảm bảo an toàn và uy tín cho cả sinh viên lẫn doanh nghiệp.</p>
+            <p>Mọi người dùng đều được xác thực danh tính, đảm bảo an toàn và uy tín cho cả sinh viên lẫn đối tác.</p>
           </div>
           <div class="feature-card glass-card animate-fade-in-up" style="animation-delay:0.1s">
             <div class="feature-icon" style="background: linear-gradient(135deg, #10B981, #059669)">
@@ -129,7 +129,7 @@ import { AuthService } from '../../services/auth.service';
               <span class="material-icons-round">handshake</span>
             </div>
             <h3>Kết nối uy tín</h3>
-            <p>Hợp tác với hàng trăm doanh nghiệp hàng đầu, từ startup đến tập đoàn lớn. Cơ hội thực sự cho sinh viên.</p>
+            <p>Hợp tác với hàng trăm hộ kinh doanh uy tín. Cơ hội thực sự cho sinh viên.</p>
           </div>
           <div class="feature-card glass-card animate-fade-in-up" style="animation-delay:0.3s">
             <div class="feature-icon" style="background: linear-gradient(135deg, #EF4444, #DC2626)">

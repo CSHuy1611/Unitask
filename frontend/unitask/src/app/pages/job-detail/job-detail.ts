@@ -35,11 +35,7 @@ import { CommonModule } from '@angular/common';
                       <span class="meta-item">
                         <span class="material-icons-round">business</span>
                         {{ job()!.company }}
-                        @if (job()!.employerType === 1) {
                           <span class="soft-badge soft-badge-warning" style="margin-left: 4px;">🏠 Hộ KD</span>
-                        } @else {
-                          <span class="soft-badge soft-badge-primary" style="margin-left: 4px;">🏢 Doanh nghiệp</span>
-                        }
                         @if (job()!.isCompanyPremium) {
                           <span class="premium-badge" title="Nhà tuyển dụng Premium">
                             <span class="material-icons-round" style="font-size: 14px;">workspace_premium</span>
@@ -581,7 +577,7 @@ export class JobDetailComponent implements OnInit {
           this.companyInfo.set(mockCompany);
         } else {
           this.companyInfo.set({
-            name: found.company || 'Doanh nghiệp tuyển dụng',
+            name: found.company || 'Hộ kinh doanh tuyển dụng',
             description: found.companyDescription || 'Chưa cập nhật giới thiệu công ty.',
             industry: found.companyIndustry || 'Chưa cập nhật lĩnh vực hoạt động',
             size: found.companySize || 'Chưa cập nhật quy mô',

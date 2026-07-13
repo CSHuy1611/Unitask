@@ -25,7 +25,7 @@ import { RouterLink } from '@angular/router';
               
             </div>
             <p class="footer-desc">
-              Nền tảng kết nối việc làm nhanh chóng dành cho sinh viên. Tìm kiếm cơ hội thực tập, part-time và freelance từ các doanh nghiệp uy tín.
+              Nền tảng kết nối việc làm nhanh chóng dành cho sinh viên. Tìm kiếm cơ hội thực tập, part-time và freelance từ các hộ kinh doanh uy tín.
             </p>
             <div class="social-links">
               <a href="#" class="social-link">
@@ -48,7 +48,7 @@ import { RouterLink } from '@angular/router';
           </div>
 
           <div class="footer-col">
-            <h4 class="footer-title">Doanh nghiệp</h4>
+            <h4 class="footer-title">Hộ kinh doanh</h4>
             <a routerLink="/register" class="footer-link">Đăng ký tuyển dụng</a>
             <a routerLink="/employer/dashboard" class="footer-link">Đăng việc làm</a>
             <a href="#" class="footer-link">Gói dịch vụ</a>

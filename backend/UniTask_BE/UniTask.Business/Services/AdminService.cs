@@ -838,9 +838,7 @@ namespace UniTask.Business.Services
                     ? j.Employer.EmployerProfile.Company.Name 
                     : j.Employer?.FullName;
                 
-                var employerType = j.Employer?.EmployerProfile?.Type == EmployerType.SmallBusinessHousehold 
-                    ? "Hộ kinh doanh" 
-                    : "Doanh nghiệp";
+                var employerType = "Hộ kinh doanh";
 
                 var activeApp = j.Applications?.FirstOrDefault(a => a.Status == ApplicationStatus.Accepted || a.Status == ApplicationStatus.Completed);
                 var assignedStudent = activeApp != null && activeApp.StudentProfile != null && activeApp.StudentProfile.User != null
@@ -1080,11 +1078,7 @@ namespace UniTask.Business.Services
                 int row = i + 2;
                 activeSheet.Cell(row, 1).Value = u.FullName;
                 activeSheet.Cell(row, 2).Value = u.Email;
-                activeSheet.Cell(row, 3).Value = u.UserType == UserType.Student 
-                    ? "Sinh viên" 
-                    : (u.EmployerProfile?.Type == EmployerType.SmallBusinessHousehold 
-                        ? "Hộ kinh doanh" 
-                        : "Doanh nghiệp");
+                activeSheet.Cell(row, 3).Value = u.UserType == UserType.Student ? "Sinh viên" : "Hộ kinh doanh";
                 
                 var uTx = transactions.Where(t => t.Wallet.UserId == u.Id).ToList();
                 var userDeposit = uTx.Where(t => t.Type == TransactionType.Deposit && !(t.Description != null && t.Description.Contains("[PAYOS_PENDING]"))).Sum(t => t.Amount);
@@ -1134,11 +1128,7 @@ namespace UniTask.Business.Services
                 int row = i + 2;
                 allUsersSheet.Cell(row, 1).Value = u.FullName;
                 allUsersSheet.Cell(row, 2).Value = u.Email;
-                allUsersSheet.Cell(row, 3).Value = u.UserType == UserType.Student 
-                    ? "Sinh viên" 
-                    : (u.EmployerProfile?.Type == EmployerType.SmallBusinessHousehold 
-                        ? "Hộ kinh doanh" 
-                        : "Doanh nghiệp");
+                allUsersSheet.Cell(row, 3).Value = u.UserType == UserType.Student ? "Sinh viên" : "Hộ kinh doanh";
                 
                 var userRev = (u.Wallet != null && revenueByWalletId.ContainsKey(u.Wallet.Id)) ? revenueByWalletId[u.Wallet.Id] : 0;
                 bool isPaidUser = userRev > 0;
