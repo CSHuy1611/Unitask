@@ -102,8 +102,8 @@ import { AuthService } from '../../services/auth.service';
               <!-- Employer fields -->
               @if (activeRole() === 'employer') {
                 <div class="form-group">
-                  <label class="form-label">Tên công ty / Hộ kinh doanh</label>
-                  <input type="text" class="form-input" placeholder="VD: FPT Software"
+                  <label class="form-label">Tên hộ kinh doanh</label>
+                  <input type="text" class="form-input" placeholder="VD: Hộ kinh doanh ABC"
                          [(ngModel)]="companyName" name="companyName">
                 </div>
                 <div class="form-group">
