@@ -51,6 +51,7 @@ namespace UniTask.DataAcesss.Entities
         public DateTime? DateOfBirth { get; set; }
 
         public int ReliabilityScore { get; set; } = 100;
+        public DateTime? ReliabilityBlockedUntil { get; set; }
 
         // ===== Navigation Properties =====
         public ICollection<Application> Applications { get; set; } = new List<Application>();

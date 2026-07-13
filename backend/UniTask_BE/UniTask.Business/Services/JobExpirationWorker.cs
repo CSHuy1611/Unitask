@@ -53,6 +53,7 @@ namespace UniTask.Business.Services
             // Find jobs that are Open or InProgress and have passed their deadline
             var expiredJobs = await context.Jobs
                 .Include(j => j.Applications)
+                    .ThenInclude(a => a.StudentProfile)
                 .Where(j => (j.Status == JobStatus.Open || j.Status == JobStatus.InProgress) && j.Deadline != null && j.Deadline < now)
                 .ToListAsync();
 
@@ -95,6 +96,37 @@ namespace UniTask.Business.Services
                         foreach (var app in pendingApps)
                         {
                             app.Status = ApplicationStatus.Rejected;
+                        }
+
+                        // Xử lý tự động trừ điểm uy tín cho sinh viên vắng mặt (không đi làm) hoặc thiếu checkout
+                        var acceptedAppsForScore = job.Applications.Where(a => a.Status == ApplicationStatus.Accepted).ToList();
+                        foreach (var app in acceptedAppsForScore)
+                        {
+                            var studentProfile = app.StudentProfile;
+                            if (studentProfile != null)
+                            {
+                                if (app.CheckInTime == null && app.CheckOutTime == null)
+                                {
+                                    // Hoàn toàn không đi làm: chuyển trạng thái đơn sang NoShow và trừ 2 điểm
+                                    app.Status = ApplicationStatus.NoShow;
+                                    studentProfile.ReliabilityScore = Math.Max(0, studentProfile.ReliabilityScore - 2);
+
+                                    if (studentProfile.ReliabilityScore < 80 && (!studentProfile.ReliabilityBlockedUntil.HasValue || DateTime.UtcNow >= studentProfile.ReliabilityBlockedUntil.Value))
+                                    {
+                                        studentProfile.ReliabilityBlockedUntil = DateTime.UtcNow.AddDays(3);
+                                    }
+                                }
+                                else if (app.CheckInTime != null && app.CheckOutTime == null)
+                                {
+                                    // Có check-in nhưng không checkout: trừ 1 điểm vì lỗi checkout sớm/thiếu
+                                    studentProfile.ReliabilityScore = Math.Max(0, studentProfile.ReliabilityScore - 1);
+
+                                    if (studentProfile.ReliabilityScore < 80 && (!studentProfile.ReliabilityBlockedUntil.HasValue || DateTime.UtcNow >= studentProfile.ReliabilityBlockedUntil.Value))
+                                    {
+                                        studentProfile.ReliabilityBlockedUntil = DateTime.UtcNow.AddDays(3);
+                                    }
+                                }
+                            }
                         }
                     }
                 }

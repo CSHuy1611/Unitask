@@ -44,13 +44,14 @@ namespace UniTask.DataAcesss
                 }
             }
 
-            // ===== 1.2 Fix ReliabilityScore = 0 bug (Hotfix) =====
-            var zeroScoreStudents = await context.StudentProfiles.Where(sp => sp.ReliabilityScore == 0).ToListAsync();
-            if (zeroScoreStudents.Any())
+            // ===== 1.2 Fix ReliabilityScore = 0 or > 100 bug (Hotfix) =====
+            var invalidScoreStudents = await context.StudentProfiles.Where(sp => sp.ReliabilityScore == 0 || sp.ReliabilityScore > 100).ToListAsync();
+            if (invalidScoreStudents.Any())
             {
-                foreach (var sp in zeroScoreStudents) sp.ReliabilityScore = 100;
+                foreach (var sp in invalidScoreStudents) sp.ReliabilityScore = 100;
                 await context.SaveChangesAsync();
             }
+
 
             // ===== 2. Seed Service Packages (Dữ liệu hệ thống bắt buộc) =====
             var packages = new List<ServicePackage>

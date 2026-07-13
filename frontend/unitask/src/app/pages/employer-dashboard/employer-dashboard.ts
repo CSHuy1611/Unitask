@@ -699,7 +699,7 @@ import { Subscription } from 'rxjs';
                         </div>
 
                         <!-- Info Grid: Major, Year, GPA -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
                           <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
                             <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Chuyên ngành</span>
                             <span style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="app.studentMajor">{{ app.studentMajor || 'Chưa cập nhật' }}</span>
@@ -710,7 +710,14 @@ import { Subscription } from 'rxjs';
                             <span style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">Năm thứ {{ app.studentYear || '?' }}</span>
                           </div>
 
-                          <!-- GPA info hidden by user request -->
+                          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Điểm uy tín</span>
+                            <span style="font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 4px;"
+                                  [style.color]="(app.studentReliabilityScore ?? 100) >= 80 ? 'var(--success)' : 'var(--danger)'">
+                              <span class="material-icons-round" style="font-size:16px;">stars</span>
+                              {{ app.studentReliabilityScore ?? 100 }}
+                            </span>
+                          </div>
                         </div>
 
                         <!-- Bio Blockquote -->
@@ -1174,7 +1181,16 @@ import { Subscription } from 'rxjs';
                         Năm {{ selectedStudentDetails()?.studentYear || '?' }} 
                       </span>
                     </div>
-                    <!-- Reliability score hidden by user request -->
+                    <!-- Reliability Score -->
+                    <div>
+                      <span style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">Điểm uy tín</span>
+                      <span style="font-size: 1.1rem; font-weight: 700; display:inline-flex; align-items:center; gap: 6px; padding: 4px 12px; border-radius: 20px;"
+                            [style.background]="(selectedStudentDetails()?.studentReliabilityScore ?? 100) >= 80 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'"
+                            [style.color]="(selectedStudentDetails()?.studentReliabilityScore ?? 100) >= 80 ? '#10B981' : '#EF4444'">
+                        <span class="material-icons-round" style="font-size:16px;">stars</span>
+                        {{ selectedStudentDetails()?.studentReliabilityScore ?? 100 }} / 100
+                      </span>
+                    </div>
                     <div>
                       <span style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">Kỹ năng</span>
                       <div style="display:flex; flex-wrap:wrap; gap: 4px;">

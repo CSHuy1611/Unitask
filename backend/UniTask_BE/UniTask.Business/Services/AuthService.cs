@@ -321,7 +321,8 @@ namespace UniTask.Business.Services
                         UserId = user.Id,
                         University = request.University,
                         Major = request.Major,
-                        Year = request.Year
+                        Year = request.Year,
+                        ReliabilityScore = 100
                     };
                     _context.StudentProfiles.Add(studentProfile);
                     await _context.SaveChangesAsync();
