@@ -300,7 +300,7 @@ export class JobCardComponent {
 
     if (!this.hasApplied()) {
       if (user.ekycStatus !== 'verified') {
-        this.toast.warning('Bạn cần xác thực danh tính (eKYC) trước khi ứng tuyển.');
+        this.toast.warning('Vui lòng xác thực danh tính để ứng tuyển công việc.');
         return;
       }
 

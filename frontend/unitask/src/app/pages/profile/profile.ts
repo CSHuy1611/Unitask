@@ -457,7 +457,7 @@ import Tesseract from 'tesseract.js';
                         <span class="material-icons-round">gpp_maybe</span>
                         <strong>Chưa xác thực</strong>
                       </div>
-                      <p>Xác thực danh tính để tăng uy tín hồ sơ và tiếp cận nhiều cơ hội hơn.</p>
+                      <p>Vui lòng xác thực danh tính để ứng tuyển công việc.</p>
                     }
                   }
                 </div>
