@@ -129,8 +129,8 @@ interface Withdrawal {
                           <div class="student-info">
                             <span class="student-name">{{ w.userName }}</span>
                             <span class="student-email">{{ w.userEmail }}</span>
-                            <span class="role-tag" [style.color]="w.userRole === 'student' ? '#3B82F6' : (w.employerType === 1 ? '#F59E0B' : '#10B981')" [style.borderColor]="w.userRole === 'student' ? 'rgba(59,130,246,0.3)' : (w.employerType === 1 ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)')">
-                              {{ w.userRole === 'student' ? 'Sinh viên' : (w.employerType === 1 ? 'Hộ KD' : 'Doanh nghiệp') }}
+                            <span class="role-tag" [style.color]="w.userRole === 'student' ? '#3B82F6' : '#F59E0B'" [style.borderColor]="w.userRole === 'student' ? 'rgba(59,130,246,0.3)' : 'rgba(245,158,11,0.3)'">
+                              {{ w.userRole === 'student' ? 'Sinh viên' : 'Hộ KD' }}
                             </span>
                           </div>
                         </td>

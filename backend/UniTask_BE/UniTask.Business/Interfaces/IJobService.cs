@@ -6,6 +6,8 @@ namespace UniTask.Business.Interfaces
     {
         Task<IEnumerable<JobDto>> GetJobsAsync(JobFilterDto filter, string? currentUserId = null);
         Task<JobDto?> GetJobByIdAsync(int id, string? currentUserId = null);
+        Task<object> GetPublicStatsAsync();
+        Task<IEnumerable<object>> GetTopCompaniesAsync(int count);
         Task<JobDto?> CreateJobAsync(string employerId, JobCreateDto dto);
         Task<bool> StartJobAsync(int jobId, string employerId);
         Task<bool> UpdateJobAsync(int id, string employerId, JobUpdateDto dto);

@@ -29,8 +29,8 @@ namespace UniTask.Business.Services
                 totalUsers = await _context.Users.CountAsync(),
                 totalStudents = await _context.StudentProfiles.CountAsync(),
                 totalEmployers = await _context.EmployerProfiles.CountAsync(),
-                totalBusinessEmployers = await _context.EmployerProfiles.CountAsync(ep => ep.Type == EmployerType.Business),
-                totalHouseholdEmployers = await _context.EmployerProfiles.CountAsync(ep => ep.Type == EmployerType.SmallBusinessHousehold),
+                totalBusinessEmployers = 0,
+                totalHouseholdEmployers = await _context.EmployerProfiles.CountAsync(),
                 totalJobs = await _context.Jobs.CountAsync(),
                 totalRevenue = await _context.Transactions
                     .Where(t => t.Type == TransactionType.CommissionFee || t.Type == TransactionType.PostingFee || t.Type == TransactionType.SubscriptionFee)
@@ -125,14 +125,6 @@ namespace UniTask.Business.Services
                 {
                     query = query.Where(u => u.UserType == UserType.Employer);
                 }
-                else if (role == "household")
-                {
-                    query = query.Where(u => u.UserType == UserType.Employer && u.EmployerProfile != null && u.EmployerProfile.Type == EmployerType.SmallBusinessHousehold);
-                }
-                else if (role == "business")
-                {
-                    query = query.Where(u => u.UserType == UserType.Employer && u.EmployerProfile != null && u.EmployerProfile.Type == EmployerType.Business);
-                }
             }
 
             // 2. Filter by Status
@@ -187,7 +179,7 @@ namespace UniTask.Business.Services
                     companyName = u.EmployerProfile?.Company?.Name ?? "",
                     createdAt = u.CreatedAt.ToString("yyyy-MM-dd"),
                     reliabilityScore = u.StudentProfile?.ReliabilityScore ?? 100,
-                    employerType = u.EmployerProfile != null ? (int?)u.EmployerProfile.Type : null,
+                    employerType = u.EmployerProfile != null ? (int?)1 : null,
                     isFlagged = u.IsFlagged,
                     flagReason = u.FlagReason ?? "",
                     isBanned = u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow

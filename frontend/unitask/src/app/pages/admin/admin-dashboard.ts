@@ -138,13 +138,6 @@ import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
               </div>
             </div>
             <div class="mini-stat glass-card">
-              <span class="material-icons-round" style="color:#10B981">business</span>
-              <div>
-                <strong>{{ data().summary.totalBusinessEmployers }}</strong>
-                <span>Doanh nghiệp</span>
-              </div>
-            </div>
-            <div class="mini-stat glass-card">
               <span class="material-icons-round" style="color:#EF4444">hourglass_top</span>
               <div>
                 <strong>{{ data().summary.ekycPending }}</strong>
