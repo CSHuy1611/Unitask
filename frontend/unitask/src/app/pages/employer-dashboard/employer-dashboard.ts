@@ -205,9 +205,7 @@ import { Subscription } from 'rxjs';
                   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Loại hình</label>
-                      <select class="form-select" [(ngModel)]="formData.type" (ngModelChange)="onTypeChange($event)" name="type">
-                        <option>Part-time</option>
-                      </select>
+                      <input type="text" class="form-input" value="Part-time" disabled style="background-color: var(--bg-hover); color: var(--text-muted); font-weight: 500; cursor: not-allowed;">
                     </div>
                     <div class="form-group" style="margin: 0;">
                       <label class="form-label">Số lượng tuyển <span style="color: #EF4444">*</span></label>
@@ -1986,7 +1984,7 @@ export class EmployerDashboardComponent implements OnInit, OnDestroy {
   private getEmptyForm() {
     return {
       title: '',
-      type: 'Freelance',
+      type: 'Part-time',
       category: '',
       location: '',
       headCount: 1,
