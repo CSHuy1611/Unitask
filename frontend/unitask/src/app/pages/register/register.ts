@@ -28,7 +28,7 @@ import { AuthService } from '../../services/auth.service';
                 🎓 Sinh viên
               </button>
               <button class="role-tab" [class.active]="activeRole() === 'employer'" (click)="activeRole.set('employer')">
-                🏢 Doanh nghiệp
+                🏢 Hộ kinh doanh
               </button>
             </div>
 
@@ -119,7 +119,7 @@ import { AuthService } from '../../services/auth.service';
                     <span class="spinner"></span> {{ loadingText() }}
                   </div>
                 } @else {
-                  Đăng ký {{ activeRole() === 'student' ? 'Sinh viên' : 'Doanh nghiệp' }}
+                  Đăng ký {{ activeRole() === 'student' ? 'Sinh viên' : 'Hộ kinh doanh' }}
                 }
               </button>
             </form>
