@@ -243,17 +243,58 @@ namespace UniTask.Business.Services
             var user = await _context.Users.FindAsync(userId);
             if (user == null) return false;
 
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Note: If the user has related transactions or jobs, this might fail due to FK constraints.
-                // Depending on DeleteBehavior.Restrict in DbContext.
+                // Delete Jobs if user is an employer
+                var jobs = await _context.Jobs.Where(j => j.EmployerId == userId).ToListAsync();
+                if (jobs.Any())
+                {
+                    _context.Jobs.RemoveRange(jobs);
+                }
+
+                // Delete Company if this user is the only one associated with it
+                var employerProfile = await _context.EmployerProfiles.FirstOrDefaultAsync(ep => ep.UserId == userId);
+                if (employerProfile?.CompanyId != null)
+                {
+                    var companyId = employerProfile.CompanyId;
+                    var otherEmployersCount = await _context.EmployerProfiles
+                        .CountAsync(ep => ep.CompanyId == companyId && ep.UserId != userId);
+                    if (otherEmployersCount == 0)
+                    {
+                        var company = await _context.Companies.FindAsync(companyId);
+                        if (company != null)
+                        {
+                            _context.Companies.Remove(company);
+                        }
+                    }
+                }
+
+                // Delete Applications and SavedJobs if user is a student
+                var studentProfile = await _context.StudentProfiles.FirstOrDefaultAsync(sp => sp.UserId == userId);
+                if (studentProfile != null)
+                {
+                    var applications = await _context.Applications.Where(a => a.StudentProfileId == studentProfile.Id).ToListAsync();
+                    if (applications.Any())
+                    {
+                        _context.Applications.RemoveRange(applications);
+                    }
+
+                    var savedJobs = await _context.SavedJobs.Where(s => s.StudentProfileId == studentProfile.Id).ToListAsync();
+                    if (savedJobs.Any())
+                    {
+                        _context.SavedJobs.RemoveRange(savedJobs);
+                    }
+                }
+
                 _context.Users.Remove(user);
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
                 return true;
             }
-            catch (DbUpdateException)
+            catch (Exception)
             {
-                // Referential integrity constraint violation
+                await transaction.RollbackAsync();
                 return false;
             }
         }

@@ -25,13 +25,13 @@ import { AuthService } from '../../services/auth.service';
             <a routerLink="/profile" class="btn btn-primary btn-sm" style="flex-shrink: 0; padding: 8px 16px; font-size: 14px;">Đến hồ sơ</a>
           </div>
         }
-        <div class="hero-text animate-fade-in-up">
-          <span class="hero-badge">🎓 #1 Nền tảng việc làm ngắn hạn cho sinh viên</span>
+        <div class="hero-text animate-fade-in-up" style="display: flex; flex-direction: column; align-items: center; text-align: center; margin: 0 auto;">
+          <span class="hero-badge">🎓 #1 Nền tảng việc làm cho sinh viên</span>
           <h1 class="hero-title">
-            Tìm kiếm <span class="gradient-text">việc làm ngắn hạn</span> linh hoạt cho sinh viên
+            Tìm kiếm <span class="gradient-text">việc làm</span> phù hợp cho sinh viên
           </h1>
-          <p class="hero-desc">
-            Kết nối sinh viên với hàng nghìn cơ hội việc làm ngắn hạn, part-time và freelance từ các Hộ kinh doanh và Đối tác uy tín.
+          <p class="hero-desc" style="max-width: 600px;">
+            Kết nối sinh viên với hàng nghìn cơ hội việc làm uy tín từ các hộ kinh doanh uy tín hàng đầu Việt Nam.
           </p>
         </div>
 
