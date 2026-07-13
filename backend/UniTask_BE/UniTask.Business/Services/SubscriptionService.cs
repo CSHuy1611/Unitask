@@ -70,14 +70,10 @@ namespace UniTask.Business.Services
                 DateTime newEndDate;
                 if (existingSub != null)
                 {
-                    // Extend duration based on old subscription EndDate
-                    newEndDate = existingSub.EndDate.AddMonths(package.DurationMonths);
                     existingSub.IsActive = false; // Mark old subscription as inactive so the new one takes over
                 }
-                else
-                {
-                    newEndDate = DateTime.UtcNow.AddMonths(package.DurationMonths);
-                }
+                
+                newEndDate = DateTime.UtcNow.AddMonths(package.DurationMonths);
 
                 _context.Subscriptions.Add(new Subscription
                 {

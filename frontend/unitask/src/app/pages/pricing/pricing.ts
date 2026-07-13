@@ -100,10 +100,17 @@ import { API_BASE_URL } from '../../config/api.config';
                 </div>
                 <div class="payment-details">
                   @if (auth.currentUser()?.activePackage) {
-                    <div class="alert alert-warning" style="margin-bottom: var(--space-4); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #F59E0B; padding: var(--space-3); border-radius: var(--radius-lg); font-size: var(--font-size-sm); display: flex; align-items: center; gap: 8px;">
-                      <span class="material-icons-round" style="font-size: 20px;">warning</span>
-                      <span>Tài khoản đang có gói hoạt động. Giao dịch này sẽ cộng dồn thời hạn.</span>
-                    </div>
+                    @if (isDowngrade()) {
+                      <div class="alert alert-danger" style="margin-bottom: var(--space-4); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; padding: var(--space-3); border-radius: var(--radius-lg); font-size: var(--font-size-sm); display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="font-size: 20px;">warning</span>
+                        <span><strong>Cảnh báo:</strong> Bạn đang ở gói dài hạn hơn. Mua gói mới sẽ <strong>GHI ĐÈ</strong> và làm mất thời gian còn lại của gói cũ!</span>
+                      </div>
+                    } @else {
+                      <div class="alert alert-warning" style="margin-bottom: var(--space-4); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #F59E0B; padding: var(--space-3); border-radius: var(--radius-lg); font-size: var(--font-size-sm); display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="font-size: 20px;">info</span>
+                        <span>Tài khoản đang có gói hoạt động. Giao dịch này sẽ <strong>GHI ĐÈ</strong> thời hạn hiện tại.</span>
+                      </div>
+                    }
                   }
                   <p style="margin-bottom: var(--space-4); color: var(--text-secondary); font-size: var(--font-size-sm)">Bạn đang đăng ký gói dịch vụ sau bằng số dư ví:</p>
                   <div class="bill-info">
@@ -161,7 +168,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     @if (auth.currentUser()?.activePackage && paymentType() === 'package') {
                       <div class="alert alert-warning" style="margin-bottom: var(--space-4); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #F59E0B; padding: var(--space-3); border-radius: var(--radius-lg); font-size: var(--font-size-sm); display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="font-size: 20px;">warning</span>
-                        <span>Tài khoản đang có gói hoạt động. Nạp tiền mua gói sẽ cộng dồn thời hạn.</span>
+                        <span>Lưu ý: Nạp tiền mua gói sẽ <strong>GHI ĐÈ</strong> thời hạn cũ.</span>
                       </div>
                     }
                     @if (paymentType() === 'package') {
@@ -424,6 +431,19 @@ export class PricingComponent implements OnInit {
   isProcessing = signal(false);
   paymentSuccess = signal(false);
   successMessage = signal('');
+
+  isDowngrade(): boolean {
+    const user = this.auth.currentUser();
+    const pkg = this.selectedPackage();
+    if (!user || !user.activePackage || !pkg) return false;
+
+    const match = user.activePackage.match(/\d+/);
+    if (match) {
+      const currentMonths = parseInt(match[0], 10);
+      return currentMonths > pkg.durationMonths;
+    }
+    return false;
+  }
 
   ngOnInit() {
     this.loadPackages();
