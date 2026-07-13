@@ -271,8 +271,7 @@ namespace UniTask.Business.Services
                     else if (checkInLocal == shiftStart)
                     {
                         isOnTime = true;
-                        if (studentProfile.ReliabilityScore < 100)
-                            studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                        // On time: No change
                     }
                     else
                     {
@@ -290,8 +289,7 @@ namespace UniTask.Business.Services
                 else
                 {
                     isOnTime = true;
-                    if (studentProfile.ReliabilityScore < 100)
-                        studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                    // On time (no shift info): No change
                 }
 
                 var newScore = studentProfile.ReliabilityScore;
@@ -311,16 +309,8 @@ namespace UniTask.Business.Services
                 }
                 else if (isOnTime)
                 {
-                    if (oldScore >= 100)
-                    {
-                        statusText = $"Bạn đã check-in đúng giờ lúc {checkInStr}. Điểm uy tín của bạn vẫn giữ nguyên 100";
-                        reliabilityChangeText = "Điểm uy tín được giữ nguyên ở mức tối đa 100/100.";
-                    }
-                    else
-                    {
-                        statusText = $"Bạn đã check-in đúng giờ lúc {checkInStr}! Bạn được cộng 1 điểm uy tín";
-                        reliabilityChangeText = $"Bạn được cộng 1 điểm uy tín (Lên {newScore}/100).";
-                    }
+                    statusText = $"Bạn đã check-in đúng giờ lúc {checkInStr}. Điểm uy tín giữ nguyên ở mức {newScore}";
+                    reliabilityChangeText = $"Điểm uy tín được giữ nguyên (Mức {newScore}/100).";
                 }
                 else // isLate
                 {
@@ -395,8 +385,7 @@ namespace UniTask.Business.Services
                     else if (checkOutLocal == shiftEnd)
                     {
                         isOnTime = true;
-                        if (studentProfile.ReliabilityScore < 100)
-                            studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                        // On time: No change
                     }
                     else
                     {
@@ -414,8 +403,7 @@ namespace UniTask.Business.Services
                 else
                 {
                     isOnTime = true;
-                    if (studentProfile.ReliabilityScore < 100)
-                        studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
+                    // On time (no shift info): No change
                 }
 
                 var newScore = studentProfile.ReliabilityScore;
@@ -427,16 +415,8 @@ namespace UniTask.Business.Services
                 }
                 else if (isOnTime)
                 {
-                    if (oldScore >= 100)
-                    {
-                        statusText = $"Bạn đã check-out đúng giờ lúc {checkOutStr}. Điểm uy tín của bạn vẫn giữ nguyên 100";
-                        reliabilityChangeText = "Điểm uy tín được giữ nguyên ở mức tối đa 100/100.";
-                    }
-                    else
-                    {
-                        statusText = $"Bạn đã check-out đúng giờ lúc {checkOutStr}! Bạn được cộng 1 điểm uy tín";
-                        reliabilityChangeText = $"Bạn được cộng 1 điểm uy tín (Lên {newScore}/100).";
-                    }
+                    statusText = $"Bạn đã check-out đúng giờ lúc {checkOutStr}. Điểm uy tín giữ nguyên ở mức {newScore}";
+                    reliabilityChangeText = $"Điểm uy tín được giữ nguyên (Mức {newScore}/100).";
                 }
                 else // isLate
                 {

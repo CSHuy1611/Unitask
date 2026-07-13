@@ -1130,6 +1130,13 @@ import Tesseract from 'tesseract.js';
       animation: spin 0.8s linear infinite;
     }
 
+    .spinner {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .profile-card h2 {
@@ -2074,6 +2081,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.isSubmittingWithdraw.set(false);
         if (res.success) {
           this.toast.success('Yêu cầu rút tiền thành công! Tiền sẽ được chuyển trong 24h.');
+          this.auth.fetchBalance().subscribe();
           this.showWithdrawModal.set(false);
           this.withdrawForm = { amount: '' as any, bank: '', account: '', name: '' };
         } else {

@@ -84,8 +84,6 @@ namespace UniTask.Business.Services
                                 CreatedAt = DateTime.UtcNow
                             });
 
-                            // Add +5 Reliability Score for completing job
-                            app.StudentProfile.ReliabilityScore += 5;
                         }
                     }
 

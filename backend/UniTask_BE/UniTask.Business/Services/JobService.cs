@@ -774,13 +774,17 @@ namespace UniTask.Business.Services
                 var nowVn = DateTime.UtcNow.AddHours(7);
                 var shiftStart = job.WorkDate.Value.Date + job.WorkStartTime.Value;
 
-                if (nowVn <= shiftStart)
+                if (nowVn < shiftStart)
                 {
-                    // Check-in sớm/đúng giờ: +1 điểm (tối đa 100)
+                    // Check-in sớm: +1 điểm (tối đa 100)
                     if (studentProfile.ReliabilityScore < 100)
                     {
                         studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
                     }
+                }
+                else if (nowVn == shiftStart)
+                {
+                    // Đúng giờ: Giữ nguyên
                 }
                 else
                 {
@@ -824,13 +828,17 @@ namespace UniTask.Business.Services
                 var nowVn = DateTime.UtcNow.AddHours(7);
                 var shiftEnd = job.WorkDate.Value.Date + job.WorkEndTime.Value;
 
-                if (nowVn >= shiftEnd)
+                if (nowVn > shiftEnd)
                 {
-                    // Check-out trễ/đúng giờ: +1 điểm (tối đa 100)
+                    // Check-out trễ: +1 điểm (tối đa 100)
                     if (studentProfile.ReliabilityScore < 100)
                     {
                         studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 1);
                     }
+                }
+                else if (nowVn == shiftEnd)
+                {
+                    // Đúng giờ: Giữ nguyên
                 }
                 else
                 {
@@ -938,7 +946,7 @@ namespace UniTask.Business.Services
                 {
                     if (rating == 5)
                     {
-                        studentProfile.ReliabilityScore += 2;
+                        studentProfile.ReliabilityScore = Math.Min(100, studentProfile.ReliabilityScore + 2);
                     }
 
                     // Check negative ratings/tags to auto-flag
