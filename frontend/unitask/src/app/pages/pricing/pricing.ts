@@ -19,7 +19,7 @@ import { API_BASE_URL } from '../../config/api.config';
             Bảng giá & <span class="gradient-text">Nạp tiền</span>
           </h1>
           <p style="color:var(--text-secondary);max-width:600px;margin: 0 auto var(--space-8)">
-            Mua các gói đăng tuyển có lợi hoặc nạp số dư vào tài khoản để trả phí theo từng tin đăng (200đ/tin).
+            Mua các gói đăng tuyển có lợi hoặc nạp số dư vào tài khoản để trả phí theo từng tin đăng (2000đ/tin).
           </p>
         </div>
 
@@ -73,7 +73,7 @@ import { API_BASE_URL } from '../../config/api.config';
                     <li><span class="material-icons-round">check_circle</span> {{ feat }}</li>
                   }
                   @if (pkg.id >= 3) {
-                    <li><span class="material-icons-round" style="color:var(--warning)">workspace_premium</span> Huy hiệu Doanh nghiệp Premium</li>
+                    <li><span class="material-icons-round" style="color:var(--warning)">workspace_premium</span> Huy hiệu Premium</li>
                   }
                 </ul>
                 <button class="btn btn-lg full-width" [class.btn-primary]="pkg.id === 2" [class.btn-secondary]="pkg.id !== 2" (click)="buyPackage(pkg)">
